@@ -13,7 +13,7 @@ async function initApp() {
   const { data: { session } } = await sb.auth.getSession();
   if (!session) {
     localStorage.setItem('auth_redirect', location.href);
-    location.href = 'auth.html';
+    location.href = 'index.html';
     return;
   }
   currentUser = session.user;
@@ -58,5 +58,5 @@ async function saveLangToCloud(code) {
 
 async function logout() {
   await sb.auth.signOut();
-  location.href = 'auth.html';
+  location.href = 'index.html';
 }
