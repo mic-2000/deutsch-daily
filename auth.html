@@ -7,90 +7,9 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500;9..144,600&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
-<style>
-:root {
-  --paper: #F2EDE3;
-  --paper-2: #E8E0D0;
-  --paper-3: #FAF6EC;
-  --ink: #1C1A17;
-  --ink-soft: #4A453D;
-  --line: #BFB5A0;
-  --accent: #B5512A;
-  --accent-2: #8C3F1F;
-  --green: #4A7C3A;
-  --gold: #C5963B;
-  --serif: 'Fraunces', Georgia, serif;
-  --sans: 'Manrope', system-ui, sans-serif;
-}
-* { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: var(--sans); background: var(--paper); color: var(--ink); min-height: 100vh; line-height: 1.5; }
-button { font-family: inherit; cursor: pointer; border: none; background: none; color: inherit; }
-input { font-family: inherit; }
-.container { max-width: 480px; margin: 0 auto; padding: 0 24px; }
-
-header { border-bottom: 1px solid var(--line); padding: 28px 0 22px; }
-.title-cat { color: var(--accent); font-size: 11px; text-transform: uppercase; letter-spacing: 0.3em; }
-h1 { font-family: var(--serif); font-size: 44px; font-weight: 300; margin-top: 4px; letter-spacing: -0.02em; line-height: 1; }
-h1 em { color: var(--accent); font-style: italic; }
-.subtitle { font-family: var(--serif); font-style: italic; font-size: 16px; color: var(--ink-soft); margin-top: 6px; }
-
-main { padding: 48px 0 60px; }
-
-.auth-box { border: 2px solid var(--ink); background: var(--paper-3); padding: 32px; }
-.auth-title { font-family: var(--serif); font-size: 26px; font-weight: 300; margin-bottom: 24px; }
-
-.field { margin-bottom: 18px; }
-.field label { display: block; font-size: 11px; text-transform: uppercase; letter-spacing: 0.2em; color: var(--ink-soft); margin-bottom: 6px; }
-.field input {
-  width: 100%; padding: 10px 12px;
-  border: 1px solid var(--line); background: var(--paper);
-  color: var(--ink); font-size: 15px; outline: none;
-}
-.field input:focus { border-color: var(--ink); }
-
-.btn-submit {
-  width: 100%; padding: 13px;
-  background: var(--ink); color: var(--paper);
-  font-size: 14px; font-family: var(--sans); cursor: pointer;
-  border: none; margin-top: 8px; letter-spacing: 0.05em;
-  transition: background 0.15s;
-}
-.btn-submit:hover { background: var(--accent); }
-.btn-submit:disabled { opacity: 0.5; cursor: not-allowed; }
-
-.toggle-link { text-align: center; margin-top: 20px; font-size: 13px; color: var(--ink-soft); }
-.toggle-link span { color: var(--accent); cursor: pointer; text-decoration: underline; }
-
-.divider { display: flex; align-items: center; gap: 12px; margin: 20px 0; color: var(--ink-soft); font-size: 12px; }
-.divider::before, .divider::after { content: ''; flex: 1; height: 1px; background: var(--line); }
-
-.btn-google {
-  width: 100%; padding: 11px; border: 1px solid var(--line);
-  background: var(--paper); color: var(--ink); font-size: 14px;
-  font-family: var(--sans); cursor: pointer; display: flex;
-  align-items: center; justify-content: center; gap: 10px;
-  transition: border-color 0.15s, background 0.15s;
-}
-.btn-google:hover { border-color: var(--ink); background: var(--paper-2); }
-
-.notice {
-  font-size: 13px; color: var(--ink-soft); margin-top: 16px;
-  padding: 10px 12px; background: var(--paper-2);
-  border-left: 2px solid var(--gold);
-}
-
-.loading-msg { text-align: center; padding: 60px 0; color: var(--ink-soft); font-family: var(--serif); font-style: italic; font-size: 20px; }
-
-.toast {
-  position: fixed; bottom: 24px; left: 50%;
-  transform: translateX(-50%) translateY(80px);
-  background: var(--ink); color: var(--paper);
-  padding: 10px 20px; font-size: 14px;
-  opacity: 0; transition: all 0.25s; z-index: 100;
-  pointer-events: none; white-space: nowrap;
-}
-.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
-</style>
+<link rel="stylesheet" href="assets/css/base.css">
+<link rel="stylesheet" href="assets/css/components.css">
+<link rel="stylesheet" href="assets/css/auth.css">
 </head>
 <body>
 
@@ -111,15 +30,13 @@ main { padding: 48px 0 60px; }
 <div id="toast" class="toast"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-<script src="i18n.js"></script>
+<script src="locales/ru.js"></script>
+<script src="locales/ua.js"></script>
+<script src="locales/en.js"></script>
+<script src="assets/js/i18n.js"></script>
+<script src="assets/js/utils.js"></script>
+<script src="assets/js/supabase.js"></script>
 <script>
-/* ---- КОНФИГ: замени на свои значения из Supabase → Settings → API ---- */
-const SUPABASE_URL = 'https://YOUR_PROJECT_ID.supabase.co';
-const SUPABASE_ANON_KEY = 'YOUR_ANON_KEY';
-/* ---------------------------------------------------------------------- */
-
-const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
 let mode = 'login'; // 'login' | 'register'
 let loading = false;
 
@@ -167,7 +84,7 @@ async function loginGoogle() {
     });
     if (error) showToast(error.message);
   } catch(e) {
-    showToast('Ошибка соединения');
+    showToast(T('auth_err_connection'));
   }
 }
 
@@ -191,7 +108,7 @@ async function submit() {
     if (mode === 'register') {
       const { error } = await sb.auth.signUp({ email, password });
       if (error) { showToast(error.message); return; }
-      showToast('Проверьте почту — нужно подтвердить адрес!');
+      showToast(T('auth_notice'));
     } else {
       const { error } = await sb.auth.signInWithPassword({ email, password });
       if (error) { showToast(T('auth_err_wrong')); return; }
@@ -206,17 +123,9 @@ async function submit() {
 }
 
 function redirect() {
-  const back = localStorage.getItem('auth_redirect') || 'german_daily_planner.html';
+  const back = localStorage.getItem('auth_redirect') || 'planner.html';
   localStorage.removeItem('auth_redirect');
   location.href = back;
-}
-
-let toastTimer;
-function showToast(msg) {
-  const t = document.getElementById('toast');
-  t.textContent = msg; t.classList.add('show');
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => t.classList.remove('show'), 3200);
 }
 
 // Init: if already logged in — redirect

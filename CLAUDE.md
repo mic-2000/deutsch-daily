@@ -8,8 +8,8 @@
 
 Пользователь учит немецкий, цель — сдать экзамен **Goethe-Zertifikat B1**, старт около A1, план на 6 месяцев. Вся система состоит из трёх частей, работающих вместе:
 
-1. **`german_daily_planner.html`** — планировщик по дням. Показывает задачу на день и копирует её в буфер как готовый промпт для чата.
-2. **`german_vocab_trainer.html`** — тренажёр словаря с тремя режимами и интервальным повторением.
+1. **`planner.html`** — планировщик по дням. Показывает задачу на день и копирует её в буфер как готовый промпт для чата.
+2. **`vocab.html`** — тренажёр словаря с тремя режимами и интервальным повторением.
 3. **Чат с языковой моделью** — пользователь вставляет скопированный план дня, модель выдаёт учебный материал и упражнения.
 
 Учебная программа: 24 недели, 3 фазы.
@@ -17,13 +17,35 @@
 - **Фаза 2 (нед. 9–16):** A2 — Präteritum, придаточные (weil/dass/wenn/als), сравнение, рефлексивные глаголы, склонение прилагательных (intro).
 - **Фаза 3 (нед. 17–24):** B1 — полное склонение прилагательных, пассив, Konjunktiv II, Relativsätze, косвенная речь, глаголы с управлением + тренировка формата экзамена.
 
-Оба файла: **vanilla HTML/CSS/JS, без зависимостей и сборки**. Открываются двойным кликом (`file://`). Единственная внешняя загрузка — шрифты Google Fonts (Fraunces + Manrope) через `<link>`. Прогресс хранится в `localStorage`. Язык интерфейса — русский, учебный контент — немецкий с русским переводом.
+Стек: **vanilla HTML/CSS/JS, без фреймворков и бандлера**. Деплой на Vercel (https); сборка `npm run build` → `node build.js` подставляет креды Supabase в `assets/js/supabase.js`. Единственная внешняя загрузка — шрифты Google Fonts (Fraunces + Manrope) через `<link>`. Прогресс хранится в `localStorage` и синхронизируется в Supabase. Язык интерфейса — RU/UA/EN, учебный контент — немецкий с переводом.
+
+### Структура проекта
+
+```
+deutsch-daily/
+├── index.html          # роутер: сессия есть → planner.html, нет → auth.html
+├── auth.html           # вход/регистрация (email + Google OAuth)
+├── planner.html        # планировщик (тонкий: разметка + логика страницы)
+├── vocab.html          # тренажёр словаря (тонкий)
+├── assets/
+│   ├── css/  base.css · components.css · planner.css · vocab.css · auth.css
+│   └── js/   i18n.js · utils.js · supabase.js · cloud-sync.js
+├── data/   weeks.js (WEEKS) · vocab.js (VOCAB)
+├── locales/  ru.js · ua.js · en.js   (window.LOCALE_*  = { ui, vocab })
+├── build.js · package.json · vercel.json · CLAUDE.md
+```
+
+**Порядок подключения скриптов** (planner/vocab): supabase CDN → locales/ru,ua,en → assets/js/i18n → utils → supabase → cloud-sync → data/(weeks|vocab) → инлайн-скрипт страницы. `index.html`/`auth.html` подключают только нужное подмножество.
+
+**Общий JS:** `assets/js/supabase.js` (клиент `sb` + плейсхолдеры кредов), `assets/js/utils.js` (`esc`, `showToast(msg, duration?)`), `assets/js/cloud-sync.js` (`initApp` / `saveToCloud` / `saveLangToCloud` / `logout` + глобал `currentUser`). Каждая страница задаёт `CLOUD_FIELD` (`planner_data`/`vocab_data`), `getCloudPayload()`, `applyCloudData(d)` и определяет `load()` / `render()`.
+
+**Общий CSS:** `base.css` (токены `:root`, reset, header/footer/info-box/toast/container), `components.css` (user-bar, nav-tabs, lang-switcher). Ширина контейнера задаётся в `planner.css` (820px) / `auth.css` (480px); `base.css` по умолчанию 920px (vocab).
 
 ---
 
-## 2. Общая дизайн-система (одинакова в обоих файлах)
+## 2. Общая дизайн-система (в `assets/css/base.css`)
 
-CSS-переменные в `:root`:
+CSS-переменные в `:root` (файл `assets/css/base.css`):
 
 ```css
 --paper: #F2EDE3;     /* основной фон (тёплая бумага) */
@@ -48,7 +70,7 @@ CSS-переменные в `:root`:
 
 ---
 
-## 3. `german_daily_planner.html`
+## 3. `planner.html`
 
 ### Назначение
 Один учебный день = одна основная задача. Большая кнопка копирует план дня как готовое сообщение для чата. Связывает трекер и диалог в ежедневный цикл.
@@ -113,7 +135,7 @@ ${d.text}
 
 ---
 
-## 4. `german_vocab_trainer.html`
+## 4. `vocab.html`
 
 ### Назначение
 Тренажёр словаря. 24 недельных набора (~600 слов). Три режима упражнений вперемешку + интервальное повторение по Лейтнеру + озвучка.

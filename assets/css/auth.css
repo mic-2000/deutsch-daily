@@ -1,0 +1,48 @@
+/* auth.css — page-specific styles for the login / register screen. */
+.container { max-width: 480px; }
+main { padding: 48px 0 60px; }
+
+.auth-box { border: 2px solid var(--ink); background: var(--paper-3); padding: 32px; }
+.auth-title { font-family: var(--serif); font-size: 26px; font-weight: 300; margin-bottom: 24px; }
+
+.field { margin-bottom: 18px; }
+.field label { display: block; font-size: 11px; text-transform: uppercase; letter-spacing: 0.2em; color: var(--ink-soft); margin-bottom: 6px; }
+.field input {
+  width: 100%; padding: 10px 12px;
+  border: 1px solid var(--line); background: var(--paper);
+  color: var(--ink); font-size: 15px; outline: none;
+}
+.field input:focus { border-color: var(--ink); }
+
+.btn-submit {
+  width: 100%; padding: 13px;
+  background: var(--ink); color: var(--paper);
+  font-size: 14px; font-family: var(--sans); cursor: pointer;
+  border: none; margin-top: 8px; letter-spacing: 0.05em;
+  transition: background 0.15s;
+}
+.btn-submit:hover { background: var(--accent); }
+.btn-submit:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.toggle-link { text-align: center; margin-top: 20px; font-size: 13px; color: var(--ink-soft); }
+.toggle-link span { color: var(--accent); cursor: pointer; text-decoration: underline; }
+
+.divider { display: flex; align-items: center; gap: 12px; margin: 20px 0; color: var(--ink-soft); font-size: 12px; }
+.divider::before, .divider::after { content: ''; flex: 1; height: 1px; background: var(--line); }
+
+.btn-google {
+  width: 100%; padding: 11px; border: 1px solid var(--line);
+  background: var(--paper); color: var(--ink); font-size: 14px;
+  font-family: var(--sans); cursor: pointer; display: flex;
+  align-items: center; justify-content: center; gap: 10px;
+  transition: border-color 0.15s, background 0.15s;
+}
+.btn-google:hover { border-color: var(--ink); background: var(--paper-2); }
+
+.notice {
+  font-size: 13px; color: var(--ink-soft); margin-top: 16px;
+  padding: 10px 12px; background: var(--paper-2);
+  border-left: 2px solid var(--gold);
+}
+
+.loading-msg { text-align: center; padding: 60px 0; color: var(--ink-soft); font-family: var(--serif); font-style: italic; font-size: 20px; }

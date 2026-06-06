@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Deutsch · Tagesplan</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500;9..144,600&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/base.css">
+<link rel="stylesheet" href="assets/css/components.css">
+<link rel="stylesheet" href="assets/css/planner.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="locales/ru.js"></script>
+<script src="locales/ua.js"></script>
+<script src="locales/en.js"></script>
+<script src="assets/js/i18n.js"></script>
+<script src="assets/js/utils.js"></script>
+<script src="assets/js/supabase.js"></script>
+<script src="assets/js/cloud-sync.js"></script>
+<script src="data/weeks.js"></script>
+</head>
+<body>
+<div id="app"></div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ==========================================================================
+   CURRICULUM (24 weeks) lives in data/weeks.js (global `WEEKS`).
+   ========================================================================== */
+const TYPE_LABEL = {
+  test: "Диагностика", grammar: "Грамматика", listen: "Аудирование",
+  write: "Письмо", speak: "Говорение", read: "Чтение", review: "Повторение / Экзамен"
+};
+
+/* Flatten weeks into days (one task = one day) */
+const DAYS = [];
+WEEKS.forEach(w => {
+  w.tasks.forEach(([type, text]) => {
+    DAYS.push({
+      day: DAYS.length + 1,
+      week: w.n,
+      weekTheme: w.theme,
+      grammar: w.grammar,
+      vocab: w.vocab,
+      type, text
+    });
+  });
+});
+const TOTAL_DAYS = DAYS.length;
+
+/* ==========================================================================
+   STATE
+   ========================================================================== */
+let state = { currentDay: 1, viewingDay: 1, completed: {} };
+const KEY = 'de-tagesplan-v1';
+
+/* Cloud sync config — initApp / saveToCloud / saveLangToCloud / logout live in assets/js/cloud-sync.js */
+const CLOUD_FIELD = 'planner_data';
+function getCloudPayload(){ return { currentDay: state.currentDay, completed: state.completed }; }
+function applyCloudData(d){
+  state.currentDay = d.currentDay || 1;
+  state.completed = d.completed || {};
+  state.viewingDay = state.currentDay;
+  try { localStorage.setItem(KEY, JSON.stringify({ currentDay: state.currentDay, completed: state.completed })); } catch(e){}
+}
+
+function load() {
+  try {
+    const s = localStorage.getItem(KEY);
+    if (s) {
+      const d = JSON.parse(s);
+      state.currentDay = d.currentDay || 1;
+      state.viewingDay = state.currentDay;
+      state.completed = d.completed || {};
+    }
+  } catch(e){}
+}
+function save() {
+  try { localStorage.setItem(KEY, JSON.stringify({ currentDay: state.currentDay, completed: state.completed })); } catch(e){}
+  saveToCloud();
+}
+
+/* ==========================================================================
+   CLIPBOARD TEXT
+   ========================================================================== */
+function buildPlanText(d) {
+  return `${T('planner_clip_header', d.day, TOTAL_DAYS, d.week)}
+${T('planner_clip_week_theme')}: ${d.weekTheme}
+${T('planner_clip_grammar')}: ${d.grammar}
+
+📋 ${T('planner_clip_task')} — [${T('type_'+d.type)}]:
+${d.text}
+
+${T('planner_clip_daily')}:
+${T('planner_clip_vocab', d.week, d.vocab)}
+
+${T('planner_clip_prompt')}`;
+}
+
+function copyPlan(day) {
+  const d = DAYS[day - 1];
+  const text = buildPlanText(d);
+  const onOk = () => {
+    showToast(T('planner_toast_copied'));
+    const btn = document.getElementById('copyBtn');
+    if (btn) { btn.classList.add('copied'); btn.textContent = T('planner_copied'); setTimeout(render, 1400); }
+  };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(onOk).catch(() => fallbackCopy(text, onOk));
+  } else {
+    fallbackCopy(text, onOk);
+  }
+}
+function fallbackCopy(text, onOk) {
+  const ta = document.createElement('textarea');
+  ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+  document.body.appendChild(ta); ta.focus(); ta.select();
+  try { document.execCommand('copy'); onOk(); }
+  catch(e) { showToast(T('planner_toast_copy_fail')); }
+  document.body.removeChild(ta);
+}
+
+/* ==========================================================================
+   ACTIONS
+   ========================================================================== */
+function goDay(n) {
+  state.viewingDay = Math.max(1, Math.min(TOTAL_DAYS, n));
+  render();
+}
+function goToCurrent() { state.viewingDay = state.currentDay; render(); }
+function jumpWeek(weekNum) {
+  const firstDay = DAYS.find(d => d.week === +weekNum);
+  if (firstDay) { state.viewingDay = firstDay.day; render(); }
+}
+function toggleDone(day) {
+  if (state.completed[day]) {
+    delete state.completed[day];
+  } else {
+    state.completed[day] = true;
+    if (day === state.currentDay && state.currentDay < TOTAL_DAYS) {
+      state.currentDay++;
+      state.viewingDay = state.currentDay;
+    }
+  }
+  save(); render();
+}
+
+/* ==========================================================================
+   RENDER
+   ========================================================================== */
+function render() {
+  const d = DAYS[state.viewingDay - 1];
+  const doneCount = Object.values(state.completed).filter(Boolean).length;
+  const pct = Math.round(doneCount / TOTAL_DAYS * 100);
+  const isDone = !!state.completed[d.day];
+  const isViewingCurrent = state.viewingDay === state.currentDay;
+
+  const weekOptions = WEEKS.map(w =>
+    `<option value="${w.n}" ${w.n === d.week ? 'selected' : ''}>${T('planner_week_option', w.n, esc(w.theme))}</option>`
+  ).join('');
+
+  document.getElementById('app').innerHTML = `
+<header>
+  <div class="container">
+    <div class="title-cat">${T('planner_title_cat')}</div>
+    <h1>Tages<em>plan</em></h1>
+    <div class="subtitle">${T('planner_subtitle')}</div>
+    <div class="user-bar">
+      <div class="nav-tabs">
+        <a class="nav-tab active" href="planner.html">${T('nav_planner')}</a>
+        <a class="nav-tab" href="vocab.html">${T('nav_vocab')}</a>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px">
+        <div class="lang-switcher">${renderLangSwitcher()}</div>
+        <span class="user-email">${esc(currentUser ? currentUser.email : '')}</span>
+        <button class="btn-logout" onclick="logout()">${T('logout')}</button>
+      </div>
+    </div>
+  </div>
+</header>
+
+<section class="container prog-section">
+  <div class="prog-head">
+    <span>${T('planner_progress', doneCount, TOTAL_DAYS)}</span>
+    <span>${pct}%</span>
+  </div>
+  <div class="prog-bar"><div class="prog-fill" style="width:${pct}%"></div></div>
+</section>
+
+<main class="container">
+  <div class="day-card">
+    <div class="day-top">
+      <div class="day-num num">${d.day}<small>${T('planner_day_of', TOTAL_DAYS)}</small></div>
+      <div class="day-week">
+        <div class="day-week-label">${T('planner_week', d.week)}</div>
+        <div class="day-week-theme">${esc(d.weekTheme)}</div>
+      </div>
+      ${isDone ? `<div class="day-done-badge">${T('planner_done_badge')}</div>` : ''}
+    </div>
+
+    <div class="day-body">
+      <div class="grammar-focus">
+        <div class="uppercase-mini">${T('planner_grammar_week')}</div>
+        <div class="grammar-focus-text">${esc(d.grammar)}</div>
+      </div>
+
+      <div class="task-block">
+        <div class="task-label-row">
+          <span class="task-badge ${d.type === 'review' ? 'review' : ''}">${T('type_'+d.type)}</span>
+          <span class="uppercase-mini">${T('planner_task_today')}</span>
+        </div>
+        <div class="task-main">${esc(d.text)}</div>
+      </div>
+
+      <div class="habits">
+        <div class="uppercase-mini">${T('planner_daily_also')}</div>
+        <div class="habit"><span class="habit-dot">●</span><span>${T('planner_vocab_habit', d.week, esc(d.vocab))}</span></div>
+      </div>
+    </div>
+
+    <div class="day-actions">
+      <button class="btn copy" id="copyBtn" onclick="copyPlan(${d.day})">${T('planner_copy')}</button>
+      <button class="btn done ${isDone ? 'is-done' : ''}" onclick="toggleDone(${d.day})">${isDone ? T('planner_undo') : T('planner_done')}</button>
+    </div>
+  </div>
+
+  <div class="nav-row">
+    <button class="nav-btn" onclick="goDay(${d.day - 1})" ${d.day <= 1 ? 'disabled' : ''}>${T('planner_prev')}</button>
+    <div class="nav-center">
+      <select class="jump-select" onchange="jumpWeek(this.value)">${weekOptions}</select>
+    </div>
+    <button class="nav-btn" onclick="goDay(${d.day + 1})" ${d.day >= TOTAL_DAYS ? 'disabled' : ''}>${T('planner_next')}</button>
+  </div>
+  ${!isViewingCurrent ? `<div style="text-align:center;margin-top:14px"><span class="today-link" onclick="goToCurrent()">${T('planner_back_current', state.currentDay)}</span></div>` : ''}
+
+  <div class="info-box">${T('planner_how_to')}</div>
+</main>
+
+<footer>
+  <div class="container f-row">
+    <span>${T('planner_footer')} · ${esc(currentUser ? currentUser.email : '')}</span>
+    <span style="font-family:var(--serif);font-style:italic">«Schritt für Schritt»</span>
+  </div>
+</footer>
+  `;
+}
+
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'SELECT') return;
+  if (e.key === 'ArrowLeft') goDay(state.viewingDay - 1);
+  else if (e.key === 'ArrowRight') goDay(state.viewingDay + 1);
+  else if (e.key === 'c' || e.key === 'C' || e.key === 'с' || e.key === 'С') copyPlan(state.viewingDay);
+});
+
+initApp();
+</script>
+</body>
+</html>

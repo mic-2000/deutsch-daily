@@ -1,0 +1,47 @@
+/* base.css — design tokens, reset, shared layout primitives (header/footer/toast). */
+:root {
+  --paper: #F2EDE3;
+  --paper-2: #E8E0D0;
+  --paper-3: #FAF6EC;
+  --ink: #1C1A17;
+  --ink-soft: #4A453D;
+  --line: #BFB5A0;
+  --accent: #B5512A;
+  --accent-2: #8C3F1F;
+  --green: #4A7C3A;
+  --gold: #C5963B;
+  --der: #2F5C8F;
+  --die: #A23B2D;
+  --das: #3F7A3A;
+  --serif: 'Fraunces', Georgia, serif;
+  --sans: 'Manrope', system-ui, sans-serif;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: var(--sans); background: var(--paper); color: var(--ink); min-height: 100vh; line-height: 1.5; }
+button { font-family: inherit; cursor: pointer; border: none; background: none; color: inherit; }
+input { font-family: inherit; }
+.serif { font-family: var(--serif); }
+.container { max-width: 920px; margin: 0 auto; padding: 0 24px; }
+.uppercase-mini { font-size: 10px; text-transform: uppercase; letter-spacing: 0.3em; color: var(--ink-soft); }
+.num { font-variant-numeric: tabular-nums; }
+
+header { border-bottom: 1px solid var(--line); padding: 28px 0 22px; }
+.title-cat { color: var(--accent); font-size: 11px; text-transform: uppercase; letter-spacing: 0.3em; }
+h1 { font-family: var(--serif); font-size: 44px; font-weight: 300; margin-top: 4px; letter-spacing: -0.02em; line-height: 1; }
+h1 em { color: var(--accent); font-style: italic; }
+.subtitle { font-family: var(--serif); font-style: italic; font-size: 16px; color: var(--ink-soft); margin-top: 6px; }
+
+main { padding: 26px 0 60px; }
+
+.info-box { background: var(--paper-3); border-left: 3px solid var(--accent); padding: 14px 18px; margin-top: 26px; font-size: 14px; color: var(--ink-soft); line-height: 1.6; }
+.info-box b { color: var(--ink); }
+
+footer { border-top: 1px solid var(--line); padding: 18px 0; margin-top: 36px; }
+.f-row { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; font-size: 12px; color: var(--ink-soft); }
+
+.toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: var(--ink); color: var(--paper); padding: 14px 24px; font-size: 14px; z-index: 200; opacity: 0; transition: opacity 0.25s; pointer-events: none; }
+.toast.show { opacity: 1; }
+
+@media (max-width: 600px) {
+  h1 { font-size: 34px; }
+}
