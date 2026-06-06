@@ -95,10 +95,14 @@ footer { border-top: 1px solid var(--line); padding: 18px 0; margin-top: 36px; }
 .f-row { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; font-size: 12px; color: var(--ink-soft); }
 
 /* user bar */
-.user-bar { display: flex; align-items: center; justify-content: flex-end; gap: 12px; margin-top: 10px; }
+.user-bar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
 .user-email { font-size: 12px; color: var(--ink-soft); }
 .btn-logout { font-size: 12px; color: var(--accent); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; background: none; border: none; font-family: inherit; }
 .btn-logout:hover { color: var(--accent-2); }
+.nav-tabs { display: flex; gap: 8px; }
+.nav-tab { font-size: 12px; padding: 5px 14px; border: 1px solid var(--line); color: var(--ink-soft); text-decoration: none; transition: all 0.15s; }
+.nav-tab:hover { border-color: var(--ink); color: var(--ink); }
+.nav-tab.active { border-color: var(--ink); background: var(--ink); color: var(--paper); }
 
 /* toast */
 .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: var(--ink); color: var(--paper); padding: 14px 24px; font-size: 14px; z-index: 200; opacity: 0; transition: opacity 0.25s; pointer-events: none; }
@@ -490,8 +494,14 @@ function render() {
     <h1>Tages<em>plan</em></h1>
     <div class="subtitle">План на каждый день · копируй и вставляй в чат</div>
     <div class="user-bar">
-      <span class="user-email">${esc(currentUser ? currentUser.email : '')}</span>
-      <button class="btn-logout" onclick="logout()">Выйти</button>
+      <div class="nav-tabs">
+        <a class="nav-tab active" href="german_daily_planner.html">📅 Планнер</a>
+        <a class="nav-tab" href="german_vocab_trainer.html">🗂 Словарь</a>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px">
+        <span class="user-email">${esc(currentUser ? currentUser.email : '')}</span>
+        <button class="btn-logout" onclick="logout()">Выйти</button>
+      </div>
     </div>
   </div>
 </header>
