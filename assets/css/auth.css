@@ -23,6 +23,8 @@ main { padding: 48px 0 60px; }
 }
 .btn-submit:hover { background: var(--accent); }
 .btn-submit:disabled { opacity: 0.5; cursor: not-allowed; }
+[data-theme="dark"] .btn-submit { background: var(--accent); }
+[data-theme="dark"] .btn-submit:hover { background: var(--accent-2); }
 
 .toggle-link { text-align: center; margin-top: 20px; font-size: 13px; color: var(--ink-soft); }
 .toggle-link span { color: var(--accent); cursor: pointer; text-decoration: underline; }

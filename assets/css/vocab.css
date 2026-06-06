@@ -18,6 +18,7 @@ main { padding: 24px 0 60px; }
 .btn { padding: 11px 18px; border: 1px solid var(--ink); font-size: 14px; transition: all 0.15s; display: inline-flex; gap: 8px; align-items: center; justify-content: center; white-space: nowrap; }
 .btn:hover { background: var(--ink); color: var(--paper); }
 .btn.primary { background: var(--ink); color: var(--paper); }
+[data-theme="dark"] .btn.primary { background: var(--accent); color: var(--paper); border-color: var(--accent); }
 .btn.accent { background: var(--accent); color: var(--paper); border-color: var(--accent); }
 .btn.accent:hover { background: var(--accent-2); border-color: var(--accent-2); }
 .btn.on-dark { background: var(--paper); color: var(--ink); border-color: var(--paper); }
@@ -44,6 +45,7 @@ main { padding: 24px 0 60px; }
 .wt { width: 42px; height: 42px; border: 1px solid var(--line); font-size: 13px; transition: all 0.12s; display: flex; align-items: center; justify-content: center; position: relative; }
 .wt:hover { border-color: var(--ink); }
 .wt.active { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+[data-theme="dark"] .wt.active { background: var(--ink-soft); border-color: var(--ink-soft); }
 .wt-dot { position: absolute; top: -2px; right: -2px; width: 8px; height: 8px; border-radius: 50%; }
 
 /* week header */
@@ -75,6 +77,7 @@ main { padding: 24px 0 60px; }
 .session-top-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
 .session-mode-badge { font-size: 11px; text-transform: uppercase; letter-spacing: 0.15em; padding: 5px 12px; border-radius: 2px; color: var(--paper); }
 .session-mode-badge.flashcard { background: var(--ink); }
+[data-theme="dark"] .session-mode-badge.flashcard { background: var(--ink-soft); }
 .session-mode-badge.article { background: var(--der); }
 .session-mode-badge.spelling { background: var(--accent); }
 .session-counter { font-size: 12px; color: var(--ink-soft); }
@@ -128,6 +131,7 @@ main { padding: 24px 0 60px; }
 
 .card-actions { display: flex; gap: 10px; margin-top: 26px; justify-content: center; flex-wrap: wrap; }
 .reveal-btn { background: var(--ink); color: var(--paper); padding: 13px 34px; font-size: 14px; }
+[data-theme="dark"] .reveal-btn { background: var(--accent); }
 .mark { padding: 13px 24px; font-size: 14px; border: 2px solid; min-width: 150px; transition: all 0.15s; }
 .mark.wrong { border-color: var(--die); color: var(--die); } .mark.wrong:hover { background: var(--die); color: #fff; }
 .mark.right { border-color: var(--green); color: var(--green); } .mark.right:hover { background: var(--green); color: #fff; }
