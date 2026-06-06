@@ -52,7 +52,7 @@ main { padding: 24px 0 60px; }
 .vocab-list { border: 1px solid var(--line); }
 .vocab-row { display: grid; grid-template-columns: 1fr 1fr 90px 36px; gap: 14px; align-items: center; padding: 9px 18px; border-bottom: 1px solid var(--line); }
 .vocab-row:last-child { border-bottom: none; }
-.vocab-row.mastered { background: #EDE5D2; }
+.vocab-row.mastered { background: var(--paper-2); }
 .vocab-de { font-family: var(--serif); font-size: 17px; }
 .vocab-de .art { font-weight: 600; }
 .vocab-de .art.der { color: var(--der); } .vocab-de .art.die { color: var(--die); } .vocab-de .art.das { color: var(--das); }

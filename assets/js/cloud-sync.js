@@ -28,6 +28,15 @@ async function initApp() {
     if (data && data.lang) setLang(data.lang, true);
   } catch(e) { /* offline or no record yet */ }
 
+  // Load theme (separate query so a missing column can't break the main load)
+  try {
+    const { data } = await sb.from('progress')
+      .select('theme')
+      .eq('user_id', session.user.id)
+      .single();
+    if (data && data.theme && typeof setTheme === 'function') setTheme(data.theme, true);
+  } catch(e) { /* theme column may not exist yet */ }
+
   render();
 }
 
@@ -48,6 +57,17 @@ async function saveLangToCloud(code) {
     await sb.from('progress').upsert({
       user_id: currentUser.id,
       lang: code,
+      updated_at: new Date().toISOString()
+    }, { onConflict: 'user_id' });
+  } catch(e) {}
+}
+
+async function saveThemeToCloud(theme) {
+  if (!currentUser) return;
+  try {
+    await sb.from('progress').upsert({
+      user_id: currentUser.id,
+      theme: theme,
       updated_at: new Date().toISOString()
     }, { onConflict: 'user_id' });
   } catch(e) {}

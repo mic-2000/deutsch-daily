@@ -16,8 +16,24 @@
   --serif: 'Fraunces', Georgia, serif;
   --sans: 'Manrope', system-ui, sans-serif;
 }
+[data-theme="dark"] {
+  --paper: #1A1815;
+  --paper-2: #232019;
+  --paper-3: #211E18;
+  --ink: #ECE6DA;
+  --ink-soft: #A89F8E;
+  --line: #3D372D;
+  --accent: #D9763F;
+  --accent-2: #C0673A;
+  --green: #6FA45A;
+  --gold: #D4A954;
+  --der: #5B8FC2;
+  --die: #D0604E;
+  --das: #6FA45A;
+  color-scheme: dark;
+}
 * { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: var(--sans); background: var(--paper); color: var(--ink); min-height: 100vh; line-height: 1.5; }
+body { font-family: var(--sans); background: var(--paper); color: var(--ink); min-height: 100vh; line-height: 1.5; transition: background 0.2s, color 0.2s; }
 button { font-family: inherit; cursor: pointer; border: none; background: none; color: inherit; }
 input { font-family: inherit; }
 .serif { font-family: var(--serif); }

@@ -13,3 +13,6 @@
 .lang-btn { font-size: 11px; padding: 3px 8px; border: 1px solid var(--line); color: var(--ink-soft); background: none; font-family: inherit; cursor: pointer; letter-spacing: 0.05em; }
 .lang-btn:hover { border-color: var(--ink); color: var(--ink); }
 .lang-btn.active { border-color: var(--ink); background: var(--ink); color: var(--paper); }
+
+.theme-toggle { font-size: 13px; line-height: 1; padding: 3px 9px; border: 1px solid var(--line); color: var(--ink-soft); background: none; font-family: inherit; cursor: pointer; }
+.theme-toggle:hover { border-color: var(--ink); color: var(--ink); }
