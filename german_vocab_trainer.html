@@ -108,6 +108,10 @@ footer { border-top: 1px solid var(--line); padding: 18px 0; margin-top: 36px; }
 .nav-tab { font-size: 12px; padding: 5px 14px; border: 1px solid var(--line); color: var(--ink-soft); text-decoration: none; transition: all 0.15s; }
 .nav-tab:hover { border-color: var(--ink); color: var(--ink); }
 .nav-tab.active { border-color: var(--ink); background: var(--ink); color: var(--paper); }
+.lang-switcher { display: flex; gap: 4px; }
+.lang-btn { font-size: 11px; padding: 3px 8px; border: 1px solid var(--line); color: var(--ink-soft); background: none; font-family: inherit; cursor: pointer; letter-spacing: 0.05em; }
+.lang-btn:hover { border-color: var(--ink); color: var(--ink); }
+.lang-btn.active { border-color: var(--ink); background: var(--ink); color: var(--paper); }
 
 /* ===== SESSION ===== */
 .session-bg { position: fixed; inset: 0; background: var(--paper); z-index: 50; display: flex; flex-direction: column; }
@@ -198,6 +202,7 @@ footer { border-top: 1px solid var(--line); padding: 18px 0; margin-top: 36px; }
 }
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="i18n.js"></script>
 </head>
 <body>
 <div id="app"></div>
@@ -526,12 +531,13 @@ async function initApp() {
   // Sync from cloud (overwrites local if cloud record exists)
   try {
     const { data } = await sb.from('progress')
-      .select('vocab_data')
+      .select('vocab_data, lang')
       .eq('user_id', session.user.id)
       .single();
     if (data && data.vocab_data) {
       applyData(data.vocab_data);
     }
+    if (data && data.lang) setLang(data.lang, true);
   } catch(e) { /* offline or no record yet — localStorage is fine */ }
 
   render();
@@ -547,6 +553,16 @@ async function saveToCloud() {
     }, { onConflict: 'user_id' });
   } catch(e) { /* ignore — localStorage is the fallback */ }
 }
+async function saveLangToCloud(code) {
+  if (!currentUser) return;
+  try {
+    await sb.from('progress').upsert({
+      user_id: currentUser.id,
+      lang: code,
+      updated_at: new Date().toISOString()
+    }, { onConflict: 'user_id' });
+  } catch(e) {}
+}
 async function logout() {
   await sb.auth.signOut();
   location.href = 'auth.html';
@@ -558,7 +574,7 @@ function serialize(){
 }
 function applyData(d){
   if (!d || typeof d !== 'object' || !d.mastery || typeof d.mastery !== 'object'){
-    showToast('Файл не похож на прогресс'); return false;
+    showToast(T('toast_file_bad')); return false;
   }
   state.mastery = d.mastery;
   if (d.modes) state.modes = d.modes;
@@ -592,7 +608,7 @@ function exportProgress(){
   a.href = url; a.download = 'deutsch-fortschritt.json';
   document.body.appendChild(a); a.click(); document.body.removeChild(a);
   setTimeout(()=>URL.revokeObjectURL(url), 1000);
-  showToast('Файл прогресса скачан');
+  showToast(T('toast_file_saved'));
 }
 function importProgress(){
   const inp = document.createElement('input');
@@ -600,7 +616,7 @@ function importProgress(){
   inp.onchange = () => {
     const file = inp.files && inp.files[0]; if (!file) return;
     const reader = new FileReader();
-    reader.onload = () => { try { if (applyData(JSON.parse(reader.result))) showToast('Прогресс загружен'); } catch(e){ showToast('Не удалось прочитать файл'); } };
+    reader.onload = () => { try { if (applyData(JSON.parse(reader.result))) showToast(T('toast_file_loaded')); } catch(e){ showToast(T('toast_file_read_err')); } };
     reader.readAsText(file);
   };
   inp.click();
@@ -623,7 +639,7 @@ async function createSyncFile(){
       types:[{ description:'Прогресс', accept:{ 'application/json':['.json'] } }] });
     await writeToFile();
     render(); showToast('Файл создан — прогресс сохраняется в него автоматически');
-  } catch(e){ if (e && e.name !== 'AbortError') showToast('Автосинхронизация недоступна (откройте страницу через http)'); }
+  } catch(e){ if (e && e.name !== 'AbortError') showToast(T('toast_sync_unavailable')); }
 }
 async function openSyncFile(){
   try {
@@ -632,9 +648,9 @@ async function openSyncFile(){
     const file = await h.getFile();
     const text = await file.text();
     let ok = true;
-    if (text.trim()){ try { ok = applyData(JSON.parse(text)); } catch(e){ ok = false; showToast('Файл повреждён'); } }
-    if (ok){ fileHandle = h; await writeToFile(); render(); showToast('Файл подключён — автосохранение включено'); }
-  } catch(e){ if (e && e.name !== 'AbortError') showToast('Автосинхронизация недоступна (откройте страницу через http)'); }
+    if (text.trim()){ try { ok = applyData(JSON.parse(text)); } catch(e){ ok = false; showToast(T('toast_file_corrupt')); } }
+    if (ok){ fileHandle = h; await writeToFile(); render(); showToast(T('toast_sync_opened')); }
+  } catch(e){ if (e && e.name !== 'AbortError') showToast(T('toast_sync_unavailable')); }
 }
 
 /* ==========================================================================
@@ -772,8 +788,11 @@ function submitSpelling(){
       else { correct = false; note = `корень верный, но артикль не тот`; }
     }
   }
-  // accept "core correct but missing article" as correct-with-note
-  if (!correct && art && normalize(art.core) === u){ correct = true; note = `верно, но с артиклем: <span class="correct-answer">${art.article} ${esc(art.core)}</span>`; }
+  if (!correct && art && normalize(art.core) === u){ correct = true; note = T('note_no_article', `<span class="correct-answer">${art.article}</span>`, esc(art.core)); }
+  if (!correct && art){
+    const noArt = u.replace(/^(der|die|das)\s+/,'');
+    if (noArt === normalize(art.core) && u !== normalize(art.core)) note = T('note_core_correct');
+  }
 
   s.spellCorrect = correct; s.spellNote = note;
   answer(correct);
@@ -793,62 +812,63 @@ function render(){
 
   let html = `
 <header><div class="container">
-  <div class="title-cat">Deutsch · A1 → B1</div>
+  <div class="title-cat">${T('vocab_title_cat')}</div>
   <h1>Vokabel<em>trainer</em></h1>
-  <div class="subtitle">Карточки · артикли · написание · интервальное повторение</div>
+  <div class="subtitle">${T('vocab_subtitle')}</div>
   <div class="user-bar">
     <div class="nav-tabs">
-      <a class="nav-tab" href="german_daily_planner.html">📅 Планнер</a>
-      <a class="nav-tab active" href="german_vocab_trainer.html">🗂 Словарь</a>
+      <a class="nav-tab" href="german_daily_planner.html">${T('nav_planner')}</a>
+      <a class="nav-tab active" href="german_vocab_trainer.html">${T('nav_vocab')}</a>
     </div>
     <div style="display:flex;align-items:center;gap:12px">
+      <div class="lang-switcher">${renderLangSwitcher()}</div>
       <span class="user-email">${esc(currentUser ? currentUser.email : '')}</span>
-      <button class="btn-logout" onclick="logout()">Выйти</button>
+      <button class="btn-logout" onclick="logout()">${T('logout')}</button>
     </div>
   </div>
 </div></header>
 
 <section class="container stats">
-  <div><div class="stat-label">Всего слов</div><div class="stat-big num">${g.total}</div><div class="stat-sub">в программе</div></div>
-  <div><div class="stat-label">Выучено</div><div class="stat-big green num">${g.mastered}</div><div class="stat-sub">${Math.round(g.mastered/g.total*100)}% · коробка 5</div></div>
-  <div><div class="stat-label">Изучается</div><div class="stat-big num">${g.learning}</div><div class="stat-sub">в коробках 1–4</div></div>
-  <div><div class="stat-label">Пора повторить</div><div class="stat-big accent num">${g.due}</div><div class="stat-sub">слов сегодня</div></div>
+  <div><div class="stat-label">${T('stat_total')}</div><div class="stat-big num">${g.total}</div><div class="stat-sub">${T('stat_total_sub')}</div></div>
+  <div><div class="stat-label">${T('stat_mastered')}</div><div class="stat-big green num">${g.mastered}</div><div class="stat-sub">${T('stat_mastered_sub', Math.round(g.mastered/g.total*100))}</div></div>
+  <div><div class="stat-label">${T('stat_learning')}</div><div class="stat-big num">${g.learning}</div><div class="stat-sub">${T('stat_learning_sub')}</div></div>
+  <div><div class="stat-label">${T('stat_due')}</div><div class="stat-big accent num">${g.due}</div><div class="stat-sub">${T('stat_due_sub')}</div></div>
 </section>
 
 <main class="container">
 
   <div class="due-banner">
     <div class="due-banner-text">
-      ${g.due > 0 ? `Пора повторить ${g.due} ${plural(g.due,'слово','слова','слов')}` : 'На сегодня всё повторено 🎉'}
-      <small>${g.due > 0 ? 'Интервальное повторение — главное для долгой памяти' : 'Можно учить новые слова в любой неделе ниже'}</small>
+      ${g.due > 0 ? T('due_title', g.due) : T('due_all_done')}
+      <small>${g.due > 0 ? T('due_hint') : T('due_all_done_hint')}</small>
     </div>
-    <button class="btn on-dark big" onclick="startSession({type:'review-all'})" ${g.due===0?'disabled':''}>Повторить пору</button>
+    <button class="btn on-dark big" onclick="startSession({type:'review-all'})" ${g.due===0?'disabled':''}>${T('due_btn')}</button>
   </div>
 
   <div class="settings-bar">
-    <span class="settings-label">Режимы в тренировке:</span>
-    ${modeChip('flashcard','Карточки')}
-    ${modeChip('article','Артикль der/die/das')}
-    ${modeChip('spelling','Написание слова')}
+    <span class="settings-label">${T('settings_modes')}</span>
+    ${modeChip('flashcard', T('mode_flashcard'))}
+    ${modeChip('article', T('mode_article'))}
+    ${modeChip('spelling', T('mode_spelling'))}
   </div>
 
   <div class="settings-bar">
-    <span class="settings-label">Прогресс между браузерами:</span>
-    <button class="chip" onclick="exportProgress()">📤 Сохранить в файл</button>
-    <button class="chip" onclick="importProgress()">📥 Загрузить из файла</button>
+    <span class="settings-label">${T('settings_sync')}</span>
+    <button class="chip" onclick="exportProgress()">${T('settings_save_file')}</button>
+    <button class="chip" onclick="importProgress()">${T('settings_load_file')}</button>
     ${FSA ? `
       <span style="width:1px;height:22px;background:var(--line)"></span>
       ${fileHandle
-        ? `<span class="chip on" style="cursor:default"><span class="chip-check">✓</span>автосохранение в файл</span>`
-        : `<button class="chip" onclick="createSyncFile()">🔗 Создать файл</button>
-           <button class="chip" onclick="openSyncFile()">🔗 Открыть файл</button>`}
-    ` : `<span class="sync-hint">Автосинхронизация — только если открыть страницу через http. При открытии файла используйте «Сохранить / Загрузить»; держите файл в облачной папке (Drive / Dropbox).</span>`}
+        ? `<span class="chip on" style="cursor:default"><span class="chip-check">✓</span>${T('settings_auto_on')}</span>`
+        : `<button class="chip" onclick="createSyncFile()">${T('settings_create_file')}</button>
+           <button class="chip" onclick="openSyncFile()">${T('settings_open_file')}</button>`}
+    ` : `<span class="sync-hint">${T('settings_sync_hint')}</span>`}
   </div>
 
   <div class="week-tabs">
     <div class="tabs-label">
-      <span class="uppercase-mini">Неделя</span>
-      <span class="uppercase-mini">● зелёная = выучена · золотая = в работе</span>
+      <span class="uppercase-mini">${T('tabs_label')}</span>
+      <span class="uppercase-mini">${T('tabs_legend')}</span>
     </div>
     <div class="tabs-grid">
       ${Object.keys(VOCAB).map(w=>{
@@ -866,9 +886,9 @@ function render(){
     <div class="wk-num num">W${String(week).padStart(2,'0')}</div>
     <div class="wk-meta">
       <div class="wk-theme">${esc(wk.theme)}</div>
-      <div class="wk-count">${ws.total} слов · выучено ${ws.mastered} · в работе ${ws.learning} · новых ${ws.neu}</div>
+      <div class="wk-count">${T('words_count', ws.total, ws.mastered, ws.learning, ws.neu)}</div>
     </div>
-    <button class="btn accent big" onclick="startSession({type:'week',week:${week}})">Тренировать неделю ${week}</button>
+    <button class="btn accent big" onclick="startSession({type:'week',week:${week}})">${T('train_week', week)}</button>
   </div>
 
   <div class="vocab-list">
@@ -879,20 +899,18 @@ function render(){
       return `<div class="vocab-row ${mastered?'mastered':''}">
         <div class="vocab-de">${deColored(w[0])}</div>
         <div class="vocab-ru">${esc(w[1])}</div>
-        <button class="box-bar" onclick="resetWord(${week},${i})" title="Коробка ${box} из 5 · нажми, чтобы сбросить это слово">${segs}</button>
+        <button class="box-bar" onclick="resetWord(${week},${i})" title="${T('box_title', box)}">${segs}</button>
         <button class="mini-audio" onclick="speakWord(${week},${i},this)" title="Произношение">🔊</button>
       </div>`;
     }).join('')}
   </div>
 
-  <div class="info-box">
-    <b>Как считается прогресс.</b> У каждого слова 5 коробок (это кубики рядом). Новое слово — 0 кубиков. Каждый правильный ответ поднимает на одну коробку и откладывает повтор дальше: <b>1 → 2 → 4 → 8 → 16 дней</b>. Ошибка возвращает слово в первую коробку. <b>Коробка 5 = выучено</b> (нужно 5 правильных ответов подряд). Каждый день жми «Повторить пору» — это и есть закрепление. Чтобы сбросить прогресс одного слова, нажми на его кубики; сбросить всё — кнопка внизу.
-  </div>
+  <div class="info-box">${T('vocab_info')}</div>
 </main>
 
 <footer><div class="container f-row">
-  <span>Прогресс синхронизируется с облаком · озвучка — синтезатор речи системы</span>
-  <button onclick="resetAll()" style="font-size:12px;color:var(--ink-soft);text-decoration:underline;text-underline-offset:3px;background:none;border:none;cursor:pointer">Сбросить весь прогресс</button>
+  <span>${T('vocab_footer')}</span>
+  <button onclick="resetAll()" style="font-size:12px;color:var(--ink-soft);text-decoration:underline;text-underline-offset:3px;background:none;border:none;cursor:pointer">${T('reset_all')}</button>
 </div></footer>`;
 
   if (state.confirm){
@@ -901,8 +919,8 @@ function render(){
   <div class="confirm-box">
     <div class="confirm-msg">${esc(state.confirm.message)}</div>
     <div class="confirm-actions">
-      <button class="btn" onclick="confirmNo()">Отмена</button>
-      <button class="btn accent" onclick="confirmYes()">Сбросить</button>
+      <button class="btn" onclick="confirmNo()">${T('confirm_no')}</button>
+      <button class="btn accent" onclick="confirmYes()">${T('confirm_yes')}</button>
     </div>
   </div>
 </div>`;
@@ -924,7 +942,7 @@ function modeChip(mode,label){
 function toggleMode(mode){
   // keep at least one mode on
   const others = Object.keys(state.modes).filter(m=>m!==mode).some(m=>state.modes[m]);
-  if (state.modes[mode] && !others){ showToast('Хотя бы один режим должен быть включён'); return; }
+  if (state.modes[mode] && !others){ showToast(T('toast_at_least_one_mode')); return; }
   state.modes[mode] = !state.modes[mode]; save(); render();
 }
 function selectWeek(w){ state.selectedWeek = +w; save(); render(); }
@@ -937,7 +955,7 @@ function renderSession(){
   if (s.pos >= s.queue.length){ renderEnd(); return; }
   const card = s.queue[s.pos];
   const progress = (s.pos / s.queue.length) * 100;
-  const modeLabel = { flashcard:'Карточка', article:'Артикль', spelling:'Написание' }[card.mode];
+  const modeLabel = { flashcard: T('mode_flashcard'), article: T('mode_article').split(' ')[0], spelling: T('mode_spelling').split(' ')[0] }[card.mode];
 
   let bodyHtml = '';
   if (card.mode === 'flashcard') bodyHtml = renderFlashcard(card, s);
@@ -948,7 +966,7 @@ function renderSession(){
 <div class="session-bg">
   <div class="session-top"><div class="container session-top-row">
     <span class="session-mode-badge ${card.mode}">${modeLabel}</span>
-    <span class="session-counter">${s.pos+1} / ${s.queue.length}${s.scope.type==='review-all'?' · повторение':' · неделя '+s.scope.week}</span>
+    <span class="session-counter">${s.pos+1} / ${s.queue.length}${s.scope.type==='review-all'? T('session_review') : T('session_week', s.scope.week)}</span>
     <button class="session-close" onclick="closeSession()">×</button>
   </div>
   <div class="container"><div class="session-progress"><div class="session-progress-fill" style="width:${progress}%"></div></div></div>
@@ -963,17 +981,17 @@ function renderSession(){
 
 function renderFlashcard(card, s){
   return `
-    <div class="card-prompt-label">Что это значит?</div>
+    <div class="card-prompt-label">${T('flashcard_prompt')}</div>
     <button class="audio-btn" id="cardAudio" onclick="speakWord(${card.week},${card.idx},this)">🔊</button>
     <div class="card-word">${deColored(card.de)}</div>
     <div class="card-sub">${s.revealed ? esc(card.ru) : '&nbsp;'}</div>
     <div class="card-actions">
       ${!s.revealed
-        ? `<button class="reveal-btn" onclick="revealFlash()">Показать перевод</button>`
-        : `<button class="mark wrong" onclick="answer(false)">Не знал</button>
-           <button class="mark right" onclick="answer(true)">Знал</button>`}
+        ? `<button class="reveal-btn" onclick="revealFlash()">${T('flashcard_show')}</button>`
+        : `<button class="mark wrong" onclick="answer(false)">${T('flashcard_wrong')}</button>
+           <button class="mark right" onclick="answer(true)">${T('flashcard_right')}</button>`}
     </div>
-    <div class="kbd-hint">Space — показать · 1/← не знал · 2/→ знал</div>`;
+    <div class="kbd-hint">${T('flashcard_hint')}</div>`;
 }
 
 function renderArticle(card, s){
@@ -983,27 +1001,25 @@ function renderArticle(card, s){
     let cls = 'art-btn ' + a;
     if (s.answered){
       if (a === s.chosenArticle){
-        // the button the user pressed: solid fill, white letter
         cls += (a === art.article) ? ' chosen-correct' : ' chosen-wrong';
       } else if (a === art.article){
-        // user picked the wrong one — outline the correct answer
         cls += ' reveal-correct';
       }
     }
     return `<button class="${cls}" ${s.answered?'disabled':''} onclick="chooseArticle('${a}')">${a}</button>`;
   }).join('');
   return `
-    <div class="card-prompt-label">Какой артикль?</div>
+    <div class="card-prompt-label">${T('article_prompt')}</div>
     <div class="card-word">${esc(art.core)}</div>
     <div class="art-btns">${btns}</div>
     ${s.answered ? `
       <div class="feedback ${s.lastCorrect?'ok':'bad'}">
-        ${s.lastCorrect ? '✓ Верно!' : '✗ Правильно:'} <span class="correct-answer"><span class="art ${art.article}" style="font-weight:600">${art.article}</span> ${esc(art.core)}</span> — ${esc(card.ru)}
+        ${s.lastCorrect ? T('article_correct') : T('article_wrong')} <span class="correct-answer"><span class="art ${art.article}" style="font-weight:600">${art.article}</span> ${esc(art.core)}</span> — ${esc(card.ru)}
       </div>
       <button class="audio-btn" id="cardAudio" onclick="speakWord(${card.week},${card.idx},this)" style="margin-top:8px">🔊</button>
-      <div class="card-actions"><button class="next-btn" onclick="nextCard()">Дальше →</button></div>
-      <div class="kbd-hint">Enter — дальше</div>
-    ` : `<div class="kbd-hint">1 — der · 2 — die · 3 — das</div>`}`;
+      <div class="card-actions"><button class="next-btn" onclick="nextCard()">${T('article_next')}</button></div>
+      <div class="kbd-hint">${T('article_hint_next')}</div>
+    ` : `<div class="kbd-hint">${T('article_hint')}</div>`}`;
 }
 function chooseArticle(a){
   const s = state.session; if (s.answered) return;
@@ -1019,16 +1035,16 @@ function renderSpelling(card, s){
     const userRaw = (s.spellValue || '').trim();
     if (s.spellCorrect){
       answeredBlock = `
-        <div class="feedback ok">✓ Верно — <span class="correct-answer">${deColored(card.de)}</span>
+        <div class="feedback ok">${T('spelling_correct')} <span class="correct-answer">${deColored(card.de)}</span>
           ${s.spellNote ? '<br><span class="spell-note">'+s.spellNote+'</span>' : ''}
         </div>`;
     } else {
       const d = diffChars(userRaw, card.de);
-      const userShow = userRaw ? `<span class="cmp-val">${d.aHtml}</span>` : '<span class="spell-empty">(ничего не введено)</span>';
+      const userShow = userRaw ? `<span class="cmp-val">${d.aHtml}</span>` : `<span class="spell-empty">${T('spelling_empty')}</span>`;
       answeredBlock = `
         <div class="spell-compare">
-          <div class="cmp-row"><span class="cmp-label">Твой ответ</span>${userShow}</div>
-          <div class="cmp-row"><span class="cmp-label">Правильно</span><span class="cmp-val">${d.bHtml}</span></div>
+          <div class="cmp-row"><span class="cmp-label">${T('spelling_your')}</span>${userShow}</div>
+          <div class="cmp-row"><span class="cmp-label">${T('spelling_right_ans')}</span><span class="cmp-val">${d.bHtml}</span></div>
           <div class="cmp-ru">${esc(card.ru)}</div>
         </div>`;
     }
