@@ -85,13 +85,13 @@ function load() {
     if (s) {
       const d = JSON.parse(s);
       state.currentDay = d.currentDay || 1;
-      state.viewingDay = state.currentDay;
+      state.viewingDay = d.viewingDay || state.currentDay;
       state.completed = d.completed || {};
     }
   } catch(e){}
 }
 function save() {
-  try { localStorage.setItem(KEY, JSON.stringify({ currentDay: state.currentDay, completed: state.completed })); } catch(e){}
+  try { localStorage.setItem(KEY, JSON.stringify({ currentDay: state.currentDay, viewingDay: state.viewingDay, completed: state.completed })); } catch(e){}
   saveToCloud();
 }
 
@@ -135,14 +135,18 @@ function fallbackCopy(text, onOk) {
   document.body.removeChild(ta);
 }
 
+function saveViewing() {
+  try { localStorage.setItem(KEY, JSON.stringify({ currentDay: state.currentDay, viewingDay: state.viewingDay, completed: state.completed })); } catch(e){}
+}
+
 /* ==========================================================================
    ACTIONS
    ========================================================================== */
 function goDay(n) {
   state.viewingDay = Math.max(1, Math.min(TOTAL_DAYS, n));
-  render();
+  saveViewing(); render();
 }
-function goToCurrent() { state.viewingDay = state.currentDay; render(); }
+function goToCurrent() { state.viewingDay = state.currentDay; saveViewing(); render(); }
 function jumpWeek(weekNum) {
   const firstDay = DAYS.find(d => d.week === +weekNum);
   if (firstDay) { state.viewingDay = firstDay.day; render(); }
