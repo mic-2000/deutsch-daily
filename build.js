@@ -8,7 +8,7 @@ if (!url || !key) {
   process.exit(1);
 }
 
-const files = ['auth.html', 'german_daily_planner.html', 'german_vocab_trainer.html'];
+const files = ['index.html', 'auth.html', 'german_daily_planner.html', 'german_vocab_trainer.html'];
 
 files.forEach(file => {
   let content = fs.readFileSync(file, 'utf8');
