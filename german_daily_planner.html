@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Deutsch · Tagesplan</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500;9..144,600&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --paper: #F2EDE3;
+  --paper-2: #E8E0D0;
+  --paper-3: #FAF6EC;
+  --ink: #1C1A17;
+  --ink-soft: #4A453D;
+  --line: #BFB5A0;
+  --accent: #B5512A;
+  --accent-2: #8C3F1F;
+  --green: #4A7C3A;
+  --gold: #C5963B;
+  --serif: 'Fraunces', Georgia, serif;
+  --sans: 'Manrope', system-ui, sans-serif;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: var(--sans); background: var(--paper); color: var(--ink); min-height: 100vh; line-height: 1.5; }
+button { font-family: inherit; cursor: pointer; border: none; background: none; color: inherit; }
+.serif { font-family: var(--serif); }
+.container { max-width: 820px; margin: 0 auto; padding: 0 24px; }
+.uppercase-mini { font-size: 10px; text-transform: uppercase; letter-spacing: 0.3em; color: var(--ink-soft); }
+.num { font-variant-numeric: tabular-nums; }
+
+header { border-bottom: 1px solid var(--line); padding: 28px 0 22px; }
+.title-cat { color: var(--accent); font-size: 11px; text-transform: uppercase; letter-spacing: 0.3em; }
+h1 { font-family: var(--serif); font-size: 44px; font-weight: 300; margin-top: 4px; letter-spacing: -0.02em; line-height: 1; }
+h1 em { color: var(--accent); font-style: italic; }
+.subtitle { font-family: var(--serif); font-style: italic; font-size: 16px; color: var(--ink-soft); margin-top: 6px; }
+
+.prog-section { padding: 22px 0 6px; }
+.prog-head { display: flex; justify-content: space-between; font-size: 11px; text-transform: uppercase; letter-spacing: 0.2em; color: var(--ink-soft); margin-bottom: 8px; }
+.prog-bar { height: 12px; background: var(--paper-2); border: 1px solid var(--line); position: relative; }
+.prog-fill { height: 100%; background: var(--accent); transition: width 0.4s; }
+
+main { padding: 26px 0 60px; }
+
+/* DAY CARD */
+.day-card { border: 2px solid var(--ink); background: var(--paper-3); }
+.day-top { display: flex; align-items: center; gap: 20px; padding: 22px 26px; border-bottom: 1px solid var(--line); }
+.day-num { font-family: var(--serif); font-size: 52px; font-weight: 300; color: var(--accent); line-height: 1; }
+.day-num small { display: block; font-size: 10px; text-transform: uppercase; letter-spacing: 0.2em; color: var(--ink-soft); font-family: var(--sans); margin-top: 4px; }
+.day-week { flex: 1; }
+.day-week-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.2em; color: var(--ink-soft); }
+.day-week-theme { font-family: var(--serif); font-size: 22px; margin-top: 2px; }
+.day-done-badge { background: var(--green); color: var(--paper); font-size: 11px; text-transform: uppercase; letter-spacing: 0.15em; padding: 6px 12px; }
+
+.day-body { padding: 24px 26px; }
+.grammar-focus { background: var(--paper-2); padding: 12px 16px; border-radius: 2px; margin-bottom: 22px; }
+.grammar-focus .uppercase-mini { margin-bottom: 4px; }
+.grammar-focus-text { font-family: var(--serif); font-size: 17px; }
+
+.task-block { margin-bottom: 22px; }
+.task-label-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.task-badge { font-size: 11px; text-transform: uppercase; letter-spacing: 0.12em; padding: 4px 10px; background: var(--accent); color: var(--paper); border-radius: 2px; }
+.task-badge.review { background: var(--ink); }
+.task-main { font-family: var(--serif); font-size: 24px; font-weight: 400; line-height: 1.3; }
+
+.habits { border-top: 1px solid var(--line); padding-top: 18px; }
+.habits .uppercase-mini { margin-bottom: 10px; }
+.habit { display: flex; gap: 10px; align-items: flex-start; padding: 4px 0; font-size: 15px; }
+.habit-dot { color: var(--accent); margin-top: 2px; }
+
+.day-actions { display: flex; gap: 10px; padding: 0 26px 26px; flex-wrap: wrap; }
+.btn { padding: 14px 22px; border: 1px solid var(--ink); font-size: 14px; transition: all 0.15s; display: inline-flex; gap: 8px; align-items: center; justify-content: center; white-space: nowrap; }
+.btn:hover { background: var(--ink); color: var(--paper); }
+.btn.copy { flex: 1; min-width: 240px; background: var(--accent); color: var(--paper); border-color: var(--accent); font-weight: 600; font-size: 15px; }
+.btn.copy:hover { background: var(--accent-2); border-color: var(--accent-2); }
+.btn.copy.copied { background: var(--green); border-color: var(--green); }
+.btn.done { background: var(--ink); color: var(--paper); }
+.btn.done:hover { background: var(--accent); border-color: var(--accent); }
+.btn.done.is-done { background: transparent; color: var(--ink-soft); border-color: var(--line); }
+
+/* NAV */
+.nav-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 22px; flex-wrap: wrap; }
+.nav-btn { padding: 10px 16px; border: 1px solid var(--line); font-size: 13px; transition: all 0.15s; }
+.nav-btn:hover:not(:disabled) { border-color: var(--ink); background: var(--ink); color: var(--paper); }
+.nav-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+.nav-center { display: flex; gap: 8px; align-items: center; }
+.jump-select { padding: 9px 12px; border: 1px solid var(--line); background: var(--paper); font-family: inherit; font-size: 13px; }
+.today-link { font-size: 12px; color: var(--accent); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+
+.info-box { background: var(--paper-3); border-left: 3px solid var(--accent); padding: 14px 18px; margin-top: 26px; font-size: 14px; color: var(--ink-soft); line-height: 1.6; }
+.info-box b { color: var(--ink); }
+
+footer { border-top: 1px solid var(--line); padding: 18px 0; margin-top: 36px; }
+.f-row { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; font-size: 12px; color: var(--ink-soft); }
+
+/* toast */
+.toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: var(--ink); color: var(--paper); padding: 14px 24px; font-size: 14px; z-index: 200; opacity: 0; transition: opacity 0.25s; pointer-events: none; }
+.toast.show { opacity: 1; }
+
+@media (max-width: 600px) {
+  h1 { font-size: 34px; }
+  .day-num { font-size: 40px; }
+  .day-week-theme { font-size: 18px; }
+  .task-main { font-size: 20px; }
+  .day-top { flex-wrap: wrap; gap: 12px; }
+}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ==========================================================================
+   CURRICULUM (24 weeks). Each week: theme, grammar focus, vocab theme, tasks.
+   Tasks: [type, text]. Vocab is a daily habit, not a separate day.
+   ========================================================================== */
+const WEEKS = [
+  { n:1, theme:"Диагностика + основы Präsens", grammar:"Präsens, артикли der/die/das, sein/haben/werden", vocab:"приветствия, семья, числа", tasks:[
+    ["test","Пройти диагностический тест и зафиксировать стартовый уровень"],
+    ["grammar","Выучить наизусть спряжение sein, haben, werden (Präsens + Präteritum)"],
+    ["listen","Deutsche Welle — Nicos Weg A1, эпизоды 1–3 (с упражнениями)"],
+    ["write","Написать текст о себе — Steckbrief, 5–7 предложений"],
+    ["speak","Записать аудио: представить себя за 1 минуту без бумажки"],
+  ]},
+  { n:2, theme:"Akkusativ полный разбор", grammar:"Akkusativ + ein/eine/einen, отрицание kein", vocab:"еда, покупки", tasks:[
+    ["grammar","Таблица Akkusativ: der→den, ein→einen, mein→meinen, kein→keinen"],
+    ["grammar","Глаголы с Akkusativ: haben, kaufen, sehen, brauchen, suchen, nehmen"],
+    ["listen","Nicos Weg A1, эпизоды 4–8"],
+    ["write","Диалог покупателя и продавца в магазине — 10 реплик"],
+    ["speak","Ролевая игра: заказ еды в кафе (с тандем-партнёром или с ИИ)"],
+  ]},
+  { n:3, theme:"Модальные глаголы", grammar:"können, müssen, wollen, möchten, dürfen, sollen", vocab:"хобби, спорт, досуг", tasks:[
+    ["grammar","Все 6 модальных глаголов — таблицы спряжения наизусть"],
+    ["grammar","Рамочная конструкция: модальный на 2-м месте, Infinitiv в конце"],
+    ["listen","Nicos Weg A1, эпизоды 9–14"],
+    ["write","10 предложений: что я могу / хочу / должен делать сегодня"],
+    ["speak","Рассказать о своих хобби — 1 минута без подготовки"],
+  ]},
+  { n:4, theme:"Dativ + Wechselpräpositionen", grammar:"Dativ; 9 предлогов Wo? (Dat) vs Wohin? (Akk)", vocab:"жильё, мебель, помещения", tasks:[
+    ["grammar","Dativ: der→dem, die→der, das→dem, мн.ч.→den+n; глаголы helfen, gefallen, danken"],
+    ["grammar","9 Wechselpräpositionen: an/auf/hinter/in/neben/über/unter/vor/zwischen"],
+    ["listen","Nicos Weg A1, эпизоды 15–20"],
+    ["write","Описать свою комнату — 10 предложений (где что стоит, Dativ)"],
+    ["speak","Виртуальная экскурсия по своей квартире"],
+  ]},
+  { n:5, theme:"Perfekt — прошедшее в речи", grammar:"Perfekt: haben/sein + Partizip II", vocab:"глаголы в Partizip II", tasks:[
+    ["grammar","Образование Partizip II: ge-…-t / ge-…-en / неправильные / -ieren без ge"],
+    ["grammar","Когда haben, когда sein (движение и изменение состояния → sein)"],
+    ["listen","Nicos Weg A1, эпизоды 21–25"],
+    ["write","Текст «Mein Wochenende» — 100 слов в Perfekt"],
+    ["speak","Рассказать, что делал вчера — 5 предложений в Perfekt"],
+  ]},
+  { n:6, theme:"Отделяемые приставки + Zeitangaben", grammar:"Trennbare Verben; am/im/um/in", vocab:"транспорт, поездки", tasks:[
+    ["grammar","20 отделяемых приставок: an-, auf-, aus-, ein-, mit-, vor-, zurück-…"],
+    ["grammar","Предлоги времени: am Montag, im Januar, um 8 Uhr, in 2 Stunden"],
+    ["listen","Slow German Podcast — эпизод 1 (дважды: без текста и с текстом)"],
+    ["write","Мой обычный день — 12 предложений с отделяемыми глаголами"],
+    ["speak","Описать вчерашний день в Perfekt — 3 минуты со связками"],
+  ]},
+  { n:7, theme:"Imperativ + Wegbeschreibung", grammar:"Imperativ (du/ihr/Sie); ориентация в городе", vocab:"город, ориентиры", tasks:[
+    ["grammar","Imperativ для du/ihr/Sie + особые формы (Sei! Nimm! Gib!)"],
+    ["grammar","Объяснение дороги: geradeaus, links/rechts abbiegen, an…vorbei, bis zur Ampel"],
+    ["listen","Easy German на YouTube — 1 видео с двойными субтитрами"],
+    ["write","Объяснить маршрут от дома до ближайшей станции (8 шагов)"],
+    ["speak","Спросить дорогу у носителя в Tandem или на улице в Берлине"],
+  ]},
+  { n:8, theme:"Закрепление + A2 вход-тест", grammar:"Повторение всей фазы 1", vocab:"повторение фазы 1", tasks:[
+    ["review","Повторить вслух таблицы Akkusativ и Dativ — без подсказок"],
+    ["review","Прорешать бесплатный пробный A2-тест Goethe (все 4 секции)"],
+    ["listen","Nicos Weg A2, эпизоды 1–5 (новый уровень сложности)"],
+    ["write","Письмо другу о последнем месяце — 120 слов в Perfekt"],
+    ["speak","Полноценный разговор 15 минут с тандем-партнёром"],
+  ]},
+  { n:9, theme:"Präteritum sein/haben/модальные", grammar:"war, hatte, konnte, musste, wollte, durfte", vocab:"биография, этапы жизни", tasks:[
+    ["grammar","Спряжение war/hatte и всех модальных в Präteritum"],
+    ["grammar","Когда Präteritum (письмо, sein/haben/модальные везде) vs Perfekt (речь)"],
+    ["listen","Nicos Weg A2, эпизоды 6–10"],
+    ["write","Мини-биография известного человека — 150 слов в Präteritum"],
+    ["speak","Рассказать о своём детстве"],
+  ]},
+  { n:10, theme:"Präteritum правильных и неправильных", grammar:"Полная система Präteritum", vocab:"учёба, работа", tasks:[
+    ["grammar","30 сильных глаголов в Präteritum: ging, kam, fuhr, aß, trank, sah…"],
+    ["grammar","Слабые глаголы: основа + -te- (machte, lernte, arbeitete)"],
+    ["listen","Deutsch perfekt — статья с аудио (уровень A2–B1)"],
+    ["write","Сказка или короткий рассказ в Präteritum — 200 слов"],
+    ["speak","Рассказать о школьных годах"],
+  ]},
+  { n:11, theme:"Komparativ + Superlativ", grammar:"Сравнительная и превосходная степени, als/wie", vocab:"характер, личность", tasks:[
+    ["grammar","schnell → schneller → am schnellsten + исключения (gut/besser/am besten)"],
+    ["grammar","Конструкции: so … wie (равенство), -er als (сравнение)"],
+    ["listen","Easy German — видео о жизни в Германии"],
+    ["write","Сравнить два города или две страны — 150 слов"],
+    ["speak","Сравнить свою страну и Германию"],
+  ]},
+  { n:12, theme:"Придаточные weil / dass / ob", grammar:"Nebensätze — глагол в конец", vocab:"мнение, аргументы", tasks:[
+    ["grammar","weil (потому что), dass (что), ob (ли) — глагол едет в конец, запятая"],
+    ["grammar","Если придаточное стоит первым: «Weil…, verb главного сразу после запятой»"],
+    ["listen","Slow German Podcast — 2 эпизода"],
+    ["write","Эссе-мнение на социальную тему — 150 слов, минимум 5 weil/dass"],
+    ["speak","Объяснить, почему ты учишь немецкий (несколько причин с weil)"],
+  ]},
+  { n:13, theme:"wenn / als + временные придаточные", grammar:"Temporale Nebensätze", vocab:"воспоминания, эмоции", tasks:[
+    ["grammar","wenn (повтор./будущее) vs als (один раз в прошлом) + während/bevor/nachdem"],
+    ["listen","Nicos Weg A2, эпизоды 11–15"],
+    ["write","Воспоминание из детства — 200 слов (Präteritum + als)"],
+    ["speak","Рассказать о важном событии в жизни"],
+  ]},
+  { n:14, theme:"Genitiv", grammar:"Genitiv + предлоги wegen/trotz/während/statt", vocab:"семья расширенно, Genitiv-предлоги", tasks:[
+    ["grammar","Окончания Genitiv: des Mannes, der Frau, des Kindes; притяжательность"],
+    ["grammar","Предлоги с Genitiv: wegen, trotz, während, statt, aufgrund"],
+    ["listen","DW Top-Thema — статья уровня B1"],
+    ["write","Описание семейного древа с Genitiv-конструкциями"],
+    ["speak","Рассказать про любимые вещи: das Buch meines Vaters…"],
+  ]},
+  { n:15, theme:"Рефлексивные глаголы", grammar:"sich + Akkusativ / Dativ", vocab:"рефлексивные глаголы, рутина", tasks:[
+    ["grammar","15 рефлексивных: sich freuen, interessieren, treffen, beeilen, anziehen…"],
+    ["grammar","Спряжение sich: mich/dich/sich/uns/euch/sich + глаголы с Dativ-рефлексивом"],
+    ["listen","Easy German — 2 видео"],
+    ["write","Описать идеальный день — 200 слов с рефлексивными глаголами"],
+    ["speak","Рассказать об утренней рутине"],
+  ]},
+  { n:16, theme:"Склонение прилагательных (введение)", grammar:"Слабое склонение (после der/die/das)", vocab:"одежда, описания", tasks:[
+    ["grammar","Слабое склонение: der gute Mann, die schöne Frau — окончания -e / -en"],
+    ["listen","DW Top-Thema — 2 статьи"],
+    ["write","Описать 3 человек подробно — 200 слов"],
+    ["speak","Описать фотографию — 1 минута"],
+  ]},
+  { n:17, theme:"Склонение прилагательных — полная система", grammar:"stark / schwach / gemischt", vocab:"оттенки описания", tasks:[
+    ["grammar","3 типа склонения — полная таблица всех окончаний"],
+    ["grammar","Прилагательные без артикля: guter Wein, kalte Milch, frisches Brot"],
+    ["listen","Goethe-Zertifikat B1 — пробник Hörverstehen №1"],
+    ["write","Детальное описание фотографии — 250 слов"],
+    ["speak","Описать любимое место в деталях"],
+  ]},
+  { n:18, theme:"Пассивный залог", grammar:"Vorgangspassiv (werden+P.II) и Zustandspassiv (sein+P.II)", vocab:"процессы, инструкции", tasks:[
+    ["grammar","werden + Partizip II — все времена (Präsens, Prät., Perfekt, Futur)"],
+    ["grammar","Vorgangspassiv (процесс) vs Zustandspassiv (результат); von / durch"],
+    ["listen","Langsam gesprochene Nachrichten (DW) — новости медленным темпом"],
+    ["write","Описать процесс приготовления блюда в пассиве"],
+    ["speak","Объяснить, как что-то работает (метро, кофемашина)"],
+  ]},
+  { n:19, theme:"Konjunktiv II — вежливость и гипотезы", grammar:"würde + Inf, hätte, wäre, könnte, sollte", vocab:"желания, вежливость", tasks:[
+    ["grammar","Формы: hätte, wäre, würde + Infinitiv; könnte/sollte/müsste"],
+    ["grammar","Применение: вежливые просьбы, нереальные ситуации, советы"],
+    ["listen","Goethe B1 — пробник Hören №2"],
+    ["write","Формальное письмо-жалоба в отель (со всеми правилами стиля)"],
+    ["speak","Что бы ты сделал, если бы выиграл миллион?"],
+  ]},
+  { n:20, theme:"Относительные придаточные", grammar:"Relativsätze: der/die/das + dessen/deren", vocab:"профессии, определения", tasks:[
+    ["grammar","Таблица относительных местоимений (4 падежа × 3 рода × мн.ч.)"],
+    ["grammar","Сложные случаи: mit dem ich spreche; der Mann, dessen Auto…"],
+    ["listen","Aktuelle Stunde (WDR) — короткое новостное видео"],
+    ["write","Дать определения 10 предметам через Relativsätze"],
+    ["speak","Описать разные профессии через относительные предложения"],
+  ]},
+  { n:21, theme:"Косвенная речь", grammar:"Indirekte Rede (Konjunktiv I), косвенные вопросы", vocab:"медиа, политика", tasks:[
+    ["grammar","Konjunktiv I в 3-м лице: er sei, habe, werde, könne"],
+    ["grammar","Косвенные вопросы: Ich weiß nicht, ob / wann / wo… (глагол в конец)"],
+    ["listen","Tagesschau in 100 Sekunden — смотреть ежедневно"],
+    ["write","Пересказ новостной статьи в косвенной речи — 200 слов"],
+    ["speak","Рассказать другу, что ты услышал в новостях"],
+  ]},
+  { n:22, theme:"Глаголы с предлогами + двойные союзы", grammar:"Verben mit Präpositionen; entweder…oder и т.д.", vocab:"глаголы с предлогами", tasks:[
+    ["grammar","20 ключевых глаголов с предлогами: warten auf, denken an, sich freuen auf…"],
+    ["grammar","Двойные союзы: entweder…oder, sowohl…als auch, nicht nur…sondern auch"],
+    ["listen","Goethe B1 — пробник Hören №3"],
+    ["write","Эссе на B1-тему — 250 слов, структура Pro / Contra"],
+    ["speak","Дискуссия на тему с тандем-партнёром"],
+  ]},
+  { n:23, theme:"Экзамен: Lesen + Hören", grammar:"Стратегии чтения и аудирования", vocab:"B1 критичный набор", tasks:[
+    ["review","Полный пробник Goethe B1 — Lesen (65 минут, в условиях экзамена)"],
+    ["review","Полный пробник Goethe B1 — Hören (40 минут)"],
+    ["review","Разбор всех ошибок: каждое незнакомое слово → в тренажёр"],
+    ["listen","Ещё один пробник Hören из другого источника (telc / ÖSD)"],
+    ["read","Ещё один пробник Lesen (telc / ÖSD)"],
+  ]},
+  { n:24, theme:"Экзамен: Schreiben + Sprechen", grammar:"Шаблоны писем и презентаций", vocab:"Redemittel B1 — связки", tasks:[
+    ["review","Schreiben Teil 1 — формальный email: выучить 3 шаблона структуры"],
+    ["review","Schreiben Teil 2 + 3 — форум-пост и полуформальное письмо"],
+    ["review","Sprechen Teil 1 — планирование совместного мероприятия с партнёром"],
+    ["review","Sprechen Teil 2 — презентация на 3 минуты: подготовить 5 универсальных тем"],
+    ["review","Sprechen Teil 3 — реакция + 2 вопроса; финальная репетиция всех частей"],
+  ]},
+];
+
+const TYPE_LABEL = {
+  test: "Диагностика", grammar: "Грамматика", listen: "Аудирование",
+  write: "Письмо", speak: "Говорение", read: "Чтение", review: "Повторение / Экзамен"
+};
+
+/* Flatten weeks into days (one task = one day) */
+const DAYS = [];
+WEEKS.forEach(w => {
+  w.tasks.forEach(([type, text]) => {
+    DAYS.push({
+      day: DAYS.length + 1,
+      week: w.n,
+      weekTheme: w.theme,
+      grammar: w.grammar,
+      vocab: w.vocab,
+      type, text
+    });
+  });
+});
+const TOTAL_DAYS = DAYS.length;
+
+/* ==========================================================================
+   STATE
+   ========================================================================== */
+let state = { currentDay: 1, viewingDay: 1, completed: {} };
+const KEY = 'de-tagesplan-v1';
+
+function load() {
+  try {
+    const s = localStorage.getItem(KEY);
+    if (s) {
+      const d = JSON.parse(s);
+      state.currentDay = d.currentDay || 1;
+      state.viewingDay = state.currentDay;
+      state.completed = d.completed || {};
+    }
+  } catch(e){}
+}
+function save() {
+  try { localStorage.setItem(KEY, JSON.stringify({ currentDay: state.currentDay, completed: state.completed })); } catch(e){}
+}
+
+function esc(s){ return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+/* ==========================================================================
+   CLIPBOARD TEXT
+   ========================================================================== */
+function buildPlanText(d) {
+  return `🇩🇪 Немецкий A1→B1 · День ${d.day} из ${TOTAL_DAYS} · Неделя ${d.week}
+Тема недели: ${d.weekTheme}
+Грамматика недели: ${d.grammar}
+
+📋 Задача на сегодня — [${TYPE_LABEL[d.type]}]:
+${d.text}
+
+📌 Ежедневно также:
+• Словарь: квиз по словам недели ${d.week} (${d.vocab}) — 10–15 мин в тренажёре
+
+➡️ Дай мне подробный материал по сегодняшней задаче (с таблицами, примерами и конкретными ссылками) и 2–3 коротких упражнения, чтобы я мог проверить себя.`;
+}
+
+function copyPlan(day) {
+  const d = DAYS[day - 1];
+  const text = buildPlanText(d);
+  const onOk = () => {
+    showToast('План скопирован — вставь его в чат с Claude');
+    const btn = document.getElementById('copyBtn');
+    if (btn) { btn.classList.add('copied'); btn.textContent = '✓ Скопировано!'; setTimeout(render, 1400); }
+  };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(onOk).catch(() => fallbackCopy(text, onOk));
+  } else {
+    fallbackCopy(text, onOk);
+  }
+}
+function fallbackCopy(text, onOk) {
+  const ta = document.createElement('textarea');
+  ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+  document.body.appendChild(ta); ta.focus(); ta.select();
+  try { document.execCommand('copy'); onOk(); }
+  catch(e) { showToast('Не удалось скопировать — выдели текст вручную'); }
+  document.body.removeChild(ta);
+}
+
+let toastTimer;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2600);
+}
+
+/* ==========================================================================
+   ACTIONS
+   ========================================================================== */
+function goDay(n) {
+  state.viewingDay = Math.max(1, Math.min(TOTAL_DAYS, n));
+  render();
+}
+function goToCurrent() { state.viewingDay = state.currentDay; render(); }
+function jumpWeek(weekNum) {
+  const firstDay = DAYS.find(d => d.week === +weekNum);
+  if (firstDay) { state.viewingDay = firstDay.day; render(); }
+}
+function toggleDone(day) {
+  if (state.completed[day]) {
+    delete state.completed[day];
+  } else {
+    state.completed[day] = true;
+    if (day === state.currentDay && state.currentDay < TOTAL_DAYS) {
+      state.currentDay++;
+      state.viewingDay = state.currentDay;
+    }
+  }
+  save(); render();
+}
+
+/* ==========================================================================
+   RENDER
+   ========================================================================== */
+function render() {
+  const d = DAYS[state.viewingDay - 1];
+  const doneCount = Object.values(state.completed).filter(Boolean).length;
+  const pct = Math.round(doneCount / TOTAL_DAYS * 100);
+  const isDone = !!state.completed[d.day];
+  const isViewingCurrent = state.viewingDay === state.currentDay;
+
+  const weekOptions = WEEKS.map(w =>
+    `<option value="${w.n}" ${w.n === d.week ? 'selected' : ''}>Неделя ${w.n} — ${esc(w.theme)}</option>`
+  ).join('');
+
+  document.getElementById('app').innerHTML = `
+<header>
+  <div class="container">
+    <div class="title-cat">Deutsch · A1 → B1</div>
+    <h1>Tages<em>plan</em></h1>
+    <div class="subtitle">План на каждый день · копируй и вставляй в чат</div>
+  </div>
+</header>
+
+<section class="container prog-section">
+  <div class="prog-head">
+    <span>Пройдено ${doneCount} из ${TOTAL_DAYS} дней</span>
+    <span>${pct}%</span>
+  </div>
+  <div class="prog-bar"><div class="prog-fill" style="width:${pct}%"></div></div>
+</section>
+
+<main class="container">
+  <div class="day-card">
+    <div class="day-top">
+      <div class="day-num num">${d.day}<small>день из ${TOTAL_DAYS}</small></div>
+      <div class="day-week">
+        <div class="day-week-label">Неделя ${d.week}</div>
+        <div class="day-week-theme">${esc(d.weekTheme)}</div>
+      </div>
+      ${isDone ? '<div class="day-done-badge">Выполнено</div>' : ''}
+    </div>
+
+    <div class="day-body">
+      <div class="grammar-focus">
+        <div class="uppercase-mini">Грамматика недели</div>
+        <div class="grammar-focus-text">${esc(d.grammar)}</div>
+      </div>
+
+      <div class="task-block">
+        <div class="task-label-row">
+          <span class="task-badge ${d.type === 'review' ? 'review' : ''}">${TYPE_LABEL[d.type]}</span>
+          <span class="uppercase-mini">Задача на сегодня</span>
+        </div>
+        <div class="task-main">${esc(d.text)}</div>
+      </div>
+
+      <div class="habits">
+        <div class="uppercase-mini">Ежедневно также</div>
+        <div class="habit"><span class="habit-dot">●</span><span>Словарь: квиз по словам недели ${d.week} (${esc(d.vocab)}) — 10–15 минут в тренажёре</span></div>
+      </div>
+    </div>
+
+    <div class="day-actions">
+      <button class="btn copy" id="copyBtn" onclick="copyPlan(${d.day})">⧉ Скопировать план на сегодня</button>
+      <button class="btn done ${isDone ? 'is-done' : ''}" onclick="toggleDone(${d.day})">${isDone ? '↺ Отменить' : '✓ Готово, дальше'}</button>
+    </div>
+  </div>
+
+  <div class="nav-row">
+    <button class="nav-btn" onclick="goDay(${d.day - 1})" ${d.day <= 1 ? 'disabled' : ''}>← Вчера</button>
+    <div class="nav-center">
+      <select class="jump-select" onchange="jumpWeek(this.value)">${weekOptions}</select>
+    </div>
+    <button class="nav-btn" onclick="goDay(${d.day + 1})" ${d.day >= TOTAL_DAYS ? 'disabled' : ''}>Завтра →</button>
+  </div>
+  ${!isViewingCurrent ? `<div style="text-align:center;margin-top:14px"><span class="today-link" onclick="goToCurrent()">↩ Вернуться к текущему дню (${state.currentDay})</span></div>` : ''}
+
+  <div class="info-box">
+    <b>Как пользоваться:</b> нажми «Скопировать план на сегодня» → вставь текст в чат с Claude → получишь подробный материал и упражнения именно по задаче дня. После занятия жми «Готово, дальше» — план перейдёт на следующий день. Прогресс сохраняется в браузере.
+  </div>
+</main>
+
+<footer>
+  <div class="container f-row">
+    <span>Прогресс хранится в браузере · сохрани файл в закладки</span>
+    <span style="font-family:var(--serif);font-style:italic">«Schritt für Schritt»</span>
+  </div>
+</footer>
+  `;
+}
+
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'SELECT') return;
+  if (e.key === 'ArrowLeft') goDay(state.viewingDay - 1);
+  else if (e.key === 'ArrowRight') goDay(state.viewingDay + 1);
+  else if (e.key === 'c' || e.key === 'C' || e.key === 'с' || e.key === 'С') copyPlan(state.viewingDay);
+});
+
+load();
+render();
+</script>
+</body>
+</html>
