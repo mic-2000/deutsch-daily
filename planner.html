@@ -71,11 +71,12 @@ const KEY = 'de-tagesplan-v1';
 
 /* Cloud sync config — initApp / saveToCloud / saveLangToCloud / logout live in assets/js/cloud-sync.js */
 const CLOUD_FIELD = 'planner_data';
-function getCloudPayload(){ return { currentDay: state.currentDay, viewingDay: state.viewingDay, completed: state.completed }; }
+function getCloudPayload(){ return { currentDay: state.currentDay, completed: state.completed }; }
 function applyCloudData(d){
   state.currentDay = d.currentDay || 1;
   state.completed = d.completed || {};
-  state.viewingDay = d.viewingDay || state.currentDay;
+  // viewingDay is local-only — keep whatever is already in localStorage
+  if (!state.viewingDay || state.viewingDay === 1) state.viewingDay = state.currentDay;
   try { localStorage.setItem(KEY, JSON.stringify({ currentDay: state.currentDay, viewingDay: state.viewingDay, completed: state.completed })); } catch(e){}
 }
 
@@ -149,7 +150,7 @@ function goDay(n) {
 function goToCurrent() { state.viewingDay = state.currentDay; saveViewing(); render(); }
 function jumpWeek(weekNum) {
   const firstDay = DAYS.find(d => d.week === +weekNum);
-  if (firstDay) { state.viewingDay = firstDay.day; render(); }
+  if (firstDay) { state.viewingDay = firstDay.day; saveViewing(); render(); }
 }
 function toggleDone(day) {
   if (state.completed[day]) {
