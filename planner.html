@@ -71,12 +71,12 @@ const KEY = 'de-tagesplan-v1';
 
 /* Cloud sync config — initApp / saveToCloud / saveLangToCloud / logout live in assets/js/cloud-sync.js */
 const CLOUD_FIELD = 'planner_data';
-function getCloudPayload(){ return { currentDay: state.currentDay, completed: state.completed }; }
+function getCloudPayload(){ return { currentDay: state.currentDay, viewingDay: state.viewingDay, completed: state.completed }; }
 function applyCloudData(d){
   state.currentDay = d.currentDay || 1;
   state.completed = d.completed || {};
-  state.viewingDay = state.currentDay;
-  try { localStorage.setItem(KEY, JSON.stringify({ currentDay: state.currentDay, completed: state.completed })); } catch(e){}
+  state.viewingDay = d.viewingDay || state.currentDay;
+  try { localStorage.setItem(KEY, JSON.stringify({ currentDay: state.currentDay, viewingDay: state.viewingDay, completed: state.completed })); } catch(e){}
 }
 
 function load() {
