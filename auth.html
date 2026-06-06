@@ -40,7 +40,7 @@
 let mode = 'login'; // 'login' | 'register'
 let loading = false;
 
-function renderForm() {
+function render() {
   const isReg = mode === 'register';
   document.getElementById('auth-form').innerHTML = `
     <div class="auth-box">
@@ -90,7 +90,7 @@ async function loginGoogle() {
 
 function toggleMode() {
   mode = mode === 'login' ? 'register' : 'login';
-  renderForm();
+  render();
 }
 
 async function submit() {
@@ -118,7 +118,7 @@ async function submit() {
     showToast(T('auth_err_connection'));
   } finally {
     loading = false;
-    renderForm();
+    render();
   }
 }
 
@@ -131,7 +131,7 @@ function redirect() {
 // Init: if already logged in — redirect
 sb.auth.getSession().then(({ data: { session } }) => {
   if (session) { redirect(); return; }
-  renderForm();
+  render();
 });
 </script>
 </body>
