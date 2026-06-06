@@ -54,5 +54,5 @@ async function saveLangToCloud(code) {
 
 async function logout() {
   await sb.auth.signOut();
-  location.href = 'index.html';
+  location.href = '/';
 }
