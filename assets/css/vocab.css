@@ -14,6 +14,7 @@ main { padding: 24px 0 60px; }
 .due-banner { background: var(--ink); color: var(--paper); padding: 18px 22px; display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; margin-bottom: 22px; }
 .due-banner-text { font-family: var(--serif); font-size: 19px; }
 .due-banner-text small { display: block; font-family: var(--sans); font-size: 12px; opacity: 0.7; margin-top: 2px; }
+[data-theme="dark"] .due-banner { background: var(--paper-2); color: var(--ink); }
 .btn { padding: 11px 18px; border: 1px solid var(--ink); font-size: 14px; transition: all 0.15s; display: inline-flex; gap: 8px; align-items: center; justify-content: center; white-space: nowrap; }
 .btn:hover { background: var(--ink); color: var(--paper); }
 .btn.primary { background: var(--ink); color: var(--paper); }
@@ -21,6 +22,8 @@ main { padding: 24px 0 60px; }
 .btn.accent:hover { background: var(--accent-2); border-color: var(--accent-2); }
 .btn.on-dark { background: var(--paper); color: var(--ink); border-color: var(--paper); }
 .btn.on-dark:hover { background: var(--gold); border-color: var(--gold); }
+[data-theme="dark"] .btn.on-dark { background: var(--accent); color: var(--paper); border-color: var(--accent); }
+[data-theme="dark"] .btn.on-dark:hover { background: var(--accent-2); border-color: var(--accent-2); }
 .btn:disabled { opacity: 0.4; cursor: not-allowed; }
 .btn.big { padding: 14px 24px; font-size: 15px; font-weight: 600; }
 
