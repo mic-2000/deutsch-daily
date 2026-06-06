@@ -159,7 +159,6 @@ let state = {
   session: null,
 };
 const KEY = 'de-vocab-trainer-v2';
-let fileHandle = null; // File System Access handle (Chromium); session-only
 
 /* Cloud sync config — initApp / saveToCloud / saveLangToCloud / logout live in assets/js/cloud-sync.js */
 const CLOUD_FIELD = 'vocab_data';
@@ -194,7 +193,6 @@ function load(){
 }
 function save(){
   try { localStorage.setItem(KEY, JSON.stringify(serialize())); } catch(e){}
-  if (fileHandle) writeToFile(); // auto-sync to linked file (fire-and-forget)
   saveToCloud(); // sync to Supabase (fire-and-forget)
 }
 
@@ -218,37 +216,6 @@ function importProgress(){
     reader.readAsText(file);
   };
   inp.click();
-}
-
-/* ---- Auto-sync via File System Access API (Chrome / Edge) ---- */
-const FSA_API = !!(window.showOpenFilePicker && window.showSaveFilePicker);
-const FSA = FSA_API && (location.protocol === 'http:' || location.protocol === 'https:'); // blocked on file://
-async function writeToFile(){
-  if (!fileHandle) return;
-  try {
-    const w = await fileHandle.createWritable();
-    await w.write(JSON.stringify(serialize(), null, 2));
-    await w.close();
-  } catch(e){ /* permission revoked or error — ignore */ }
-}
-async function createSyncFile(){
-  try {
-    fileHandle = await window.showSaveFilePicker({ suggestedName:'deutsch-fortschritt.json',
-      types:[{ description:'Прогресс', accept:{ 'application/json':['.json'] } }] });
-    await writeToFile();
-    render(); showToast(T('toast_sync_created'));
-  } catch(e){ if (e && e.name !== 'AbortError') showToast(T('toast_sync_unavailable')); }
-}
-async function openSyncFile(){
-  try {
-    const [h] = await window.showOpenFilePicker({
-      types:[{ description:'Прогресс', accept:{ 'application/json':['.json'] } }] });
-    const file = await h.getFile();
-    const text = await file.text();
-    let ok = true;
-    if (text.trim()){ try { ok = applyData(JSON.parse(text)); } catch(e){ ok = false; showToast(T('toast_file_corrupt')); } }
-    if (ok){ fileHandle = h; await writeToFile(); render(); showToast(T('toast_sync_opened')); }
-  } catch(e){ if (e && e.name !== 'AbortError') showToast(T('toast_sync_unavailable')); }
 }
 
 /* ==========================================================================
@@ -455,13 +422,6 @@ function render(){
     <span class="settings-label">${T('settings_sync')}</span>
     <button class="chip" onclick="exportProgress()">${T('settings_save_file')}</button>
     <button class="chip" onclick="importProgress()">${T('settings_load_file')}</button>
-    ${FSA ? `
-      <span style="width:1px;height:22px;background:var(--line)"></span>
-      ${fileHandle
-        ? `<span class="chip on" style="cursor:default"><span class="chip-check">✓</span>${T('settings_auto_on')}</span>`
-        : `<button class="chip" onclick="createSyncFile()">${T('settings_create_file')}</button>
-           <button class="chip" onclick="openSyncFile()">${T('settings_open_file')}</button>`}
-    ` : `<span class="sync-hint">${T('settings_sync_hint')}</span>`}
   </div>
 
   <div class="week-tabs">
