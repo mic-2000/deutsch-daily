@@ -177,11 +177,10 @@ window.LOCALE_EN = {
     23: ["opportunity","meaning / significance","difference","impact / effect","connection / context","impression","necessity","to take into account","to emphasize","to confirm","to claim / assert","to doubt","to recommend","to mention","to describe","to compare"],
     24: ["First of all I would like to…","On one hand…","On the other hand…","Another point is…","In conclusion one can say…","I disagree with that","I see it the same way","That may be true, but…","It depends"],
   },
-};
 
-// Curriculum content translations (week themes, grammar notes, vocab hints, task texts)
-// Index-matched with WEEKS[n].tasks in data/weeks.js
-LOCALE_EN.weeks = {
+  // Curriculum content — week themes, grammar notes, vocab hints, task texts
+  // Index-matched with WEEKS[n].tasks in data/weeks.js
+  weeks: {
   1:  { theme: "Diagnosis + Präsens basics", grammar: "Präsens, articles der/die/das, sein/haben/werden", vocab: "greetings, family, numbers", tasks: [
     "Complete a placement test and record your starting level",
     "Memorise the conjugation of sein, haben, werden (Präsens + Präteritum)",
@@ -348,4 +347,5 @@ LOCALE_EN.weeks = {
     "Sprechen Teil 2 — 3-minute presentation: prepare 5 universal topics",
     "Sprechen Teil 3 — reaction + 2 questions; final rehearsal of all parts",
   ]},
+  },
 };

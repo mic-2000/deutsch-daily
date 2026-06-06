@@ -172,11 +172,10 @@ window.LOCALE_UA = {
     23: ["можливість / нагода","значення","відмінність","вплив","зв'язок","враження","необхідність","враховувати","підкреслювати","підтверджувати","стверджувати","сумніватися","рекомендувати","згадувати","описувати","порівнювати"],
     24: ["Перш за все хочу…","З одного боку…","З іншого боку…","Ще один момент…","На завершення можна сказати…","Я з цим не погоджуюся","Я теж так вважаю","Це, звичайно, вірно, але…","Залежить від ситуації"],
   },
-};
 
-// Curriculum content translations (week themes, grammar notes, vocab hints, task texts)
-// Index-matched with WEEKS[n].tasks in data/weeks.js
-LOCALE_UA.weeks = {
+  // Curriculum content — week themes, grammar notes, vocab hints, task texts
+  // Index-matched with WEEKS[n].tasks in data/weeks.js
+  weeks: {
   1:  { theme: "Діагностика + основи Präsens", grammar: "Präsens, артиклі der/die/das, sein/haben/werden", vocab: "привітання, сім'я, числа", tasks: [
     "Пройти діагностичний тест і зафіксувати стартовий рівень",
     "Вивчити напам'ять відмінювання sein, haben, werden (Präsens + Präteritum)",
@@ -343,4 +342,5 @@ LOCALE_UA.weeks = {
     "Sprechen Teil 2 — презентація на 3 хвилини: підготувати 5 універсальних тем",
     "Sprechen Teil 3 — реакція + 2 питання; фінальна репетиція всіх частин",
   ]},
+  },
 };
