@@ -8,7 +8,7 @@ Personal German learning app (A1 → B1) with a daily task planner and vocabular
 
 - **Daily Planner** — 24-week curriculum (118 days) with grammar, listening, writing and speaking tasks. Copy today's plan into an AI chat to get detailed material and exercises.
 - **Vocabulary Trainer** — ~500 words across 24 weeks. Spaced repetition (5-box Leitner system) with three modes: flashcards, article (der/die/das), and spelling.
-- **3 UI languages** — Russian, Ukrainian, English (including all week content).
+- **3 UI languages** — English, Ukrainian, Russian (including all week content).
 - **Cloud sync** — progress saved to Supabase; works across devices.
 - **Auth** — email/password and Google OAuth.
 
