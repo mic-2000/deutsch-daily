@@ -158,7 +158,7 @@ let state = {
   modes: { flashcard: true, article: true, spelling: true },
   session: null,
 };
-const KEY = 'de-vocab-trainer-v2';
+const KEY = 'de-vocab-trainer-v2'; // kept for export/import format version reference
 
 /* Cloud sync config — initApp / saveToCloud / saveLangToCloud / logout live in assets/js/cloud-sync.js */
 const CLOUD_FIELD = 'vocab_data';
@@ -180,20 +180,9 @@ function applyData(d){
   return true;
 }
 
-function load(){
-  try {
-    const s = localStorage.getItem(KEY);
-    if (s){
-      const d = JSON.parse(s);
-      state.selectedWeek = d.selectedWeek || 1;
-      state.mastery = d.mastery || {};
-      if (d.modes) state.modes = d.modes;
-    }
-  } catch(e){}
-}
+function load(){} // no-op: cloud is source of truth
 function save(){
-  try { localStorage.setItem(KEY, JSON.stringify(serialize())); } catch(e){}
-  saveToCloud(); // sync to Supabase (fire-and-forget)
+  saveToCloud();
 }
 
 /* ---- Manual export / import (works in every browser) ---- */

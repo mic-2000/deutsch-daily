@@ -2,7 +2,6 @@
    Requires: supabase.js (sb), i18n.js (setLang).
    The page must define these globals before initApp() runs:
      CLOUD_FIELD        — string column on the `progress` table ('planner_data' | 'vocab_data')
-     load()             — load state from localStorage
      applyCloudData(d)  — apply the loaded field payload to state
      getCloudPayload()  — return the object to persist into CLOUD_FIELD
      render()           — re-render the UI
@@ -18,10 +17,7 @@ async function initApp() {
   }
   currentUser = session.user;
 
-  // Load from localStorage first (fast)
-  load();
-
-  // Sync from cloud (overwrites local if a cloud record exists)
+  // Load from cloud
   try {
     const { data } = await sb.from('progress')
       .select(CLOUD_FIELD + ', lang')
@@ -29,7 +25,7 @@ async function initApp() {
       .single();
     if (data && data[CLOUD_FIELD]) applyCloudData(data[CLOUD_FIELD]);
     if (data && data.lang) setLang(data.lang, true);
-  } catch(e) { /* offline or no record yet — localStorage is fine */ }
+  } catch(e) { /* offline or no record yet */ }
 
   render();
 }
@@ -42,7 +38,7 @@ async function saveToCloud() {
       [CLOUD_FIELD]: getCloudPayload(),
       updated_at: new Date().toISOString()
     }, { onConflict: 'user_id' });
-  } catch(e) { /* ignore — localStorage is the fallback */ }
+  } catch(e) { /* ignore */ }
 }
 
 async function saveLangToCloud(code) {
