@@ -161,7 +161,7 @@ async function loginGoogle() {
   try {
     const { error } = await sb.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: window.location.origin + '/german_daily_planner.html' }
+      options: { redirectTo: 'https://deutsch-daily-red.vercel.app/' }
     });
     if (error) showToast(error.message);
   } catch(e) {
