@@ -5,7 +5,7 @@
 */
 
 const LANG_NAMES = { en: 'EN', ua: 'UA', ru: 'RU' };
-const DEFAULT_LANG = 'ru';
+const DEFAULT_LANG = 'en';
 
 let _lang = localStorage.getItem('ui_lang') || DEFAULT_LANG;
 if (!LANG_NAMES[_lang]) _lang = DEFAULT_LANG;

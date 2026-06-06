@@ -23,7 +23,8 @@ async function initApp() {
       .select(CLOUD_FIELD + ', lang')
       .eq('user_id', session.user.id)
       .single();
-    if (data && data[CLOUD_FIELD]) applyCloudData(data[CLOUD_FIELD]);
+    const payload = data && data[CLOUD_FIELD];
+    if (payload && Object.keys(payload).length) applyCloudData(payload); // skip empty default ({}::jsonb)
     if (data && data.lang) setLang(data.lang, true);
   } catch(e) { /* offline or no record yet */ }
 
