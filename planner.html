@@ -70,11 +70,11 @@ let state = { currentDay: 1, viewingDay: 1, completed: {} };
 
 /* Cloud sync config — initApp / saveToCloud / saveLangToCloud / logout live in assets/js/cloud-sync.js */
 const CLOUD_FIELD = 'planner_data';
-function getCloudPayload(){ return { currentDay: state.currentDay, completed: state.completed }; }
+function getCloudPayload(){ return { currentDay: state.currentDay, viewingDay: state.viewingDay, completed: state.completed }; }
 function applyCloudData(d){
   state.currentDay = d.currentDay || 1;
   state.completed = d.completed || {};
-  state.viewingDay = state.currentDay;
+  state.viewingDay = d.viewingDay || state.currentDay;
 }
 
 function save() { saveToCloud(); }
@@ -124,12 +124,12 @@ function fallbackCopy(text, onOk) {
    ========================================================================== */
 function goDay(n) {
   state.viewingDay = Math.max(1, Math.min(TOTAL_DAYS, n));
-  render();
+  save(); render();
 }
-function goToCurrent() { state.viewingDay = state.currentDay; render(); }
+function goToCurrent() { state.viewingDay = state.currentDay; save(); render(); }
 function jumpWeek(weekNum) {
   const firstDay = DAYS.find(d => d.week === +weekNum);
-  if (firstDay) { state.viewingDay = firstDay.day; render(); }
+  if (firstDay) { state.viewingDay = firstDay.day; save(); render(); }
 }
 function toggleDone(day) {
   if (state.completed[day]) {
