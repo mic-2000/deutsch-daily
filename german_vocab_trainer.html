@@ -99,6 +99,12 @@ main { padding: 24px 0 60px; }
 footer { border-top: 1px solid var(--line); padding: 18px 0; margin-top: 36px; }
 .f-row { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; font-size: 12px; color: var(--ink-soft); }
 
+/* user bar */
+.user-bar { display: flex; align-items: center; justify-content: flex-end; gap: 12px; margin-top: 10px; }
+.user-email { font-size: 12px; color: var(--ink-soft); }
+.btn-logout { font-size: 12px; color: var(--accent); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; background: none; border: none; font-family: inherit; }
+.btn-logout:hover { color: var(--accent-2); }
+
 /* ===== SESSION ===== */
 .session-bg { position: fixed; inset: 0; background: var(--paper); z-index: 50; display: flex; flex-direction: column; }
 .session-top { border-bottom: 1px solid var(--line); padding: 16px 0; }
@@ -187,6 +193,7 @@ footer { border-top: 1px solid var(--line); padding: 18px 0; margin-top: 36px; }
   .vocab-row .box-bar { display: none; }
 }
 </style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 </head>
 <body>
 <div id="app"></div>
@@ -493,6 +500,54 @@ let state = {
 const KEY = 'de-vocab-trainer-v2';
 let fileHandle = null; // File System Access handle (Chromium); session-only
 
+/* ---- SUPABASE CONFIG: замени на свои значения из Settings → API ---- */
+const SUPABASE_URL = 'https://YOUR_PROJECT_ID.supabase.co';
+const SUPABASE_ANON_KEY = 'YOUR_ANON_KEY';
+/* -------------------------------------------------------------------- */
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+let currentUser = null;
+
+async function initApp() {
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) {
+    localStorage.setItem('auth_redirect', location.href);
+    location.href = 'auth.html';
+    return;
+  }
+  currentUser = session.user;
+
+  // Load from localStorage first (fast)
+  load();
+
+  // Sync from cloud (overwrites local if cloud record exists)
+  try {
+    const { data } = await sb.from('progress')
+      .select('vocab_data')
+      .eq('user_id', session.user.id)
+      .single();
+    if (data && data.vocab_data) {
+      applyData(data.vocab_data);
+    }
+  } catch(e) { /* offline or no record yet — localStorage is fine */ }
+
+  render();
+}
+
+async function saveToCloud() {
+  if (!currentUser) return;
+  try {
+    await sb.from('progress').upsert({
+      user_id: currentUser.id,
+      vocab_data: serialize(),
+      updated_at: new Date().toISOString()
+    }, { onConflict: 'user_id' });
+  } catch(e) { /* ignore — localStorage is the fallback */ }
+}
+async function logout() {
+  await sb.auth.signOut();
+  location.href = 'auth.html';
+}
+
 function serialize(){
   return { app:'deutsch-vokabeltrainer', version:2, savedAt:new Date().toISOString(),
            selectedWeek: state.selectedWeek, modes: state.modes, mastery: state.mastery };
@@ -522,6 +577,7 @@ function load(){
 function save(){
   try { localStorage.setItem(KEY, JSON.stringify(serialize())); } catch(e){}
   if (fileHandle) writeToFile(); // auto-sync to linked file (fire-and-forget)
+  saveToCloud(); // sync to Supabase (fire-and-forget)
 }
 
 /* ---- Manual export / import (works in every browser) ---- */
@@ -736,6 +792,10 @@ function render(){
   <div class="title-cat">Deutsch · A1 → B1</div>
   <h1>Vokabel<em>trainer</em></h1>
   <div class="subtitle">Карточки · артикли · написание · интервальное повторение</div>
+  <div class="user-bar">
+    <span class="user-email">${esc(currentUser ? currentUser.email : '')}</span>
+    <button class="btn-logout" onclick="logout()">Выйти</button>
+  </div>
 </div></header>
 
 <section class="container stats">
@@ -821,7 +881,7 @@ function render(){
 </main>
 
 <footer><div class="container f-row">
-  <span>Прогресс хранится в браузере · озвучка — синтезатор речи системы</span>
+  <span>Прогресс синхронизируется с облаком · озвучка — синтезатор речи системы</span>
   <button onclick="resetAll()" style="font-size:12px;color:var(--ink-soft);text-decoration:underline;text-underline-offset:3px;background:none;border:none;cursor:pointer">Сбросить весь прогресс</button>
 </div></footer>`;
 
@@ -1027,8 +1087,7 @@ document.addEventListener('keydown', e=>{
 /* ==========================================================================
    INIT
    ========================================================================== */
-load();
-render();
+initApp();
 </script>
 </body>
 </html>

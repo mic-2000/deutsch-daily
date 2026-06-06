@@ -94,6 +94,12 @@ main { padding: 26px 0 60px; }
 footer { border-top: 1px solid var(--line); padding: 18px 0; margin-top: 36px; }
 .f-row { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; font-size: 12px; color: var(--ink-soft); }
 
+/* user bar */
+.user-bar { display: flex; align-items: center; justify-content: flex-end; gap: 12px; margin-top: 10px; }
+.user-email { font-size: 12px; color: var(--ink-soft); }
+.btn-logout { font-size: 12px; color: var(--accent); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; background: none; border: none; font-family: inherit; }
+.btn-logout:hover { color: var(--accent-2); }
+
 /* toast */
 .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: var(--ink); color: var(--paper); padding: 14px 24px; font-size: 14px; z-index: 200; opacity: 0; transition: opacity 0.25s; pointer-events: none; }
 .toast.show { opacity: 1; }
@@ -106,6 +112,7 @@ footer { border-top: 1px solid var(--line); padding: 18px 0; margin-top: 36px; }
   .day-top { flex-wrap: wrap; gap: 12px; }
 }
 </style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 </head>
 <body>
 <div id="app"></div>
@@ -312,6 +319,51 @@ const TOTAL_DAYS = DAYS.length;
 let state = { currentDay: 1, viewingDay: 1, completed: {} };
 const KEY = 'de-tagesplan-v1';
 
+/* ---- SUPABASE CONFIG: замени на свои значения из Settings → API ---- */
+const SUPABASE_URL = 'https://YOUR_PROJECT_ID.supabase.co';
+const SUPABASE_ANON_KEY = 'YOUR_ANON_KEY';
+/* -------------------------------------------------------------------- */
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+let currentUser = null;
+
+async function initApp() {
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) {
+    localStorage.setItem('auth_redirect', location.href);
+    location.href = 'auth.html';
+    return;
+  }
+  currentUser = session.user;
+
+  // Load from localStorage first (fast)
+  try {
+    const s = localStorage.getItem(KEY);
+    if (s) {
+      const d = JSON.parse(s);
+      state.currentDay = d.currentDay || 1;
+      state.viewingDay = state.currentDay;
+      state.completed = d.completed || {};
+    }
+  } catch(e){}
+
+  // Sync from cloud (overwrites local if cloud record exists)
+  try {
+    const { data } = await sb.from('progress')
+      .select('planner_data')
+      .eq('user_id', session.user.id)
+      .single();
+    if (data && data.planner_data) {
+      const d = data.planner_data;
+      state.currentDay = d.currentDay || 1;
+      state.completed = d.completed || {};
+      state.viewingDay = state.currentDay;
+      try { localStorage.setItem(KEY, JSON.stringify({ currentDay: state.currentDay, completed: state.completed })); } catch(e){}
+    }
+  } catch(e) { /* offline or no record yet — localStorage is fine */ }
+
+  render();
+}
+
 function load() {
   try {
     const s = localStorage.getItem(KEY);
@@ -325,6 +377,21 @@ function load() {
 }
 function save() {
   try { localStorage.setItem(KEY, JSON.stringify({ currentDay: state.currentDay, completed: state.completed })); } catch(e){}
+  saveToCloud();
+}
+async function saveToCloud() {
+  if (!currentUser) return;
+  try {
+    await sb.from('progress').upsert({
+      user_id: currentUser.id,
+      planner_data: { currentDay: state.currentDay, completed: state.completed },
+      updated_at: new Date().toISOString()
+    }, { onConflict: 'user_id' });
+  } catch(e) { /* ignore — localStorage is the fallback */ }
+}
+async function logout() {
+  await sb.auth.signOut();
+  location.href = 'auth.html';
 }
 
 function esc(s){ return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
@@ -422,6 +489,10 @@ function render() {
     <div class="title-cat">Deutsch · A1 → B1</div>
     <h1>Tages<em>plan</em></h1>
     <div class="subtitle">План на каждый день · копируй и вставляй в чат</div>
+    <div class="user-bar">
+      <span class="user-email">${esc(currentUser ? currentUser.email : '')}</span>
+      <button class="btn-logout" onclick="logout()">Выйти</button>
+    </div>
   </div>
 </header>
 
@@ -486,7 +557,7 @@ function render() {
 
 <footer>
   <div class="container f-row">
-    <span>Прогресс хранится в браузере · сохрани файл в закладки</span>
+    <span>Прогресс синхронизируется с облаком · ${esc(currentUser ? currentUser.email : '')}</span>
     <span style="font-family:var(--serif);font-style:italic">«Schritt für Schritt»</span>
   </div>
 </footer>
@@ -500,8 +571,7 @@ document.addEventListener('keydown', e => {
   else if (e.key === 'c' || e.key === 'C' || e.key === 'с' || e.key === 'С') copyPlan(state.viewingDay);
 });
 
-load();
-render();
+initApp();
 </script>
 </body>
 </html>

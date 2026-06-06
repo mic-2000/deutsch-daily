@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Deutsch · Вход</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500;9..144,600&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --paper: #F2EDE3;
+  --paper-2: #E8E0D0;
+  --paper-3: #FAF6EC;
+  --ink: #1C1A17;
+  --ink-soft: #4A453D;
+  --line: #BFB5A0;
+  --accent: #B5512A;
+  --accent-2: #8C3F1F;
+  --green: #4A7C3A;
+  --gold: #C5963B;
+  --serif: 'Fraunces', Georgia, serif;
+  --sans: 'Manrope', system-ui, sans-serif;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: var(--sans); background: var(--paper); color: var(--ink); min-height: 100vh; line-height: 1.5; }
+button { font-family: inherit; cursor: pointer; border: none; background: none; color: inherit; }
+input { font-family: inherit; }
+.container { max-width: 480px; margin: 0 auto; padding: 0 24px; }
+
+header { border-bottom: 1px solid var(--line); padding: 28px 0 22px; }
+.title-cat { color: var(--accent); font-size: 11px; text-transform: uppercase; letter-spacing: 0.3em; }
+h1 { font-family: var(--serif); font-size: 44px; font-weight: 300; margin-top: 4px; letter-spacing: -0.02em; line-height: 1; }
+h1 em { color: var(--accent); font-style: italic; }
+.subtitle { font-family: var(--serif); font-style: italic; font-size: 16px; color: var(--ink-soft); margin-top: 6px; }
+
+main { padding: 48px 0 60px; }
+
+.auth-box { border: 2px solid var(--ink); background: var(--paper-3); padding: 32px; }
+.auth-title { font-family: var(--serif); font-size: 26px; font-weight: 300; margin-bottom: 24px; }
+
+.field { margin-bottom: 18px; }
+.field label { display: block; font-size: 11px; text-transform: uppercase; letter-spacing: 0.2em; color: var(--ink-soft); margin-bottom: 6px; }
+.field input {
+  width: 100%; padding: 10px 12px;
+  border: 1px solid var(--line); background: var(--paper);
+  color: var(--ink); font-size: 15px; outline: none;
+}
+.field input:focus { border-color: var(--ink); }
+
+.btn-submit {
+  width: 100%; padding: 13px;
+  background: var(--ink); color: var(--paper);
+  font-size: 14px; font-family: var(--sans); cursor: pointer;
+  border: none; margin-top: 8px; letter-spacing: 0.05em;
+  transition: background 0.15s;
+}
+.btn-submit:hover { background: var(--accent); }
+.btn-submit:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.toggle-link { text-align: center; margin-top: 20px; font-size: 13px; color: var(--ink-soft); }
+.toggle-link span { color: var(--accent); cursor: pointer; text-decoration: underline; }
+
+.notice {
+  font-size: 13px; color: var(--ink-soft); margin-top: 16px;
+  padding: 10px 12px; background: var(--paper-2);
+  border-left: 2px solid var(--gold);
+}
+
+.loading-msg { text-align: center; padding: 60px 0; color: var(--ink-soft); font-family: var(--serif); font-style: italic; font-size: 20px; }
+
+.toast {
+  position: fixed; bottom: 24px; left: 50%;
+  transform: translateX(-50%) translateY(80px);
+  background: var(--ink); color: var(--paper);
+  padding: 10px 20px; font-size: 14px;
+  opacity: 0; transition: all 0.25s; z-index: 100;
+  pointer-events: none; white-space: nowrap;
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="container">
+    <div class="title-cat">Deutsch · A1 → B1</div>
+    <h1>Mein<em>kurs</em></h1>
+    <div class="subtitle">Вход в личный кабинет</div>
+  </div>
+</header>
+
+<main>
+  <div class="container">
+    <div id="auth-form"><div class="loading-msg">Загрузка…</div></div>
+  </div>
+</main>
+
+<div id="toast" class="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script>
+/* ---- КОНФИГ: замени на свои значения из Supabase → Settings → API ---- */
+const SUPABASE_URL = 'https://YOUR_PROJECT_ID.supabase.co';
+const SUPABASE_ANON_KEY = 'YOUR_ANON_KEY';
+/* ---------------------------------------------------------------------- */
+
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+let mode = 'login'; // 'login' | 'register'
+let loading = false;
+
+function renderForm() {
+  const isReg = mode === 'register';
+  document.getElementById('auth-form').innerHTML = `
+    <div class="auth-box">
+      <div class="auth-title">${isReg ? 'Создать аккаунт' : 'Войти'}</div>
+      <div class="field">
+        <label>Email</label>
+        <input type="email" id="f-email" placeholder="you@example.com" autocomplete="email" />
+      </div>
+      <div class="field">
+        <label>Пароль</label>
+        <input type="password" id="f-password" placeholder="минимум 6 символов"
+               autocomplete="${isReg ? 'new-password' : 'current-password'}" />
+      </div>
+      <button class="btn-submit" id="submitBtn" onclick="submit()">
+        ${isReg ? 'Зарегистрироваться' : 'Войти'}
+      </button>
+      ${isReg ? '<div class="notice">После регистрации проверьте почту и подтвердите адрес.</div>' : ''}
+      <div class="toggle-link">
+        ${isReg ? 'Уже есть аккаунт? ' : 'Ещё нет аккаунта? '}
+        <span onclick="toggleMode()">${isReg ? 'Войти' : 'Зарегистрироваться'}</span>
+      </div>
+    </div>
+  `;
+  const emailEl = document.getElementById('f-email');
+  if (emailEl) emailEl.focus();
+  const pwdEl = document.getElementById('f-password');
+  if (pwdEl) pwdEl.addEventListener('keydown', e => { if (e.key === 'Enter') submit(); });
+}
+
+function toggleMode() {
+  mode = mode === 'login' ? 'register' : 'login';
+  renderForm();
+}
+
+async function submit() {
+  if (loading) return;
+  const email = (document.getElementById('f-email').value || '').trim();
+  const password = document.getElementById('f-password').value || '';
+  if (!email || !password) { showToast('Заполните все поля'); return; }
+  if (password.length < 6) { showToast('Пароль — минимум 6 символов'); return; }
+
+  loading = true;
+  const btn = document.getElementById('submitBtn');
+  if (btn) { btn.disabled = true; btn.textContent = '…'; }
+
+  try {
+    if (mode === 'register') {
+      const { error } = await sb.auth.signUp({ email, password });
+      if (error) { showToast(error.message); return; }
+      showToast('Проверьте почту — нужно подтвердить адрес!');
+    } else {
+      const { error } = await sb.auth.signInWithPassword({ email, password });
+      if (error) { showToast('Неверный email или пароль'); return; }
+      redirect();
+    }
+  } catch(e) {
+    showToast('Ошибка соединения');
+  } finally {
+    loading = false;
+    renderForm();
+  }
+}
+
+function redirect() {
+  const back = localStorage.getItem('auth_redirect') || 'german_daily_planner.html';
+  localStorage.removeItem('auth_redirect');
+  location.href = back;
+}
+
+let toastTimer;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 3200);
+}
+
+// Init: if already logged in — redirect
+sb.auth.getSession().then(({ data: { session } }) => {
+  if (session) { redirect(); return; }
+  renderForm();
+});
+</script>
+</body>
+</html>
