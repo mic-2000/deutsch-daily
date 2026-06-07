@@ -134,7 +134,7 @@ window.LOCALE_UA = {
     ai_input_hint: 'Напиши відповідь або запитання…',
     ai_error: 'Помилка AI',
     ai_key_title: 'Ключ Gemini API',
-    ai_key_desc: 'Безкоштовний ключ на <a href="https://aistudio.google.com/api-keys" target="_blank" rel="noopener">aistudio.google.com/api-keys</a>. Зберігається лише на цьому пристрої.',
+    ai_key_desc: 'Безкоштовний ключ на <a href="https://aistudio.google.com/api-keys" target="_blank" rel="noopener">aistudio.google.com/api-keys</a>.<br><br>🔒 Ключ зберігається <b>лише у твоєму браузері</b> (localStorage). На наші сервери він не передається — запити йдуть напряму з браузера до API Google.',
     ai_key_placeholder: 'AIza…',
     ai_key_save: 'Зберегти',
     ai_key_cancel: 'Скасувати',

@@ -139,7 +139,7 @@ window.LOCALE_EN = {
     ai_input_hint: 'Type your answer or question…',
     ai_error: 'AI error',
     ai_key_title: 'Gemini API key',
-    ai_key_desc: 'Get a free key at <a href="https://aistudio.google.com/api-keys" target="_blank" rel="noopener">aistudio.google.com/api-keys</a>. Stored on this device only.',
+    ai_key_desc: 'Get a free key at <a href="https://aistudio.google.com/api-keys" target="_blank" rel="noopener">aistudio.google.com/api-keys</a>.<br><br>🔒 The key is stored <b>only in your browser</b> (localStorage). It is never sent to our servers — requests go directly from your browser to Google\'s API.',
     ai_key_placeholder: 'AIza…',
     ai_key_save: 'Save',
     ai_key_cancel: 'Cancel',
