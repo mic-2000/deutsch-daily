@@ -135,7 +135,7 @@ window.LOCALE_RU = {
     ai_input_hint: 'Напиши ответ или вопрос…',
     ai_error: 'Ошибка AI',
     ai_key_title: 'Ключ Gemini API',
-    ai_key_desc: 'Бесплатный ключ на <a href="https://aistudio.google.com/api-keys" target="_blank" rel="noopener">aistudio.google.com/api-keys</a>.<br><br>🔒 Ключ хранится <b>только в твоём браузере</b> (localStorage). На наши серверы он не передаётся — запросы идут напрямую из браузера к API Google.',
+    ai_key_desc: '<b>Как подключить AI-учителя (бесплатно, 2 минуты):</b><br><ol style="margin:8px 0 0 18px;padding:0;line-height:1.7"><li>Перейди по ссылке: <a href="https://aistudio.google.com/api-keys" target="_blank" rel="noopener">aistudio.google.com/api-keys</a></li><li>Войди в свой Google-аккаунт (любой Gmail)</li><li>Нажми <b>«Create API key»</b> → <b>«Create API key in new project»</b></li><li>Скопируй ключ (начинается на <code>AIza...</code>) и вставь сюда ↓</li></ol><br>🔒 Ключ хранится <b>только в твоём браузере</b>. На наш сервер он не попадает — запросы идут напрямую из браузера к Google. Это бесплатно: лимита хватает на 1–2 урока в день.',
     ai_key_placeholder: 'AIza…',
     ai_key_save: 'Сохранить',
     ai_key_cancel: 'Отмена',

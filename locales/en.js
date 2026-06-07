@@ -139,7 +139,7 @@ window.LOCALE_EN = {
     ai_input_hint: 'Type your answer or question…',
     ai_error: 'AI error',
     ai_key_title: 'Gemini API key',
-    ai_key_desc: 'Get a free key at <a href="https://aistudio.google.com/api-keys" target="_blank" rel="noopener">aistudio.google.com/api-keys</a>.<br><br>🔒 The key is stored <b>only in your browser</b> (localStorage). It is never sent to our servers — requests go directly from your browser to Google\'s API.',
+    ai_key_desc: '<b>How to enable the AI tutor (free, 2 minutes):</b><br><ol style="margin:8px 0 0 18px;padding:0;line-height:1.7"><li>Open <a href="https://aistudio.google.com/api-keys" target="_blank" rel="noopener">aistudio.google.com/api-keys</a></li><li>Sign in with any Google account (Gmail)</li><li>Click <b>"Create API key"</b> → <b>"Create API key in new project"</b></li><li>Copy the key (starts with <code>AIza...</code>) and paste it below ↓</li></ol><br>🔒 The key is stored <b>only in your browser</b>. It never reaches our server — requests go directly from your browser to Google. This is free: the daily limit is enough for 1–2 lessons per day.',
     ai_key_placeholder: 'AIza…',
     ai_key_save: 'Save',
     ai_key_cancel: 'Cancel',
