@@ -95,10 +95,10 @@ function updateCard(k,correct){
 /* ==========================================================================
    STATE + CLOUD
    ========================================================================== */
-let state = { mastery:{}, modes:{triad:true,cloze:true,table:true}, filter:'all', session:null, confirm:null };
+let state = { mastery:{}, modes:{triad:true,cloze:true,table:true}, filter:'all', sel:{}, session:null, confirm:null };
 const CLOUD_FIELD='verbs_data';
-function getCloudPayload(){ return { app:'deutsch-verbtrainer', version:1, savedAt:new Date().toISOString(), modes:state.modes, mastery:state.mastery }; }
-function applyCloudData(d){ if(!d||typeof d!=='object') return; if(d.mastery&&typeof d.mastery==='object') state.mastery=d.mastery; if(d.modes) state.modes=Object.assign(state.modes,d.modes); }
+function getCloudPayload(){ return { app:'deutsch-verbtrainer', version:1, savedAt:new Date().toISOString(), modes:state.modes, sel:state.sel, mastery:state.mastery }; }
+function applyCloudData(d){ if(!d||typeof d!=='object') return; if(d.mastery&&typeof d.mastery==='object') state.mastery=d.mastery; if(d.modes) state.modes=Object.assign(state.modes,d.modes); if(d.sel&&typeof d.sel==='object') state.sel=d.sel; }
 function save(){ saveToCloud(); }
 
 /* ---------- reset (in-page confirm, never native confirm()) ---------- */
@@ -159,6 +159,8 @@ function startSession(scope){
   let keys;
   if(scope.type==='due'){
     keys=Object.keys(VERBS).filter(k=>isSeen(k)&&!isMastered(k)&&isDue(k,now));
+  } else if(scope.type==='selected'){
+    keys=Object.keys(state.sel).filter(k=>VERBS[k]);
   } else { // train a filter set: due first, then new, then (if empty) some of the set
     const base=filterKeys(scope.filter||'all');
     const due=base.filter(k=>isSeen(k)&&isDue(k,now)&&!isMastered(k));
@@ -166,7 +168,7 @@ function startSession(scope){
     keys=due.concat(neu.slice(0,15));
     if(!keys.length) keys=base.slice(0);
   }
-  keys=keys.sort(()=>Math.random()-0.5).slice(0,20);
+  keys=keys.sort(()=>Math.random()-0.5).slice(0, scope.type==='selected'?40:20);
   if(!keys.length){ showToast(T('toast_no_words')); return; }
   state.session={ scope, queue:keys.map(makeCard), pos:0, uniqueRight:0, uniqueTotal:keys.length, answered:false, revealed:false, lastCorrect:null };
   render();
@@ -275,17 +277,25 @@ function render(){
     <button class="btn accent" style="margin-left:auto" onclick="startSession({type:'filter',filter:'${state.filter}'})">${T('verb_train')} (${fk.length})</button>
   </div>
 
+  <div class="select-bar">
+    <button class="chip" onclick="selectAllFiltered()">${T('sel_select_all')} (${fk.length})</button>
+    <button class="chip" onclick="clearSelection()">${T('sel_clear')}</button>
+    <span class="sel-count" id="selCount">${T('sel_selected', selCount())}</span>
+    <button class="btn accent" id="trainSelBtn" ${selCount()?'':'disabled'} onclick="startSession({type:'selected'})" style="margin-left:auto">${T('sel_train')}</button>
+  </div>
+
   <div class="verb-list">
     ${fk.map(k=>{
       const e=VERBS[k]; const box=cardBox(k); const mastered=box>=MAX_BOX;
       const segs=[1,2,3,4,5].map(b=>`<div class="box-seg ${b<=box?'fill':''} ${b<=box&&mastered?'full':''}"></div>`).join('');
       return `<div class="verb-row ${mastered?'mastered':''}">
+        <input type="checkbox" class="verb-check" ${state.sel[k]?'checked':''} onclick="toggleSelect(${jk(k)}, this)">
         <div class="verb-main">
           <div class="verb-de">${esc(k)} <span class="t-sep">·</span> ${esc(e.praet)} <span class="t-sep">·</span> ${auxHtml(e.aux)} ${esc(e.pp)}</div>
           <div class="verb-gloss">${esc(verbGloss(k))}</div>
         </div>
-        <button class="box-bar" onclick="resetVerb(${JSON.stringify(k).replace(/"/g,'&quot;')})" title="${T('box_title', box)}">${segs}</button>
-        <button class="mini-audio" onclick="speakVerb(${JSON.stringify(k).replace(/"/g,'&quot;')},this)" title="Aussprache">🔊</button>
+        <button class="box-bar" onclick="resetVerb(${jk(k)})" title="${T('box_title', box)}">${segs}</button>
+        <button class="mini-audio" onclick="speakVerb(${jk(k)},this)" title="Aussprache">🔊</button>
       </div>`;
     }).join('')}
   </div>
@@ -324,6 +334,17 @@ function toggleMode(mode){
 }
 function filterChip(f,label){ return `<button class="chip ${state.filter===f?'on':''}" onclick="setFilter('${f}')">${label}</button>`; }
 function setFilter(f){ state.filter=f; render(); }
+
+/* ---------- hand-picked selection (transient: in-memory, per session of use) ---------- */
+function jk(k){ return JSON.stringify(k).replace(/"/g,'&quot;'); }
+function selCount(){ return Object.keys(state.sel).length; }
+function toggleSelect(k, el){ if(el.checked) state.sel[k]=true; else delete state.sel[k]; updateSelBar(); save(); }
+function selectAllFiltered(){ filterKeys(state.filter).forEach(k=>state.sel[k]=true); document.querySelectorAll('.verb-check').forEach(c=>c.checked=true); updateSelBar(); save(); }
+function clearSelection(){ state.sel={}; document.querySelectorAll('.verb-check').forEach(c=>c.checked=false); updateSelBar(); save(); }
+function updateSelBar(){
+  const c=document.getElementById('selCount'); if(c) c.textContent=T('sel_selected', selCount());
+  const b=document.getElementById('trainSelBtn'); if(b) b.disabled = selCount()===0;
+}
 
 /* ==========================================================================
    RENDER — SESSION

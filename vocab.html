@@ -20,6 +20,7 @@
 <script src="assets/js/supabase.js"></script>
 <script src="assets/js/cloud-sync.js"></script>
 <script src="data/vocab.js"></script>
+<script src="data/verbs.js"></script>
 </head>
 <body>
 <div id="app"></div>
@@ -116,16 +117,28 @@ const BOX_INTERVAL = { 1: 1*DAY, 2: 2*DAY, 3: 4*DAY, 4: 8*DAY, 5: 16*DAY };
 const MAX_BOX = 5;
 
 function key(week, idx){ return week + '-' + idx; }
+
+/* Cross-cutting verb progress: if a word is one of our master verbs, its mastery lives in the
+   shared `verbs_data` store (keyed by verb key) — the SAME record the verb trainer uses — so
+   progress counts no matter where the word was learned. Non-verb words stay in vocab_data. */
+let verbStore = { mastery: {} };
+function applyVerbProgress(d){ if (d && typeof d === 'object'){ verbStore = d; if (!verbStore.mastery || typeof verbStore.mastery !== 'object') verbStore.mastery = {}; } }
+function saveVerbStore(){ verbStore.savedAt = new Date().toISOString(); if (typeof saveVerbsToCloud === 'function') saveVerbsToCloud(verbStore); }
+function verbKeyForWord(de){ const core = String(de).split('—')[0].trim(); return (typeof VERBS !== 'undefined' && VERBS[core]) ? core : null; }
+function vkOf(week, idx){ return verbKeyForWord(VOCAB[week].words[idx]); }
+/* the mastery record for a slot, from whichever store owns it */
+function mRec(week, idx){ const vk = vkOf(week,idx); return vk ? verbStore.mastery[vk] : state.mastery[key(week,idx)]; }
+
 function getCard(week, idx){
-  return state.mastery[key(week,idx)] || { box: 0, due: 0, right: 0, wrong: 0, seen: 0 };
+  return mRec(week,idx) || { box: 0, due: 0, right: 0, wrong: 0, seen: 0 };
 }
 function isDue(week, idx, now){
-  const c = state.mastery[key(week,idx)];
+  const c = mRec(week,idx);
   if (!c) return true;           // new = always available
   return c.due <= now;
 }
-function isSeen(week, idx){ const c = state.mastery[key(week,idx)]; return c && c.seen > 0; }
-function cardBox(week, idx){ const c = state.mastery[key(week,idx)]; return c ? c.box : 0; }
+function isSeen(week, idx){ const c = mRec(week,idx); return c && c.seen > 0; }
+function cardBox(week, idx){ const c = mRec(week,idx); return c ? c.box : 0; }
 function isMastered(week, idx){ return cardBox(week,idx) >= MAX_BOX; }
 
 function updateCard(week, idx, correct){
@@ -134,8 +147,9 @@ function updateCard(week, idx, correct){
   if (correct){ c.right++; c.box = Math.min(MAX_BOX, c.box + 1); }  // +1 box per correct (new 0→1)
   else { c.wrong++; c.box = 1; }                                    // a miss sends it back to box 1
   c.due = Date.now() + BOX_INTERVAL[c.box];
-  state.mastery[key(week,idx)] = c;
-  save();
+  const vk = vkOf(week,idx);
+  if (vk){ verbStore.mastery[vk] = c; saveVerbStore(); }            // shared verb store
+  else { state.mastery[key(week,idx)] = c; save(); }
 }
 
 function resetAll(){ askConfirm(T('confirm_reset_all'), 'all'); }
@@ -146,7 +160,12 @@ function confirmYes(){
   const a = state.confirm && state.confirm.action;
   state.confirm = null;
   if (a === 'all'){ state.mastery = {}; save(); render(); showToast(T('toast_progress_reset')); }
-  else if (a && typeof a === 'object'){ delete state.mastery[key(a.week, a.idx)]; save(); render(); showToast(T('toast_word_reset')); }
+  else if (a && typeof a === 'object'){
+    const vk = vkOf(a.week, a.idx);
+    if (vk){ delete verbStore.mastery[vk]; saveVerbStore(); }      // reset shared verb record
+    else { delete state.mastery[key(a.week, a.idx)]; save(); }
+    render(); showToast(T('toast_word_reset'));
+  }
   else render();
 }
 

@@ -146,6 +146,10 @@ Each page must define these globals **before** calling `initApp()`:
 - `saveToCloud()` — `upsert` `{ user_id, [CLOUD_FIELD]: getCloudPayload(), updated_at }` with
   `onConflict: 'user_id'`.
 - `saveLangToCloud(code)` — `upsert` `{ user_id, lang, updated_at }`.
+- `saveThemeToCloud(theme)` / `saveVerbsToCloud(payload)` — `upsert` the `theme` / `verbs_data` column.
+- During `initApp`, if the page defines `applyVerbProgress(d)`, the shared `verbs_data` is loaded
+  into it (separate query, before render) — this is how the vocabulary page gets cross-cutting verb
+  mastery without changing its own `CLOUD_FIELD`.
 - `logout()` — `sb.auth.signOut()` then go to `/`.
 
 ---
@@ -161,12 +165,12 @@ single table, `public.progress`, one row per user (confirmed schema):
 | `user_id` | `uuid` | NO | — | upserts (conflict key) | `session.user.id` — PK, FK → `auth.users(id)` |
 | `planner_data` | `jsonb` | yes | `'{}'::jsonb` | planner `getCloudPayload()` | `{ currentDay, viewingDay, completed }` |
 | `vocab_data` | `jsonb` | yes | `'{}'::jsonb` | vocab `getCloudPayload()` → `serialize()` | `{ app, version, savedAt, selectedWeek, modes, mastery }` |
-| `verbs_data` | `jsonb` | yes | `'{}'::jsonb` | verbs `getCloudPayload()` | `{ app, version, savedAt, modes, mastery }` — `mastery` keyed by **verb key** (shared store) |
+| `verbs_data` | `jsonb` | yes | `'{}'::jsonb` | verbs `getCloudPayload()` **and** vocab `saveVerbStore()` | `{ app, version, savedAt, modes, sel, mastery }` — `mastery` keyed by **verb key**; `sel` = saved training selection |
 | `lang` | `text` | yes | `'en'::text` | `saveLangToCloud` | `'ru' \| 'ua' \| 'en'` |
 | `theme` | `text` | yes | — | `saveThemeToCloud` | `'light' \| 'dark'` |
 | `updated_at` | `timestamptz` | yes | `now()` | every upsert | ISO string |
 
-> `verbs_data` must be added with `alter table public.progress add column if not exists verbs_data jsonb default '{}'::jsonb;`. The RLS policy is row-level (per `user_id`), so it covers new columns automatically. `verbs.html` degrades gracefully if the column is missing (training works in-session; cloud persistence resumes once the column exists). Verb `mastery` is keyed by the verb key (e.g. `gehen`) — the **same key space** used wherever a verb appears, so progress is shared across the verbs page and (once verbs are wired into weeks) the vocabulary page.
+> `verbs_data` was added with `alter table public.progress add column if not exists verbs_data jsonb default '{}'::jsonb;`. RLS is row-level (per `user_id`), so it covers new columns automatically. **Cross-cutting progress is live:** verb `mastery` is keyed by the verb key (e.g. `gehen`), so a verb counts the same wherever it appears. `verbs.html` owns the column via its `CLOUD_FIELD`. `vocab.html` ALSO reads/writes it: `cloud-sync` loads it into a `verbStore` via the page's `applyVerbProgress(d)` hook, and any vocabulary word that resolves to a master-verb key (`verbKeyForWord` strips the `—` form and looks it up in `VERBS`, ~69 of the vocab entries) routes its mastery to `verbStore` and persists via `saveVerbsToCloud`. `sel` (the verb-trainer's saved training selection) round-trips through the same column.
 
 **Constraints & security:**
 - `progress_pkey` — PRIMARY KEY (`user_id`). This is what makes the

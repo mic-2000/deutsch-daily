@@ -12,8 +12,14 @@
 .t-praet { color: var(--accent); }
 .t-inf { font-weight: 500; }
 
+/* hand-picked selection */
+.select-bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 12px 0; }
+.sel-count { font-size: 13px; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+.select-bar .btn.accent[disabled] { opacity: 0.4; cursor: not-allowed; }
+.verb-check { flex: 0 0 auto; width: 18px; height: 18px; accent-color: var(--accent); cursor: pointer; }
+
 /* home list */
-.verb-list { margin-top: 18px; border-top: 1px solid var(--line); }
+.verb-list { border-top: 1px solid var(--line); }
 .verb-row { display: flex; align-items: center; gap: 14px; padding: 10px 4px; border-bottom: 1px solid var(--line); }
 .verb-row.mastered { opacity: 0.6; }
 .verb-main { flex: 1; min-width: 0; }

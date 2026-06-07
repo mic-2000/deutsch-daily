@@ -27,6 +27,10 @@ window.LOCALE_EN = {
     verb_table_prompt: 'Write all the forms',
     verb_aux: 'Auxiliary',
     verb_table_hint: 'Enter — next field / check',
+    sel_select_all: 'Select all',
+    sel_clear: 'Clear',
+    sel_selected: (n) => `Selected: ${n}`,
+    sel_train: 'Train selected',
     // auth
     auth_title_login: 'Sign in',
     auth_title_register: 'Create account',

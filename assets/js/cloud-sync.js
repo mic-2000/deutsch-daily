@@ -39,6 +39,15 @@ async function initApp() {
     if (data && data.theme && typeof setTheme === 'function') setTheme(data.theme, true);
   } catch(e) { /* theme column may not exist yet */ }
 
+  // Shared verb mastery (cross-cutting: vocabulary ↔ verb trainer). Loaded if the page consumes it
+  // via applyVerbProgress(d). The verbs page loads it through its own CLOUD_FIELD instead.
+  if (typeof applyVerbProgress === 'function') {
+    try {
+      const { data } = await sb.from('progress').select('verbs_data').eq('user_id', session.user.id).single();
+      if (data && data.verbs_data) applyVerbProgress(data.verbs_data);
+    } catch(e) { /* verbs_data column may not exist yet */ }
+  }
+
   // setLang(skipSave) loads the resolved locale, syncs it into localStorage, and renders once.
   if (lang !== getLang()) { await setLang(lang, true); }
   else { await loadLocale(lang).catch(()=>{}); render(); }
@@ -72,6 +81,19 @@ async function saveThemeToCloud(theme) {
     await sb.from('progress').upsert({
       user_id: currentUser.id,
       theme: theme,
+      updated_at: new Date().toISOString()
+    }, { onConflict: 'user_id' });
+  } catch(e) {}
+}
+
+// Persist the shared verb-mastery store (verbs_data). Used by the vocabulary page, which writes
+// verb progress here so it stays in sync with the verb trainer (which owns verbs_data directly).
+async function saveVerbsToCloud(payload) {
+  if (!currentUser) return;
+  try {
+    await sb.from('progress').upsert({
+      user_id: currentUser.id,
+      verbs_data: payload,
       updated_at: new Date().toISOString()
     }, { onConflict: 'user_id' });
   } catch(e) {}
