@@ -122,6 +122,8 @@ window.LOCALE_EN = {
     tabs_legend: '● green = mastered · gold = in progress',
     words_count: (total, mastered, learning, neu) => `${total} words · mastered ${mastered} · in progress ${learning} · new ${neu}`,
     train_week: (n) => `Train week ${n}`,
+    levels_label: 'Level',
+    train_levels: (n) => `Train selected (${n})`,
     box_title: (box) => `Box ${box} of 5 · click to reset this word`,
     vocab_info: '<b>How progress works.</b> Each word has 5 boxes (the squares). New word — 0 boxes. Each correct answer moves it up one box and delays review: <b>1 → 2 → 4 → 8 → 16 days</b>. A wrong answer sends it back to box 1. <b>Box 5 = mastered</b> (5 correct answers needed). Every day click "Review due" — that\'s how you consolidate. To reset a word click its boxes; to reset everything use the button below.',
     vocab_footer: 'Progress synced to cloud · audio via system speech synthesizer',

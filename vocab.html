@@ -176,9 +176,16 @@ let state = {
   selectedWeek: 1,
   mastery: {},
   modes: { flashcard: true, article: true, spelling: true },
+  levels: { A1: false, A2: false, B1: false },
   session: null,
 };
 const KEY = 'de-vocab-trainer-v2'; // kept for export/import format version reference
+
+/* CEFR level → week mapping: A1 = weeks 1-8, A2 = 9-16, B1 = 17-24 */
+function levelOfWeek(w){ w = +w; return w <= 8 ? 'A1' : w <= 16 ? 'A2' : 'B1'; }
+function activeLevels(){ return Object.keys(state.levels).filter(l => state.levels[l]); }
+function weeksForLevels(levels){ return Object.keys(VOCAB).filter(w => levels.includes(levelOfWeek(w))); }
+function levelWordCount(levels){ let n = 0; for (const w in VOCAB){ if (levels.includes(levelOfWeek(w))) n += VOCAB[w].words.length; } return n; }
 
 /* Cloud sync config — initApp / saveToCloud / saveLangToCloud / logout live in assets/js/cloud-sync.js */
 const CLOUD_FIELD = 'vocab_data';
@@ -187,7 +194,7 @@ function applyCloudData(d){ applyData(d); }
 
 function serialize(){
   return { app:'deutsch-vokabeltrainer', version:2, savedAt:new Date().toISOString(),
-           selectedWeek: state.selectedWeek, modes: state.modes, mastery: state.mastery };
+           selectedWeek: state.selectedWeek, modes: state.modes, levels: state.levels, mastery: state.mastery };
 }
 function applyData(d){
   if (!d || typeof d !== 'object' || !d.mastery || typeof d.mastery !== 'object'){
@@ -195,6 +202,7 @@ function applyData(d){
   }
   state.mastery = d.mastery;
   if (d.modes) state.modes = d.modes;
+  if (d.levels) state.levels = Object.assign({ A1:false, A2:false, B1:false }, d.levels);
   if (d.selectedWeek) state.selectedWeek = d.selectedWeek;
   save(); render();
   return true;
@@ -290,6 +298,21 @@ function startSession(scope){
     list = due.map(i=>makeCard(scope.week,i)).concat(neu.slice(0,12).map(i=>makeCard(scope.week,i)));
     if (list.length === 0){ // nothing due & nothing new → review whole week
       list = words.map((_,i)=>makeCard(scope.week,i));
+    }
+  } else if (scope.type === 'levels'){
+    const weeks = weeksForLevels(scope.levels);
+    const due = [], neu = [];
+    for (const w of weeks){
+      const words = VOCAB[w].words;
+      for (let i=0;i<words.length;i++){
+        if (isMastered(w,i) && !isDue(w,i,now)) continue;
+        if (isSeen(w,i)){ if (isDue(w,i,now)) due.push([+w,i]); }
+        else neu.push([+w,i]);
+      }
+    }
+    list = due.map(([w,i])=>makeCard(w,i)).concat(neu.slice(0,20).map(([w,i])=>makeCard(w,i)));
+    if (list.length === 0){ // nothing due & nothing new → review some of the level
+      for (const w of weeks){ VOCAB[w].words.forEach((_,i)=>list.push(makeCard(+w,i))); }
     }
   } else { // review-all due
     for (const w in VOCAB){
@@ -435,13 +458,21 @@ function render(){
     <button class="chip" onclick="importProgress()">${T('settings_load_file')}</button>
   </div>
 
+  <div class="settings-bar">
+    <span class="settings-label">${T('levels_label')}</span>
+    ${levelChip('A1')}
+    ${levelChip('A2')}
+    ${levelChip('B1')}
+    <button class="btn accent" ${activeLevels().length?'':'disabled'} style="margin-left:auto" onclick='startSession({type:"levels",levels:${JSON.stringify(activeLevels())}})'>${T('train_levels', levelWordCount(activeLevels()))}</button>
+  </div>
+
   <div class="week-tabs">
     <div class="tabs-label">
       <span class="uppercase-mini">${T('tabs_label')}</span>
       <span class="uppercase-mini">${T('tabs_legend')}</span>
     </div>
     <div class="tabs-grid">
-      ${Object.keys(VOCAB).map(w=>{
+      ${(activeLevels().length ? weeksForLevels(activeLevels()) : Object.keys(VOCAB)).map(w=>{
         const s = weekStats(w);
         let dot = '';
         if (s.mastered === s.total) dot = '<span class="wt-dot" style="background:var(--green)"></span>';
@@ -514,6 +545,20 @@ function toggleMode(mode){
   const others = Object.keys(state.modes).filter(m=>m!==mode).some(m=>state.modes[m]);
   if (state.modes[mode] && !others){ showToast(T('toast_at_least_one_mode')); return; }
   state.modes[mode] = !state.modes[mode]; save(); render();
+}
+function levelChip(lvl){
+  const on = state.levels[lvl];
+  return `<button class="chip ${on?'on':''}" onclick="toggleLevel('${lvl}')"><span class="chip-check">${on?'✓':''}</span>${lvl}</button>`;
+}
+function toggleLevel(lvl){
+  state.levels[lvl] = !state.levels[lvl];
+  // if the current week falls outside the active filter, jump to the first visible week
+  const act = activeLevels();
+  if (act.length && !act.includes(levelOfWeek(state.selectedWeek))){
+    const ws = weeksForLevels(act);
+    if (ws.length) state.selectedWeek = +ws[0];
+  }
+  save(); render();
 }
 function selectWeek(w){ state.selectedWeek = +w; save(); render(); }
 
