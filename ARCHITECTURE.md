@@ -62,11 +62,11 @@ deutsch-daily/
 ├── vocab.html          # Vocabulary trainer (thin: page markup + page logic).
 ├── assets/
 │   ├── css/  base.css · components.css · planner.css · vocab.css · auth.css
-│   └── js/   i18n.js · utils.js · supabase.js · cloud-sync.js
-├── data/   weeks.js (global WEEKS) · vocab.js (global VOCAB)
-├── locales/  ru.js · ua.js · en.js   (window.LOCALE_RU / _UA / _EN = { ui, vocab, weeks })
+│   └── js/   i18n.js · theme.js · utils.js · supabase.js · cloud-sync.js
+├── data/   weeks.js (WEEKS) · vocab.js (VOCAB) · verbs.js (VERBS — master verb dictionary)
+├── locales/  ru.js · ua.js · en.js   (window.LOCALE_RU / _UA / _EN = { ui, vocab, verbs, weeks })
 ├── build.js · package.json · vercel.json
-├── ARCHITECTURE.md · CLAUDE.md · LICENSE
+├── ARCHITECTURE.md · CLAUDE.md · README.md · LICENSE
 ```
 
 **Important correction vs. older notes:** `index.html` *is* the auth screen (the full
@@ -78,14 +78,20 @@ each page (`initApp`).
 
 ```
 Supabase CDN
-→ locales/ru.js, ua.js, en.js      (define window.LOCALE_*)
-→ assets/js/i18n.js                (T, getLang, setLang, renderLangSwitcher)
+→ assets/js/i18n.js                (T, getLang, setLang, loadLocale, renderLangSwitcher)
+→ assets/js/theme.js               (theme toggle + persistence)
 → assets/js/utils.js               (esc, showToast)
 → assets/js/supabase.js            (sb client)
-→ assets/js/cloud-sync.js          (initApp, saveToCloud, saveLangToCloud, logout, currentUser)
+→ assets/js/cloud-sync.js          (initApp, saveToCloud, saveLangToCloud, saveThemeToCloud, logout, currentUser)
 → data/weeks.js | data/vocab.js    (WEEKS | VOCAB)
 → inline page <script>             (state, render, page logic; calls initApp() last)
 ```
+
+**Locale files are NOT in this list — they load on demand.** `i18n.loadLocale(code)` injects
+`locales/<code>.js` for the active language only (and caches it); the page bootstrap awaits
+`loadLocale(getLang())` before the first render (`initApp()` for planner/vocab; the init chain in
+`index.html`). Switching language fetches that one locale once. So a user downloads a single
+locale, not all three.
 
 `index.html` and `auth.html` load only the subset they need (`index.html` skips `cloud-sync.js`
 and the data files; `auth.html` loads nothing).
@@ -94,15 +100,18 @@ and the data files; `auth.html` loads nothing).
 
 ## 4. Shared modules (`assets/js/`)
 
-### `i18n.js` — translation core
+### `i18n.js` — translation core (lazy locale loading)
 - `_lang` initialised from `localStorage['ui_lang']`, default `'en'` (`DEFAULT_LANG`). Valid:
   `en`, `ua`, `ru`.
+- `loadLocale(code)` — injects `locales/<code>.js` once and returns a cached Promise that resolves
+  when `window.LOCALE_<CODE>` is set. This is how only the active language is fetched; nothing
+  preloads all three. Pages **must `await loadLocale(getLang())` before the first render**.
 - `T(key, ...args)` — look up `LOCALE_<lang>.ui[key]`, fall back to the `DEFAULT_LANG` (EN) value,
-  then to the raw key. If the value is a **function**, it's called with `args` (used for
-  interpolated strings, e.g. `planner_progress: (done, total) => ...`).
-- `setLang(code, skipSave)` — set language, persist to `localStorage`, push to cloud via
-  `saveLangToCloud` (unless `skipSave`), then re-`render()`. `skipSave` is used when applying the
-  language loaded *from* the cloud, to avoid a write-back loop.
+  then to the raw key (and tolerates a not-yet-loaded locale by returning the key). If the value is
+  a **function**, it's called with `args` (e.g. `planner_progress: (done, total) => ...`).
+- `setLang(code, skipSave)` — **async**: `await loadLocale(code)`, then set language, persist to
+  `localStorage`, push to cloud via `saveLangToCloud` (unless `skipSave`), then re-`render()`.
+  `skipSave` is used when applying the language loaded *from* the cloud, to avoid a write-back loop.
 - `getLang()`, `renderLangSwitcher()` (renders the EN/UA/RU buttons).
 
 ### `utils.js` — tiny shared helpers
@@ -128,8 +137,11 @@ Each page must define these globals **before** calling `initApp()`:
 - `currentUser` (global, set after auth).
 - `initApp()` — `sb.auth.getSession()`. **No session →** store `location.href` in
   `localStorage['auth_redirect']` and redirect to `index.html`. **Session →** set `currentUser`,
-  `SELECT <CLOUD_FIELD>, lang` for this user from `progress`, apply the payload (only when
-  non-empty — the `{}` column default is skipped) + language, then `render()`.
+  `SELECT <CLOUD_FIELD>, lang` from `progress`, apply the payload (only when non-empty — the `{}`
+  column default is skipped). It resolves the language (cloud value if valid, else the localStorage
+  default) **before** the first render, then `await setLang(lang, true)` loads that one locale,
+  syncs it into `localStorage`, and renders **once** — so there's no language flash and only the
+  chosen locale is fetched.
 - `saveToCloud()` — `upsert` `{ user_id, [CLOUD_FIELD]: getCloudPayload(), updated_at }` with
   `onConflict: 'user_id'`.
 - `saveLangToCloud(code)` — `upsert` `{ user_id, lang, updated_at }`.
@@ -203,20 +215,27 @@ to `index.html` and remembering where to come back to).
 
 ## 6. i18n data model
 
-`window.LOCALE_RU / _UA / _EN`, each `{ ui, vocab, weeks }`. **EN is the default and the `T()`
-fallback** (`i18n.js` `DEFAULT_LANG = 'en'`); all three locales define all three sections, so any
-of them works as the active or fallback language. Note: the data-overlay helpers `getLocalizedDay`
-(planner) and `getTranslation` (vocab) keep their own **hardcoded RU last-resort fallback** for a
-missing week/word entry — independent of `DEFAULT_LANG`.
+`window.LOCALE_RU / _UA / _EN`, each `{ ui, vocab, verbs, weeks }`, **lazy-loaded** (§4 —
+`loadLocale`). **EN is the default and the `T()` fallback** (`i18n.js` `DEFAULT_LANG = 'en'`); each
+locale is self-contained so the active one works alone. The data-overlay helpers `getLocalizedDay`
+(planner) and `getTranslation` (vocab) keep a defensive RU last-resort, but since only the active
+locale is loaded that path is effectively inert — each locale must be complete for the languages a
+user actually selects.
 
 - **`ui`** — flat string (or function) table keyed by UI string id. Used everywhere via `T(key)`.
 - **`vocab`** — `{ <weekNumber>: [translation0, translation1, ...] }`, **index-matched** to
-  `VOCAB[week].words`. Read by `getTranslation(week, idx)` (active locale → RU fallback → `''`).
+  `VOCAB[week].words`. Read by `getTranslation(week, idx)`.
+- **`verbs`** — `{ <verbKey>: "translation" }`, keyed by the **same key as `VERBS`** in
+  `data/verbs.js` (Infinitiv, reflexive → `"sich <inf>"`) — NOT index-matched. This is the
+  translation source for the verb dictionary. All three locales carry the full set (306 each):
+  RU is the original curated glosses, EN/UA were authored to match.
 - **`weeks`** — `{ <weekNumber>: { theme, grammar, vocab, tasks: [...] } }`, **index-matched** to
   `WEEKS[n].tasks`. Overlaid onto the base curriculum by `getLocalizedDay(d)` in the planner.
 
-> Consequence: adding/removing a word or a task means updating the German base array **and** the
-> matching index in **all three** locale arrays, or translations silently shift/blank out.
+> Consequence: `ui`/`vocab`/`weeks` are **index-/key-matched** to the base data — adding/removing a
+> word or task means updating the German base **and** the matching slot in **all three** locales,
+> or translations silently shift/blank out. `verbs` is key-based, so it's order-independent, but a
+> verb shown for a given UI language needs its key present in that language's `verbs` map.
 
 ---
 
@@ -262,6 +281,29 @@ const VOCAB = {
 - Nouns are stored **with their article**: `"der Vater"`.
 - Some week-5 verbs carry the Perfekt form after an em dash: `"gehen — gegangen (sein)"`. Speech
   uses only the part before `—` (see `speakWord`).
+
+### `data/verbs.js` — global `VERBS` (master verb dictionary)
+
+```js
+const VERBS = {
+  "gehen":     { praet:"ging",   pp:"gegangen",  aux:"sein" },
+  "essen":     { praet:"aß",     pp:"gegessen",  aux:"haben", praes:"isst" },
+  "abfahren":  { praet:"fuhr ab",pp:"abgefahren",aux:"sein",  praes:"fährt ab", sep:true },
+  "sich ansehen": { praet:"sah sich an", pp:"sich angesehen", aux:"haben", praes:"sieht an", sep:true, refl:true },
+  // … ≈306 verbs
+};
+```
+- A language-neutral **forms** dictionary (≈306 A1–B1 verbs). Key = Infinitiv; reflexive verbs are
+  keyed `"sich <inf>"`. `praet` = Präteritum, `pp` = Partizip II (no auxiliary), `aux` = perfect
+  auxiliary (`haben`|`sein`); optional `praes` (irregular present), `sep` (separable), `refl`.
+- **Translations are NOT here** — they live in `locales/*.verbs[key]` (§6), fully populated in all
+  three languages (306 each: RU/UA/EN).
+- **Source of truth.** Previously generated from a CSV; the CSV and its generator were removed, so
+  `data/verbs.js` (forms) + `locales/*.verbs` (glosses) are now hand-maintained.
+- **Planned use (not yet wired):** a week entry in `VOCAB` will reference a verb by key (e.g.
+  `{ v:"gehen" }`); the trainer will resolve forms from `VERBS` and the gloss from
+  `locales/<lang>.verbs[key]`, and drill the three Stammformen together (adaptive triad-flashcard /
+  cloze / table by Leitner box). The dictionary exists; the trainer integration is the next step.
 
 ---
 

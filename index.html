@@ -33,9 +33,6 @@
 <div id="toast" class="toast"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-<script src="locales/ru.js"></script>
-<script src="locales/ua.js"></script>
-<script src="locales/en.js"></script>
 <script src="assets/js/i18n.js"></script>
 <script src="assets/js/theme.js"></script>
 <script src="assets/js/utils.js"></script>
@@ -132,11 +129,14 @@ function redirect() {
   location.href = back;
 }
 
-// Init: if already logged in — redirect
-sb.auth.getSession().then(({ data: { session } }) => {
-  if (session) { redirect(); return; }
-  render();
-});
+// Init: load the active language, then route on session
+loadLocale(getLang())
+  .then(() => sb.auth.getSession())
+  .then(({ data: { session } }) => {
+    if (session) { redirect(); return; }
+    render();
+  })
+  .catch(() => render());
 </script>
 </body>
 </html>

@@ -17,8 +17,13 @@ on Vercel (HTTPS). `index.html` = login, `auth.html` = redirect stub, `planner.h
 - **`esc()` every dynamic value** before it enters `innerHTML`. (§4)
 - **User-facing text only via `T('key', …)`**, and add the key to **all three** locales
   (`ru`/`ua`/`en`; EN is the default + `T()` fallback). (§6)
+- **Locales are lazy-loaded** (`i18n.loadLocale`): only the active language is fetched. Don't
+  re-add static `<script src="locales/*.js">` tags; `await loadLocale(getLang())` before the first
+  render. (§4)
 - **Keep index-match alignment:** adding/removing/reordering a word or task means editing the
-  German base in `data/` **and** the same index in all three `locales/*.{vocab,weeks}`. (§6–§7)
+  German base in `data/` **and** the same index in all three `locales/*.{vocab,weeks}`. Verb forms
+  live in `data/verbs.js` (`VERBS`); verb glosses live in `locales/*.verbs[key]`, keyed by the same
+  verb key (not index-matched). (§6–§7)
 - **Cloud is the source of truth.** Before calling `initApp()`, a page must define `CLOUD_FIELD`,
   `getCloudPayload()`, `applyCloudData(d)`, `render()`. Never store progress in `localStorage`
   (only `ui_lang` / `auth_redirect` belong there). (§4–§5)

@@ -17,7 +17,9 @@ async function initApp() {
   }
   currentUser = session.user;
 
-  // Load from cloud
+  // Resolve language + progress from the cloud BEFORE the first render, so the page renders once
+  // in the correct language (no flash) and only that one locale is fetched.
+  let lang = getLang();
   try {
     const { data } = await sb.from('progress')
       .select(CLOUD_FIELD + ', lang')
@@ -25,7 +27,7 @@ async function initApp() {
       .single();
     const payload = data && data[CLOUD_FIELD];
     if (payload && Object.keys(payload).length) applyCloudData(payload); // skip empty default ({}::jsonb)
-    if (data && data.lang) setLang(data.lang, true);
+    if (data && data.lang && LANG_NAMES[data.lang]) lang = data.lang;
   } catch(e) { /* offline or no record yet */ }
 
   // Load theme (separate query so a missing column can't break the main load)
@@ -37,7 +39,9 @@ async function initApp() {
     if (data && data.theme && typeof setTheme === 'function') setTheme(data.theme, true);
   } catch(e) { /* theme column may not exist yet */ }
 
-  render();
+  // setLang(skipSave) loads the resolved locale, syncs it into localStorage, and renders once.
+  if (lang !== getLang()) { await setLang(lang, true); }
+  else { await loadLocale(lang).catch(()=>{}); render(); }
 }
 
 async function saveToCloud() {

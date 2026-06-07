@@ -14,9 +14,6 @@
 <link rel="stylesheet" href="assets/css/components.css">
 <link rel="stylesheet" href="assets/css/planner.css">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-<script src="locales/ru.js"></script>
-<script src="locales/ua.js"></script>
-<script src="locales/en.js"></script>
 <script src="assets/js/i18n.js"></script>
 <script src="assets/js/theme.js"></script>
 <script src="assets/js/utils.js"></script>
@@ -55,7 +52,7 @@ const TOTAL_DAYS = DAYS.length;
 
 /* Return a day object with content translated to the active UI language */
 function getLocalizedDay(d) {
-  const localeObj = window['LOCALE_' + getLang().toUpperCase()] || window.LOCALE_RU;
+  const localeObj = window['LOCALE_' + getLang().toUpperCase()] || window.LOCALE_RU || {};
   const weekLoc = (localeObj.weeks || {})[d.week];
   if (!weekLoc) return d;
   return {
@@ -159,7 +156,7 @@ function render() {
   const isViewingCurrent = state.viewingDay === state.currentDay;
 
   const weekOptions = WEEKS.map(w => {
-    const localeObj = window['LOCALE_' + getLang().toUpperCase()] || window.LOCALE_RU;
+    const localeObj = window['LOCALE_' + getLang().toUpperCase()] || window.LOCALE_RU || {};
     const wLoc = (localeObj.weeks || {})[w.n];
     const theme = (wLoc && wLoc.theme) || w.theme;
     return `<option value="${w.n}" ${w.n === d.week ? 'selected' : ''}>${T('planner_week_option', w.n, esc(theme))}</option>`;
