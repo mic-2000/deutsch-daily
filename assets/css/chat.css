@@ -95,7 +95,7 @@
   display: flex; align-items: center; justify-content: center;
   padding: 20px;
 }
-.ai-key-box { background: var(--paper); padding: 28px 32px; max-width: 420px; width: 100%; }
+.ai-key-box { background: var(--paper); padding: 28px 32px; max-width: 540px; width: 100%; }
 .ai-key-box h3 { font-family: var(--serif); font-size: 20px; font-weight: 400; margin-bottom: 6px; }
 .ai-key-box p  { font-size: 13px; color: var(--ink-soft); margin-bottom: 18px; line-height: 1.55; }
 .ai-key-input {
