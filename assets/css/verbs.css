@@ -20,6 +20,8 @@
 
 /* home list */
 .verb-list { border-top: 1px solid var(--line); }
+.verb-list-sep { font-size: 11px; text-transform: uppercase; letter-spacing: 0.14em; color: var(--ink-soft); padding: 10px 4px 6px; border-bottom: 1px solid var(--line); display: flex; align-items: center; gap: 8px; }
+.verb-list-sep::after { content: ''; flex: 1; height: 1px; background: var(--line); }
 .verb-row { display: flex; align-items: center; gap: 14px; padding: 10px 4px; border-bottom: 1px solid var(--line); }
 .verb-row.mastered { opacity: 0.6; }
 .verb-main { flex: 1; min-width: 0; }

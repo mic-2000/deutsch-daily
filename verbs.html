@@ -285,19 +285,31 @@ function render(){
   </div>
 
   <div class="verb-list">
-    ${fk.map(k=>{
-      const e=VERBS[k]; const box=cardBox(k); const mastered=box>=MAX_BOX;
-      const segs=[1,2,3,4,5].map(b=>`<div class="box-seg ${b<=box?'fill':''} ${b<=box&&mastered?'full':''}"></div>`).join('');
-      return `<div class="verb-row ${mastered?'mastered':''}">
-        <input type="checkbox" class="verb-check" ${state.sel[k]?'checked':''} onclick="toggleSelect(${jk(k)}, this)">
-        <div class="verb-main">
-          <div class="verb-de">${esc(k)} <span class="t-sep">·</span> ${esc(e.praet)} <span class="t-sep">·</span> ${auxHtml(e.aux)} ${esc(e.pp)}</div>
-          <div class="verb-gloss">${esc(verbGloss(k))}</div>
-        </div>
-        <button class="box-bar" onclick="resetVerb(${jk(k)})" title="${T('box_title', box)}">${segs}</button>
-        <button class="mini-audio" onclick="speakVerb(${jk(k)},this)" title="Aussprache">🔊</button>
-      </div>`;
-    }).join('')}
+    ${(()=>{
+      const selKeys = fk.filter(k => state.sel[k]);
+      const restKeys = fk.filter(k => !state.sel[k]);
+      const verbRowHtml = k => {
+        const e=VERBS[k]; const box=cardBox(k); const mastered=box>=MAX_BOX;
+        const segs=[1,2,3,4,5].map(b=>`<div class="box-seg ${b<=box?'fill':''} ${b<=box&&mastered?'full':''}"></div>`).join('');
+        return `<div class="verb-row ${mastered?'mastered':''}">
+          <input type="checkbox" class="verb-check" ${state.sel[k]?'checked':''} onclick="toggleSelect(${jk(k)}, this)">
+          <div class="verb-main">
+            <div class="verb-de">${esc(k)} <span class="t-sep">·</span> ${esc(e.praet)} <span class="t-sep">·</span> ${auxHtml(e.aux)} ${esc(e.pp)}</div>
+            <div class="verb-gloss">${esc(verbGloss(k))}</div>
+          </div>
+          <button class="box-bar" onclick="resetVerb(${jk(k)})" title="${T('box_title', box)}">${segs}</button>
+          <button class="mini-audio" onclick="speakVerb(${jk(k)},this)" title="Aussprache">🔊</button>
+        </div>`;
+      };
+      let out = '';
+      if(selKeys.length){
+        out += `<div class="verb-list-sep">${T('sel_section_selected')} (${selKeys.length})</div>`;
+        out += selKeys.map(verbRowHtml).join('');
+        out += `<div class="verb-list-sep">${T('sel_section_rest')} (${restKeys.length})</div>`;
+      }
+      out += restKeys.map(verbRowHtml).join('');
+      return out;
+    })()}
   </div>
 
   <div class="info-box">${T('verbs_info')}</div>

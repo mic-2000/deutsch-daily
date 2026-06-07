@@ -31,6 +31,8 @@ window.LOCALE_EN = {
     sel_clear: 'Clear',
     sel_selected: (n) => `Selected: ${n}`,
     sel_train: 'Train selected',
+    sel_section_selected: 'Selected for training',
+    sel_section_rest: 'All verbs',
     // auth
     auth_title_login: 'Sign in',
     auth_title_register: 'Create account',

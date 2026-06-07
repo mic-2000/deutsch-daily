@@ -31,6 +31,8 @@ window.LOCALE_RU = {
     sel_clear: 'Очистить',
     sel_selected: (n) => `Выбрано: ${n}`,
     sel_train: 'Тренировать выбранные',
+    sel_section_selected: 'Выбраны для тренировки',
+    sel_section_rest: 'Все глаголы',
     auth_title_login: 'Войти',
     auth_title_register: 'Создать аккаунт',
     auth_email: 'Email',

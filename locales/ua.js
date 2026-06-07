@@ -30,6 +30,8 @@ window.LOCALE_UA = {
     sel_clear: 'Очистити',
     sel_selected: (n) => `Вибрано: ${n}`,
     sel_train: 'Тренувати вибрані',
+    sel_section_selected: 'Вибрані для тренування',
+    sel_section_rest: 'Усі дієслова',
     auth_title_login: 'Увійти',
     auth_title_register: 'Створити акаунт',
     auth_email: 'Email',
