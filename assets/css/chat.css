@@ -41,13 +41,13 @@
 
 /* message list */
 .ai-messages {
-  max-height: 460px; overflow-y: auto;
+  max-height: 460px; overflow-y: auto; overflow-x: hidden;
   display: flex; flex-direction: column; gap: 10px;
   margin-bottom: 14px; scroll-behavior: smooth;
 }
-.ai-msg { padding: 11px 15px; font-size: 14px; line-height: 1.65; max-width: 90%; }
-.ai-msg.user  { background: var(--paper-2); align-self: flex-end;   border-left: 3px solid var(--line); }
-.ai-msg.model { background: var(--paper-3); align-self: flex-start; border-left: 3px solid var(--accent); }
+.ai-msg { padding: 11px 15px; font-size: 14px; line-height: 1.65; }
+.ai-msg.user  { background: var(--paper-2); align-self: flex-end; max-width: 88%; border-left: 3px solid var(--line); }
+.ai-msg.model { background: var(--paper-3); align-self: stretch;  border-left: 3px solid var(--accent); overflow-x: auto; }
 .ai-msg.ai-loading { opacity: 0.55; font-style: italic; }
 .ai-msg code { font-size: 13px; background: var(--paper-2); padding: 1px 5px; }
 
