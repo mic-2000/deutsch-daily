@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Deutsch · Verben</title>
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<script defer src="/_vercel/insights/script.js"></script>
+<script defer src="/_vercel/speed-insights/script.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500;9..144,600&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/base.css">
+<link rel="stylesheet" href="assets/css/components.css">
+<link rel="stylesheet" href="assets/css/vocab.css">
+<link rel="stylesheet" href="assets/css/verbs.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="assets/js/i18n.js"></script>
+<script src="assets/js/theme.js"></script>
+<script src="assets/js/utils.js"></script>
+<script src="assets/js/supabase.js"></script>
+<script src="assets/js/cloud-sync.js"></script>
+<script src="data/verbs.js"></script>
+</head>
+<body>
+<div id="app"></div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ==========================================================================
+   Irregular-verb trainer. Verb forms live in data/verbs.js (global `VERBS`);
+   glosses live in locales/<lang>.verbs[key]. Mastery is keyed by the verb key
+   (the Infinitiv, reflexive → "sich <inf>") in the `verbs_data` cloud column —
+   a single shared store, so a verb learned here counts wherever it appears.
+   ========================================================================== */
+
+/* ---------- helpers ---------- */
+function normalize(s){ return String(s).toLowerCase().trim().replace(/ä/g,'ae').replace(/ö/g,'oe').replace(/ü/g,'ue').replace(/ß/g,'ss').replace(/\s+/g,' '); }
+
+/* Character-level diff (LCS): wrong/extra chars in a → diff-bad, missing chars in b → diff-miss. */
+function diffChars(a, b){
+  const A=[...a], B=[...b], al=A.map(c=>c.toLowerCase()), bl=B.map(c=>c.toLowerCase());
+  const m=A.length, n=B.length, dp=Array.from({length:m+1},()=>new Array(n+1).fill(0));
+  for(let i=m-1;i>=0;i--) for(let j=n-1;j>=0;j--) dp[i][j]= al[i]===bl[j]? dp[i+1][j+1]+1 : Math.max(dp[i+1][j],dp[i][j+1]);
+  let i=0,j=0,aHtml='',bHtml='';
+  while(i<m&&j<n){ if(al[i]===bl[j]){aHtml+=esc(A[i]);bHtml+=esc(B[j]);i++;j++;} else if(dp[i+1][j]>=dp[i][j+1]){aHtml+=`<span class="diff-bad">${esc(A[i])}</span>`;i++;} else {bHtml+=`<span class="diff-miss">${esc(B[j])}</span>`;j++;} }
+  while(i<m){aHtml+=`<span class="diff-bad">${esc(A[i])}</span>`;i++;}
+  while(j<n){bHtml+=`<span class="diff-miss">${esc(B[j])}</span>`;j++;}
+  return { aHtml, bHtml };
+}
+
+function verbGloss(key){
+  const loc = window['LOCALE_'+getLang().toUpperCase()];
+  const v = loc && loc.verbs && loc.verbs[key];
+  if (v !== undefined && v !== '') return v;
+  const ru = window.LOCALE_RU && window.LOCALE_RU.verbs;
+  return (ru && ru[key]) || '';
+}
+function auxHtml(aux){ return `<span class="aux ${aux}">${aux}</span>`; }
+/* full triad e.g. "gehen · ging · ist gegangen" */
+function triadHtml(key){ const e=VERBS[key]; return `<span class="t-inf">${esc(key)}</span> <span class="t-sep">·</span> <span class="t-praet">${esc(e.praet)}</span> <span class="t-sep">·</span> ${auxHtml(e.aux)} ${esc(e.pp)}`; }
+
+/* ---------- speech ---------- */
+let GERMAN_VOICE=null;
+function pickVoice(){ if(!window.speechSynthesis) return; const vs=window.speechSynthesis.getVoices(); GERMAN_VOICE=vs.find(v=>/de[-_]/i.test(v.lang))||vs.find(v=>/german|deutsch/i.test(v.name))||null; }
+if(window.speechSynthesis){ pickVoice(); window.speechSynthesis.onvoiceschanged=pickVoice; }
+function speak(text, btn){
+  if(!window.speechSynthesis){ showToast(T('toast_no_speech')); return; }
+  window.speechSynthesis.cancel();
+  const u=new SpeechSynthesisUtterance(text); u.lang='de-DE'; u.rate=0.9;
+  if(GERMAN_VOICE) u.voice=GERMAN_VOICE;
+  if(btn){ btn.classList.add('speaking'); u.onend=()=>btn.classList.remove('speaking'); u.onerror=()=>btn.classList.remove('speaking'); }
+  window.speechSynthesis.speak(u);
+}
+function speakVerb(key, btn){ const e=VERBS[key]; speak(`${key}, ${e.praet}, ${e.aux} ${e.pp}`, btn); }
+
+/* ==========================================================================
+   LEITNER (shared model with the vocab trainer; keyed by verb key)
+   ========================================================================== */
+const DAY=86400000;
+const BOX_INTERVAL={1:1*DAY,2:2*DAY,3:4*DAY,4:8*DAY,5:16*DAY};
+const MAX_BOX=5;
+function getCard(k){ return state.mastery[k] || {box:0,due:0,right:0,wrong:0,seen:0}; }
+function isDue(k,now){ const c=state.mastery[k]; return !c || c.due<=now; }
+function isSeen(k){ const c=state.mastery[k]; return c && c.seen>0; }
+function cardBox(k){ const c=state.mastery[k]; return c?c.box:0; }
+function isMastered(k){ return cardBox(k)>=MAX_BOX; }
+function updateCard(k,correct){
+  const c=getCard(k); c.seen++;
+  if(correct){ c.right++; c.box=Math.min(MAX_BOX,c.box+1); } else { c.wrong++; c.box=1; }
+  c.due=Date.now()+BOX_INTERVAL[c.box];
+  state.mastery[k]=c; save();
+}
+
+/* ==========================================================================
+   STATE + CLOUD
+   ========================================================================== */
+let state = { mastery:{}, modes:{triad:true,cloze:true,table:true}, filter:'all', session:null, confirm:null };
+const CLOUD_FIELD='verbs_data';
+function getCloudPayload(){ return { app:'deutsch-verbtrainer', version:1, savedAt:new Date().toISOString(), modes:state.modes, mastery:state.mastery }; }
+function applyCloudData(d){ if(!d||typeof d!=='object') return; if(d.mastery&&typeof d.mastery==='object') state.mastery=d.mastery; if(d.modes) state.modes=Object.assign(state.modes,d.modes); }
+function save(){ saveToCloud(); }
+
+/* ---------- reset (in-page confirm, never native confirm()) ---------- */
+function resetVerb(k){ askConfirm(T('confirm_reset_word'), {key:k}); }
+function resetAll(){ askConfirm(T('confirm_reset_all'), 'all'); }
+function askConfirm(message, action){ state.confirm={message,action}; render(); }
+function confirmNo(){ state.confirm=null; render(); }
+function confirmYes(){
+  const a=state.confirm&&state.confirm.action; state.confirm=null;
+  if(a==='all'){ state.mastery={}; save(); render(); showToast(T('toast_progress_reset')); }
+  else if(a&&typeof a==='object'){ delete state.mastery[a.key]; save(); render(); showToast(T('toast_word_reset')); }
+  else render();
+}
+
+/* ==========================================================================
+   MODES
+   ========================================================================== */
+function availableModes(key){ const e=VERBS[key]; const m=['triad']; if(!e.refl){ m.push('cloze','table'); } return m; }
+function pickMode(key){
+  const avail=availableModes(key).filter(m=>state.modes[m]);
+  if(!avail.length) return 'triad';
+  const box=cardBox(key);
+  const want = box>=4 ? 'table' : box>=2 ? 'cloze' : 'triad';
+  if(avail.includes(want)) return want;
+  return avail.includes('triad') ? 'triad' : avail[0];
+}
+function makeCard(key){
+  const mode=pickMode(key);
+  const clozeField = (mode==='cloze') ? (Math.random()<0.5?'praet':'pp') : null;
+  return { key, mode, clozeField, requeued:false, firstTry:null, val:'', aux:null };
+}
+
+/* ==========================================================================
+   FILTER + STATS
+   ========================================================================== */
+function filterKeys(filter){
+  const all=Object.keys(VERBS);
+  if(filter==='sein') return all.filter(k=>VERBS[k].aux==='sein');
+  if(filter==='sep')  return all.filter(k=>VERBS[k].sep);
+  if(filter==='refl') return all.filter(k=>VERBS[k].refl);
+  return all;
+}
+function stats(){
+  const now=Date.now(); const all=Object.keys(VERBS);
+  let mastered=0,learning=0,due=0;
+  for(const k of all){
+    if(isMastered(k)) mastered++; else if(isSeen(k)) learning++;
+    if(isSeen(k)&&!isMastered(k)&&isDue(k,now)) due++;
+  }
+  return { total:all.length, mastered, learning, due };
+}
+
+/* ==========================================================================
+   SESSION
+   ========================================================================== */
+function startSession(scope){
+  const now=Date.now();
+  let keys;
+  if(scope.type==='due'){
+    keys=Object.keys(VERBS).filter(k=>isSeen(k)&&!isMastered(k)&&isDue(k,now));
+  } else { // train a filter set: due first, then new, then (if empty) some of the set
+    const base=filterKeys(scope.filter||'all');
+    const due=base.filter(k=>isSeen(k)&&isDue(k,now)&&!isMastered(k));
+    const neu=base.filter(k=>!isSeen(k));
+    keys=due.concat(neu.slice(0,15));
+    if(!keys.length) keys=base.slice(0);
+  }
+  keys=keys.sort(()=>Math.random()-0.5).slice(0,20);
+  if(!keys.length){ showToast(T('toast_no_words')); return; }
+  state.session={ scope, queue:keys.map(makeCard), pos:0, uniqueRight:0, uniqueTotal:keys.length, answered:false, revealed:false, lastCorrect:null };
+  render();
+}
+function answer(correct){
+  const s=state.session; if(!s) return;
+  const card=s.queue[s.pos];
+  if(card.firstTry===null){ card.firstTry=correct; if(correct) s.uniqueRight++; }
+  updateCard(card.key, correct);
+  if(!correct && !card.requeued){ s.queue.push({ ...card, mode:'triad', clozeField:null, requeued:true, firstTry:card.firstTry }); }
+  if(card.mode==='triad'){ nextCard(); return; }
+  s.lastCorrect=correct; s.answered=true; s.revealed=true; render();
+  setTimeout(()=>{ const b=document.getElementById('cardAudio'); if(b) speakVerb(card.key,b); },150);
+}
+function nextCard(){
+  const s=state.session; if(!s) return;
+  s.pos++; s.answered=false; s.revealed=false; s.lastCorrect=null;
+  render();
+  setTimeout(()=>{ const inp=document.getElementById('vInput'); if(inp) inp.focus(); },50);
+}
+function closeSession(){ if(window.speechSynthesis) window.speechSynthesis.cancel(); state.session=null; render(); }
+
+function revealTriad(){
+  state.session.revealed=true; render();
+  const card=state.session.queue[state.session.pos];
+  setTimeout(()=>{ const b=document.getElementById('cardAudio'); if(b) speakVerb(card.key,b); },120);
+}
+
+function submitCloze(){
+  const s=state.session; if(!s||s.answered) return;
+  const card=s.queue[s.pos]; const inp=document.getElementById('vInput');
+  card.val = inp ? inp.value : '';
+  const target = VERBS[card.key][card.clozeField];
+  const correct = normalize(card.val) === normalize(target);
+  answer(correct);
+}
+function submitTable(){
+  const s=state.session; if(!s||s.answered) return;
+  const card=s.queue[s.pos]; const e=VERBS[card.key];
+  const pIn=document.getElementById('praetIn'), ppIn=document.getElementById('ppIn');
+  card.valPraet = pIn?pIn.value:''; card.valPp = ppIn?ppIn.value:'';
+  const okP = normalize(card.valPraet)===normalize(e.praet);
+  const okPp = normalize(card.valPp)===normalize(e.pp);
+  const okAux = card.aux===e.aux;
+  answer(okP && okPp && okAux);
+}
+function chooseAux(a){ const s=state.session; if(!s||s.answered) return; s.queue[s.pos].aux=a; render(); setTimeout(()=>{const i=document.getElementById('praetIn'); if(i&&!i.value) i.focus();},20); }
+
+/* ==========================================================================
+   RENDER — HOME
+   ========================================================================== */
+function render(){
+  if(state.session){ renderSession(); return; }
+  const g=stats();
+  const fk=filterKeys(state.filter);
+
+  let html = `
+<header><div class="container">
+  <div class="title-cat">${T('vocab_title_cat')}</div>
+  <h1>Unregelmäßige <em>Verben</em></h1>
+  <div class="subtitle">${T('verbs_subtitle')}</div>
+  <div class="user-bar">
+    <div class="nav-tabs">
+      <a class="nav-tab" href="planner.html">${T('nav_planner')}</a>
+      <a class="nav-tab" href="vocab.html">${T('nav_vocab')}</a>
+      <a class="nav-tab active" href="verbs.html">${T('nav_verbs')}</a>
+    </div>
+    <div style="display:flex;align-items:center;gap:12px">
+      <div class="lang-switcher">${renderLangSwitcher()}</div>
+      ${typeof renderThemeToggle==='function'?renderThemeToggle():''}
+      <span class="user-email">${esc(currentUser?currentUser.email:'')}</span>
+      <button class="btn-logout" onclick="logout()">${T('logout')}</button>
+    </div>
+  </div>
+</div></header>
+
+<section class="container stats">
+  <div><div class="stat-label">${T('stat_total')}</div><div class="stat-big num">${g.total}</div><div class="stat-sub">${T('verbs_total_sub')}</div></div>
+  <div><div class="stat-label">${T('stat_mastered')}</div><div class="stat-big green num">${g.mastered}</div><div class="stat-sub">${T('stat_mastered_sub', Math.round(g.mastered/g.total*100))}</div></div>
+  <div><div class="stat-label">${T('stat_learning')}</div><div class="stat-big num">${g.learning}</div><div class="stat-sub">${T('stat_learning_sub')}</div></div>
+  <div><div class="stat-label">${T('stat_due')}</div><div class="stat-big accent num">${g.due}</div><div class="stat-sub">${T('stat_due_sub')}</div></div>
+</section>
+
+<main class="container">
+  <div class="due-banner">
+    <div class="due-banner-text">
+      ${g.due>0 ? T('due_title', g.due) : T('due_all_done')}
+      <small>${g.due>0 ? T('due_hint') : T('due_all_done_hint')}</small>
+    </div>
+    <button class="btn on-dark big" onclick="startSession({type:'due'})" ${g.due===0?'disabled':''}>${T('due_btn')}</button>
+  </div>
+
+  <div class="settings-bar">
+    <span class="settings-label">${T('settings_modes')}</span>
+    ${modeChip('triad', T('mode_triad'))}
+    ${modeChip('cloze', T('mode_cloze'))}
+    ${modeChip('table', T('mode_table'))}
+  </div>
+
+  <div class="settings-bar">
+    <span class="settings-label">${T('filter_label')}</span>
+    ${filterChip('all', T('filter_all'))}
+    ${filterChip('sein', 'sein')}
+    ${filterChip('sep', T('filter_sep'))}
+    ${filterChip('refl', T('filter_refl'))}
+    <button class="btn accent" style="margin-left:auto" onclick="startSession({type:'filter',filter:'${state.filter}'})">${T('verb_train')} (${fk.length})</button>
+  </div>
+
+  <div class="verb-list">
+    ${fk.map(k=>{
+      const e=VERBS[k]; const box=cardBox(k); const mastered=box>=MAX_BOX;
+      const segs=[1,2,3,4,5].map(b=>`<div class="box-seg ${b<=box?'fill':''} ${b<=box&&mastered?'full':''}"></div>`).join('');
+      return `<div class="verb-row ${mastered?'mastered':''}">
+        <div class="verb-main">
+          <div class="verb-de">${esc(k)} <span class="t-sep">·</span> ${esc(e.praet)} <span class="t-sep">·</span> ${auxHtml(e.aux)} ${esc(e.pp)}</div>
+          <div class="verb-gloss">${esc(verbGloss(k))}</div>
+        </div>
+        <button class="box-bar" onclick="resetVerb(${JSON.stringify(k).replace(/"/g,'&quot;')})" title="${T('box_title', box)}">${segs}</button>
+        <button class="mini-audio" onclick="speakVerb(${JSON.stringify(k).replace(/"/g,'&quot;')},this)" title="Aussprache">🔊</button>
+      </div>`;
+    }).join('')}
+  </div>
+
+  <div class="info-box">${T('verbs_info')}</div>
+</main>
+
+<footer><div class="container f-row">
+  <span>${T('vocab_footer')}</span>
+  <button onclick="resetAll()" style="font-size:12px;color:var(--ink-soft);text-decoration:underline;text-underline-offset:3px;background:none;border:none;cursor:pointer">${T('reset_all')}</button>
+</div></footer>`;
+
+  if(state.confirm){
+    html += `
+<div class="confirm-bg" onclick="if(event.target===this)confirmNo()">
+  <div class="confirm-box">
+    <div class="confirm-msg">${esc(state.confirm.message)}</div>
+    <div class="confirm-actions">
+      <button class="btn" onclick="confirmNo()">${T('confirm_no')}</button>
+      <button class="btn accent" onclick="confirmYes()">${T('confirm_yes')}</button>
+    </div>
+  </div>
+</div>`;
+  }
+  document.getElementById('app').innerHTML = html;
+}
+
+function modeChip(mode,label){
+  const on=state.modes[mode];
+  return `<button class="chip ${on?'on':''}" onclick="toggleMode('${mode}')"><span class="chip-check">${on?'✓':''}</span>${label}</button>`;
+}
+function toggleMode(mode){
+  const others=Object.keys(state.modes).filter(m=>m!==mode).some(m=>state.modes[m]);
+  if(state.modes[mode]&&!others){ showToast(T('toast_at_least_one_mode')); return; }
+  state.modes[mode]=!state.modes[mode]; save(); render();
+}
+function filterChip(f,label){ return `<button class="chip ${state.filter===f?'on':''}" onclick="setFilter('${f}')">${label}</button>`; }
+function setFilter(f){ state.filter=f; render(); }
+
+/* ==========================================================================
+   RENDER — SESSION
+   ========================================================================== */
+function renderSession(){
+  const s=state.session;
+  if(s.pos>=s.queue.length){ renderEnd(); return; }
+  const card=s.queue[s.pos];
+  const progress=(s.pos/s.queue.length)*100;
+  const modeLabel={triad:T('mode_triad'),cloze:T('mode_cloze'),table:T('mode_table')}[card.mode];
+  let body = card.mode==='triad' ? renderTriad(card,s) : card.mode==='cloze' ? renderCloze(card,s) : renderTable(card,s);
+
+  document.getElementById('app').innerHTML = `
+<div class="session-bg">
+  <div class="session-top"><div class="container session-top-row">
+    <span class="session-mode-badge ${card.mode}">${modeLabel}</span>
+    <span class="session-counter">${s.pos+1} / ${s.queue.length}</span>
+    <button class="session-close" onclick="closeSession()">×</button>
+  </div>
+  <div class="container"><div class="session-progress"><div class="session-progress-fill" style="width:${progress}%"></div></div></div>
+  </div>
+  <div class="session-body"><div class="card">${body}</div></div>
+</div>`;
+  if((card.mode==='cloze'||card.mode==='table') && !s.answered){
+    setTimeout(()=>{ const inp=document.getElementById(card.mode==='cloze'?'vInput':'praetIn'); if(inp) inp.focus(); },30);
+  }
+}
+
+function renderTriad(card,s){
+  const e=VERBS[card.key];
+  return `
+    <div class="card-prompt-label">${T('verb_recall')}</div>
+    <div class="card-word">${esc(card.key)}</div>
+    <div class="card-sub">${esc(verbGloss(card.key))}</div>
+    ${s.revealed ? `
+      <div class="triad">${triadHtml(card.key)}</div>
+      <button class="audio-btn" id="cardAudio" onclick="speakVerb(${JSON.stringify(card.key).replace(/"/g,'&quot;')},this)">🔊</button>
+      <div class="card-actions">
+        <button class="mark wrong" onclick="answer(false)">${T('flashcard_wrong')}</button>
+        <button class="mark right" onclick="answer(true)">${T('flashcard_right')}</button>
+      </div>
+      <div class="kbd-hint">${T('flashcard_hint')}</div>
+    ` : `
+      <div class="card-actions"><button class="reveal-btn" onclick="revealTriad()">${T('verb_show_forms')}</button></div>
+      <div class="kbd-hint">${T('verb_recall_hint')}</div>
+    `}`;
+}
+
+function renderCloze(card,s){
+  const e=VERBS[card.key];
+  const field=card.clozeField; // 'praet' | 'pp'
+  const target=e[field];
+  const slot = s.answered
+    ? `<span class="cloze-slot ${s.lastCorrect?'ok':'bad'}">${esc(target)}</span>`
+    : `<input class="spell-input cloze-input" id="vInput" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="…" onkeydown="if(event.key==='Enter'){event.preventDefault();submitCloze();}">`;
+  const praetCell = field==='praet' ? slot : `<span>${esc(e.praet)}</span>`;
+  const ppCell    = field==='pp'    ? slot : `<span>${esc(e.pp)}</span>`;
+  let feedback='';
+  if(s.answered && !s.lastCorrect){
+    const d=diffChars((card.val||'').trim(), target);
+    feedback = `<div class="spell-compare">
+      <div class="cmp-row"><span class="cmp-label">${T('spelling_your')}</span><span class="cmp-val">${(card.val||'').trim()?d.aHtml:('<span class="spell-empty">'+T('spelling_empty')+'</span>')}</span></div>
+      <div class="cmp-row"><span class="cmp-label">${T('spelling_right_ans')}</span><span class="cmp-val">${d.bHtml}</span></div>
+    </div>`;
+  }
+  return `
+    <div class="card-prompt-label">${T('verb_fill_form')} · ${field==='praet'?'Präteritum':'Partizip II'}</div>
+    <div class="card-sub" style="margin-bottom:14px">${esc(card.key)} — ${esc(verbGloss(card.key))}</div>
+    <div class="cloze-line">
+      <span class="t-inf">${esc(card.key)}</span> <span class="t-sep">·</span>
+      ${praetCell} <span class="t-sep">·</span>
+      ${auxHtml(e.aux)} ${ppCell}
+    </div>
+    ${s.answered ? `
+      ${s.lastCorrect?`<div class="feedback ok">${T('spelling_correct')} <span class="correct-answer">${triadHtml(card.key)}</span></div>`:feedback}
+      <button class="audio-btn" id="cardAudio" onclick="speakVerb(${JSON.stringify(card.key).replace(/"/g,'&quot;')},this)" style="margin-top:8px">🔊</button>
+      <div class="card-actions"><button class="next-btn" onclick="nextCard()">${T('article_next')}</button></div>
+      <div class="kbd-hint">${T('article_hint_next')}</div>
+    ` : `
+      <div class="card-actions"><button class="reveal-btn" onclick="submitCloze()">${T('spelling_check')}</button></div>
+      <div class="kbd-hint">ä=ae, ö=oe, ü=ue, ß=ss · Enter</div>
+    `}`;
+}
+
+function renderTable(card,s){
+  const e=VERBS[card.key];
+  const auxBtns=['haben','sein'].map(a=>{
+    let cls='aux-btn '+a;
+    if(s.answered){ if(a===card.aux) cls += (a===e.aux?' chosen-correct':' chosen-wrong'); else if(a===e.aux) cls+=' reveal-correct'; }
+    else if(a===card.aux) cls+=' chosen';
+    return `<button class="${cls}" ${s.answered?'disabled':''} onclick="chooseAux('${a}')">${a}</button>`;
+  }).join('');
+  const cmp=(val,target)=>{ const d=diffChars((val||'').trim(),target); return (val||'').trim()? (normalize(val)===normalize(target)?esc(target):d.aHtml) : '<span class="spell-empty">—</span>'; };
+  return `
+    <div class="card-prompt-label">${T('verb_table_prompt')}</div>
+    <div class="card-word" style="font-size:34px">${esc(card.key)}</div>
+    <div class="card-sub" style="margin-bottom:16px">${esc(verbGloss(card.key))}</div>
+    <div class="form-grid">
+      <label>Präteritum</label>
+      ${s.answered?`<div class="form-shown ${normalize(card.valPraet||'')===normalize(e.praet)?'ok':'bad'}">${cmp(card.valPraet,e.praet)}</div>`:`<input class="spell-input" id="praetIn" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="…" onkeydown="if(event.key==='Enter'){event.preventDefault();document.getElementById('ppIn').focus();}">`}
+      <label>Partizip II</label>
+      ${s.answered?`<div class="form-shown ${normalize(card.valPp||'')===normalize(e.pp)?'ok':'bad'}">${cmp(card.valPp,e.pp)}</div>`:`<input class="spell-input" id="ppIn" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="…" onkeydown="if(event.key==='Enter'){event.preventDefault();submitTable();}">`}
+    </div>
+    <div class="aux-row"><span class="aux-label">${T('verb_aux')}:</span> <div class="aux-btns">${auxBtns}</div></div>
+    ${s.answered ? `
+      <div class="feedback ${s.lastCorrect?'ok':'bad'}">${s.lastCorrect?T('article_correct'):T('article_wrong')} <span class="correct-answer">${triadHtml(card.key)}</span></div>
+      <button class="audio-btn" id="cardAudio" onclick="speakVerb(${JSON.stringify(card.key).replace(/"/g,'&quot;')},this)" style="margin-top:8px">🔊</button>
+      <div class="card-actions"><button class="next-btn" onclick="nextCard()">${T('article_next')}</button></div>
+    ` : `
+      <div class="card-actions"><button class="reveal-btn" onclick="submitTable()">${T('spelling_check')}</button></div>
+      <div class="kbd-hint">${T('verb_table_hint')}</div>
+    `}`;
+}
+
+function renderEnd(){
+  const s=state.session;
+  const pct=s.uniqueTotal?Math.round(s.uniqueRight/s.uniqueTotal*100):0;
+  document.getElementById('app').innerHTML=`
+<div class="session-bg">
+  <div class="session-body"><div class="session-end">
+    <div class="card-prompt-label">${T('end_title')}</div>
+    <div class="end-score num">${s.uniqueRight}<span style="font-size:24px;color:var(--ink-soft)">/${s.uniqueTotal}</span></div>
+    <div class="end-detail">${T('end_score', s.uniqueRight, s.uniqueTotal)}</div>
+    <button class="btn primary big" onclick="closeSession()">${T('end_back')}</button>
+    <button class="btn big" style="margin-left:8px" onclick='startSession(${JSON.stringify(s.scope)})'>${T('end_again')}</button>
+  </div></div>
+</div>`;
+  if(window.speechSynthesis) window.speechSynthesis.cancel();
+}
+
+/* ==========================================================================
+   KEYBOARD
+   ========================================================================== */
+document.addEventListener('keydown', e=>{
+  const s=state.session; if(!s) return;
+  if(s.pos>=s.queue.length){ if(e.key==='Escape') closeSession(); return; }
+  if(e.key==='Escape'){ closeSession(); return; }
+  const card=s.queue[s.pos];
+  if(e.target.id==='vInput'||e.target.id==='praetIn'||e.target.id==='ppIn') return;
+  if(card.mode==='triad'){
+    if(e.key===' '){ e.preventDefault(); if(!s.revealed) revealTriad(); }
+    else if(s.revealed){ if(e.key==='1'||e.key==='ArrowLeft') answer(false); else if(e.key==='2'||e.key==='ArrowRight') answer(true); }
+  } else if(s.answered && e.key==='Enter'){ nextCard(); }
+});
+
+initApp();
+</script>
+</body>
+</html>

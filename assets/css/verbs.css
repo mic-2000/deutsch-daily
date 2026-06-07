@@ -1,0 +1,60 @@
+/* verbs.css — irregular-verb trainer specifics. Reuses vocab.css for shared trainer chrome
+   (stats, due-banner, settings-bar, chips, box-bar, card, session-*, feedback, diff-*). */
+
+/* auxiliary colour coding (haben / sein) */
+.aux { font-weight: 600; }
+.aux.haben { color: var(--der); }
+.aux.sein  { color: var(--die); }
+
+/* the full triad line */
+.triad { font-family: var(--serif); font-size: 30px; line-height: 1.5; margin: 18px 0 8px; }
+.t-sep { color: var(--line); padding: 0 2px; }
+.t-praet { color: var(--accent); }
+.t-inf { font-weight: 500; }
+
+/* home list */
+.verb-list { margin-top: 18px; border-top: 1px solid var(--line); }
+.verb-row { display: flex; align-items: center; gap: 14px; padding: 10px 4px; border-bottom: 1px solid var(--line); }
+.verb-row.mastered { opacity: 0.6; }
+.verb-main { flex: 1; min-width: 0; }
+.verb-de { font-family: var(--serif); font-size: 17px; }
+.verb-gloss { font-size: 13px; color: var(--ink-soft); margin-top: 1px; }
+.verb-row .box-bar { flex: 0 0 auto; }
+.verb-row .mini-audio { flex: 0 0 auto; }
+
+/* session mode badge variants (vocab.css styles the base) */
+.session-mode-badge.triad { background: var(--gold); }
+.session-mode-badge.cloze { background: var(--accent); }
+.session-mode-badge.table { background: var(--ink); }
+
+/* cloze line */
+.cloze-line { font-family: var(--serif); font-size: 30px; line-height: 1.6; margin: 8px 0 18px; }
+.cloze-input { display: inline-block; width: 200px; font-size: 24px; text-align: center; padding: 6px 10px; }
+.cloze-slot { display: inline-block; min-width: 120px; padding: 2px 10px; border-bottom: 2px solid var(--line); }
+.cloze-slot.ok { color: var(--green); border-color: var(--green); }
+.cloze-slot.bad { color: var(--die); border-color: var(--die); }
+
+/* table mode */
+.form-grid { display: grid; grid-template-columns: auto 1fr; gap: 10px 14px; align-items: center; max-width: 420px; margin: 0 auto 16px; text-align: left; }
+.form-grid label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.2em; color: var(--ink-soft); }
+.form-grid .spell-input { width: 100%; font-size: 20px; }
+.form-shown { font-family: var(--serif); font-size: 22px; padding: 6px 0; }
+.form-shown.ok { color: var(--green); }
+.form-shown.bad { color: var(--die); }
+
+.aux-row { display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 8px; }
+.aux-label { font-size: 13px; color: var(--ink-soft); }
+.aux-btns { display: inline-flex; gap: 8px; }
+.aux-btn { padding: 8px 20px; border: 1px solid var(--line); font-size: 16px; font-weight: 600; transition: all 0.12s; }
+.aux-btn.haben { color: var(--der); }
+.aux-btn.sein  { color: var(--die); }
+.aux-btn.chosen { border-color: var(--ink); }
+.aux-btn:hover:not(:disabled) { border-color: var(--ink); }
+.aux-btn.chosen-correct { background: var(--green); color: var(--paper); border-color: var(--green); }
+.aux-btn.chosen-wrong { background: var(--die); color: var(--paper); border-color: var(--die); }
+.aux-btn.reveal-correct { border-color: var(--green); color: var(--green); }
+
+@media (max-width: 600px) {
+  .triad, .cloze-line { font-size: 24px; }
+  .cloze-input { width: 150px; font-size: 20px; }
+}

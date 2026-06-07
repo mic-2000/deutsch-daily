@@ -60,8 +60,9 @@ deutsch-daily/
 ├── auth.html           # Legacy stub: <meta refresh> redirect to "/" (i.e. index.html).
 ├── planner.html        # Daily planner (thin: page markup + page logic).
 ├── vocab.html          # Vocabulary trainer (thin: page markup + page logic).
+├── verbs.html          # Irregular-verb trainer (3-form triad / cloze / table modes).
 ├── assets/
-│   ├── css/  base.css · components.css · planner.css · vocab.css · auth.css
+│   ├── css/  base.css · components.css · planner.css · vocab.css · verbs.css · auth.css
 │   └── js/   i18n.js · theme.js · utils.js · supabase.js · cloud-sync.js
 ├── data/   weeks.js (WEEKS) · vocab.js (VOCAB) · verbs.js (VERBS — master verb dictionary)
 ├── locales/  ru.js · ua.js · en.js   (window.LOCALE_RU / _UA / _EN = { ui, vocab, verbs, weeks })
@@ -128,7 +129,7 @@ Each page must define these globals **before** calling `initApp()`:
 
 | Global | Purpose |
 | --- | --- |
-| `CLOUD_FIELD` | column on the `progress` table: `'planner_data'` or `'vocab_data'` |
+| `CLOUD_FIELD` | column on the `progress` table: `'planner_data'`, `'vocab_data'`, or `'verbs_data'` |
 | `applyCloudData(d)` | apply the loaded JSON payload into local `state` |
 | `getCloudPayload()` | return the object to persist into `CLOUD_FIELD` |
 | `render()` | (re)draw the UI |
@@ -160,8 +161,12 @@ single table, `public.progress`, one row per user (confirmed schema):
 | `user_id` | `uuid` | NO | — | upserts (conflict key) | `session.user.id` — PK, FK → `auth.users(id)` |
 | `planner_data` | `jsonb` | yes | `'{}'::jsonb` | planner `getCloudPayload()` | `{ currentDay, viewingDay, completed }` |
 | `vocab_data` | `jsonb` | yes | `'{}'::jsonb` | vocab `getCloudPayload()` → `serialize()` | `{ app, version, savedAt, selectedWeek, modes, mastery }` |
+| `verbs_data` | `jsonb` | yes | `'{}'::jsonb` | verbs `getCloudPayload()` | `{ app, version, savedAt, modes, mastery }` — `mastery` keyed by **verb key** (shared store) |
 | `lang` | `text` | yes | `'en'::text` | `saveLangToCloud` | `'ru' \| 'ua' \| 'en'` |
+| `theme` | `text` | yes | — | `saveThemeToCloud` | `'light' \| 'dark'` |
 | `updated_at` | `timestamptz` | yes | `now()` | every upsert | ISO string |
+
+> `verbs_data` must be added with `alter table public.progress add column if not exists verbs_data jsonb default '{}'::jsonb;`. The RLS policy is row-level (per `user_id`), so it covers new columns automatically. `verbs.html` degrades gracefully if the column is missing (training works in-session; cloud persistence resumes once the column exists). Verb `mastery` is keyed by the verb key (e.g. `gehen`) — the **same key space** used wherever a verb appears, so progress is shared across the verbs page and (once verbs are wired into weeks) the vocabulary page.
 
 **Constraints & security:**
 - `progress_pkey` — PRIMARY KEY (`user_id`). This is what makes the
