@@ -67,9 +67,12 @@ function getLocalizedDay(d) {
 }
 
 /* ==========================================================================
-   AI CHAT — Gemini, user-provided key stored in localStorage
+   AI CHAT — Gemini, user-provided key. Lessons are per-day and synced to the
+   `lessons` table (see cloud-sync.js). Weekly summary uses the PRO model.
    ========================================================================== */
-let chatState = { messages: [], loading: false, showKeyModal: false };
+let lessonsCache = {};   // { day: [ {role,text}, ... ] }
+let summaryCache = {};   // { week: [ {role,text}, ... ] }
+let chatState = { loading: false, showKeyModal: false, summaryWeek: null };
 
 function getGeminiKey() { return localStorage.getItem('gemini_key') || ''; }
 function _storeGeminiKey(k) {
@@ -84,58 +87,80 @@ function saveGeminiKeyAndClose() {
 }
 function removeGeminiKey() {
   _storeGeminiKey('');
-  chatState.messages = [];
   chatState.showKeyModal = false;
   render();
 }
 function openKeyModal()  { chatState.showKeyModal = true;  render(); }
 function closeKeyModal() { chatState.showKeyModal = false; render(); }
-function clearChat()     { chatState.messages = [];        render(); }
+function clearChat(day) {
+  delete lessonsCache[day];
+  deleteLessonFromCloud(day);
+  render();
+}
+
+function getDayMessages(day) { return lessonsCache[day] || []; }
+function isWeekComplete(week) {
+  return DAYS.filter(d => d.week === week).every(d => state.completed[d.day]);
+}
+
+/* Load all lessons + summaries from cloud, then re-render. */
+async function loadLessonsThenRender() {
+  const rows = await loadLessonsFromCloud();
+  rows.forEach(r => {
+    if (r.day < 0) summaryCache[-r.day] = r.messages || [];
+    else lessonsCache[r.day] = r.messages || [];
+  });
+  render();
+}
+
+/* Single Gemini request. Returns the reply text or throws. */
+async function geminiRequest(model, systemPrompt, messages) {
+  const key = getGeminiKey();
+  const res = await fetch(
+    'https://generativelanguage.googleapis.com/v1beta/models/' + model + ':generateContent?key=' + encodeURIComponent(key),
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        system_instruction: { parts: [{ text: systemPrompt }] },
+        contents: messages.map(m => ({
+          role: m.role === 'model' ? 'model' : 'user',
+          parts: [{ text: m.text }]
+        }))
+      })
+    }
+  );
+  const data = await res.json();
+  if (data.error) throw new Error(data.error.message || 'API error');
+  return (data.candidates && data.candidates[0] && data.candidates[0].content &&
+          data.candidates[0].content.parts && data.candidates[0].content.parts[0] &&
+          data.candidates[0].content.parts[0].text) || '';
+}
 
 async function startAILesson(day) {
   const d = getLocalizedDay(DAYS[day - 1]);
-  chatState.messages = [{ role: 'user', text: buildPlanText(d) }];
+  lessonsCache[day] = [{ role: 'user', text: buildPlanText(d) }];
   chatState.loading = true;
   render();
-  await callGemini();
+  await runLessonTurn(day);
 }
 
-async function sendChatMessage() {
+async function sendChatMessage(day) {
   const inp = document.getElementById('chatInput');
   const text = inp ? inp.value.trim() : '';
   if (!text || chatState.loading) return;
-  chatState.messages.push({ role: 'user', text });
+  if (!lessonsCache[day]) lessonsCache[day] = [];
+  lessonsCache[day].push({ role: 'user', text });
   chatState.loading = true;
   render();
-  await callGemini();
+  await runLessonTurn(day);
 }
 
-async function callGemini() {
-  const key = getGeminiKey();
+async function runLessonTurn(day) {
   try {
-    const res = await fetch(
-      'https://generativelanguage.googleapis.com/v1beta/models/' + AI_MODEL_ID + ':generateContent?key=' + encodeURIComponent(key),
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          system_instruction: { parts: [{ text: AI_SYSTEM_PROMPT }] },
-          contents: chatState.messages.map(m => ({
-            role: m.role === 'model' ? 'model' : 'user',
-            parts: [{ text: m.text }]
-          }))
-        })
-      }
-    );
-    const data = await res.json();
-    if (data.error) throw new Error(data.error.message || 'API error');
-    const reply = data.candidates &&
-      data.candidates[0] &&
-      data.candidates[0].content &&
-      data.candidates[0].content.parts &&
-      data.candidates[0].content.parts[0] &&
-      data.candidates[0].content.parts[0].text || '';
-    chatState.messages.push({ role: 'model', text: reply });
+    const reply = await geminiRequest(AI_MODEL_ID, getAiSystemPrompt(), lessonsCache[day]);
+    lessonsCache[day].push({ role: 'model', text: reply });
+    saveLessonToCloud(day, lessonsCache[day]);
   } catch (e) {
     showToast(e.message || T('ai_error'));
   } finally {
@@ -143,6 +168,47 @@ async function callGemini() {
     render();
     scrollChatToBottom();
   }
+}
+
+/* ---- Weekly summary (PRO model) ---------------------------------------- */
+function buildWeekTranscript(week) {
+  const parts = [];
+  DAYS.filter(d => d.week === week).forEach(d => {
+    const msgs = lessonsCache[d.day];
+    if (!msgs || !msgs.length) return;
+    parts.push('### Day ' + d.day + ' (' + d.type + ')');
+    msgs.forEach(m => parts.push((m.role === 'model' ? 'TUTOR:' : 'STUDENT:') + ' ' + m.text));
+  });
+  return parts.join('\n\n');
+}
+
+function viewWeeklySummary(week) { chatState.summaryWeek = week; render(); }
+function closeSummary() { chatState.summaryWeek = null; render(); }
+
+async function generateWeeklySummary(week) {
+  const transcript = buildWeekTranscript(week);
+  if (!transcript) { showToast(T('ai_summary_empty')); return; }
+  summaryCache[week] = [{ role: 'user', text: transcript }];
+  chatState.loading = true;
+  chatState.summaryWeek = week;
+  render();
+  try {
+    const reply = await geminiRequest(AI_PRO_MODEL_ID, getAiSummaryPrompt(), summaryCache[week]);
+    summaryCache[week].push({ role: 'model', text: reply });
+    saveLessonToCloud(-week, summaryCache[week]);
+  } catch (e) {
+    showToast(e.message || T('ai_error'));
+    chatState.summaryWeek = null;
+  } finally {
+    chatState.loading = false;
+    render();
+    scrollChatToBottom();
+  }
+}
+
+function summaryHasReply(week) {
+  const m = summaryCache[week];
+  return !!(m && m.length && m[m.length - 1].role === 'model');
 }
 
 function scrollChatToBottom() {
@@ -176,6 +242,24 @@ function renderKeyModal() {
 </div>`;
 }
 
+function renderSummaryModal() {
+  const week = chatState.summaryWeek;
+  const msgs = summaryCache[week] || [];
+  const reply = msgs.length && msgs[msgs.length - 1].role === 'model' ? msgs[msgs.length - 1].text : '';
+  const body = chatState.loading
+    ? `<div class="ai-thinking-dots"><span></span><span></span><span></span></div>`
+    : (reply ? renderMd(reply) : '');
+  return `<div class="ai-key-bg" onclick="if(event.target===this)closeSummary()">
+  <div class="ai-key-box ai-summary-box">
+    <div class="ai-summary-head">
+      <h3>${T('ai_summary_title', week)}</h3>
+      <button class="ai-link-btn" onclick="closeSummary()">✕</button>
+    </div>
+    <div class="ai-summary-body" id="chatMessages">${body}</div>
+  </div>
+</div>`;
+}
+
 function renderAiSection(d) {
   if (!getGeminiKey()) {
     return `<div class="ai-section ai-no-key-row">
@@ -183,35 +267,42 @@ function renderAiSection(d) {
   <button class="ai-key-link" onclick="openKeyModal()">${T('ai_setup_key')}</button>
 </div>`;
   }
-  if (chatState.messages.length === 0) {
+  const msgs = getDayMessages(d.day);
+  const weekDone = isWeekComplete(d.week);
+  const summaryBtn = weekDone
+    ? (summaryHasReply(d.week)
+        ? `<button class="ai-link-btn" onclick="viewWeeklySummary(${d.week})">${T('ai_summary_view')}</button>`
+        : `<button class="ai-link-btn" onclick="generateWeeklySummary(${d.week})">${T('ai_summary_make', d.week)}</button>`)
+    : '';
+  const header = `<div class="ai-chat-header">
+    <span class="ai-chat-title">AI Lehrer · ${T('planner_week', d.week)}</span>
+    <div class="ai-chat-actions">
+      ${summaryBtn}
+      ${msgs.length ? `<button class="ai-link-btn" onclick="clearChat(${d.day})">${T('ai_clear')}</button>` : ''}
+      <button class="ai-link-btn ai-settings-btn" onclick="openKeyModal()">⚙</button>
+    </div>
+  </div>`;
+
+  if (msgs.length === 0) {
     return `<div class="ai-section">
-  <div class="ai-chat-header">
-    <span class="ai-chat-title">AI Lehrer</span>
-    <button class="ai-link-btn ai-settings-btn" onclick="openKeyModal()" title="${T('ai_key_title')}">⚙</button>
-  </div>
+  ${header}
   <button class="btn done" onclick="startAILesson(${d.day})">${T('ai_start_lesson')}</button>
 </div>`;
   }
-  const msgsHtml = chatState.messages.map(m =>
+  const msgsHtml = msgs.map(m =>
     `<div class="ai-msg ${m.role === 'model' ? 'model' : 'user'}">${m.role === 'model' ? renderMd(m.text) : esc(m.text)}</div>`
   ).join('');
   return `<div class="ai-section">
-  <div class="ai-chat-header">
-    <span class="ai-chat-title">AI Lehrer</span>
-    <div class="ai-chat-actions">
-      <button class="ai-link-btn" onclick="clearChat()">${T('ai_clear')}</button>
-      <button class="ai-link-btn ai-settings-btn" onclick="openKeyModal()">⚙</button>
-    </div>
-  </div>
+  ${header}
   <div class="ai-messages" id="chatMessages">
     ${msgsHtml}
-    ${chatState.loading ? '<div class="ai-msg model ai-loading"><div class="ai-thinking-dots"><span></span><span></span><span></span></div></div>' : ''}
+    ${chatState.loading && chatState.summaryWeek === null ? '<div class="ai-msg model ai-loading"><div class="ai-thinking-dots"><span></span><span></span><span></span></div></div>' : ''}
   </div>
   <div class="ai-input-row">
     <input class="ai-input" id="chatInput" placeholder="${T('ai_input_hint')}"
       ${chatState.loading ? 'disabled' : ''}
-      onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChatMessage();}">
-    <button class="ai-send" onclick="sendChatMessage()" ${chatState.loading ? 'disabled' : ''}>${T('ai_send')}</button>
+      onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChatMessage(${d.day});}">
+    <button class="ai-send" onclick="sendChatMessage(${d.day})" ${chatState.loading ? 'disabled' : ''}>${T('ai_send')}</button>
   </div>
 </div>`;
 }
@@ -402,6 +493,7 @@ function render() {
 </footer>
   `;
   if (chatState.showKeyModal) html += renderKeyModal();
+  if (chatState.summaryWeek !== null) html += renderSummaryModal();
   document.getElementById('app').innerHTML = html;
   scrollChatToBottom();
 }
@@ -413,7 +505,7 @@ document.addEventListener('keydown', e => {
   else if (e.key === 'c' || e.key === 'C' || e.key === 'с' || e.key === 'С') copyPlan(state.viewingDay);
 });
 
-initApp();
+initApp().then(loadLessonsThenRender);
 </script>
 </body>
 </html>

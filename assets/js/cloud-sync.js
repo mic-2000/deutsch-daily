@@ -103,3 +103,36 @@ async function logout() {
   await sb.auth.signOut();
   location.href = '/';
 }
+
+/* ==========================================================================
+   LESSONS — per-day AI chat history (table `lessons`).
+   Row key: (user_id, day). day < 0 stores the weekly summary for week (-day).
+   ========================================================================== */
+async function loadLessonsFromCloud() {
+  if (!currentUser) return [];
+  try {
+    const { data } = await sb.from('lessons')
+      .select('day, messages')
+      .eq('user_id', currentUser.id);
+    return data || [];
+  } catch(e) { return []; }
+}
+
+async function saveLessonToCloud(day, messages) {
+  if (!currentUser) return;
+  try {
+    await sb.from('lessons').upsert({
+      user_id: currentUser.id,
+      day: day,
+      messages: messages,
+      updated_at: new Date().toISOString()
+    }, { onConflict: 'user_id,day' });
+  } catch(e) { /* table may not exist yet */ }
+}
+
+async function deleteLessonFromCloud(day) {
+  if (!currentUser) return;
+  try {
+    await sb.from('lessons').delete().eq('user_id', currentUser.id).eq('day', day);
+  } catch(e) {}
+}

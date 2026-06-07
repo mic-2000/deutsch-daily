@@ -93,3 +93,14 @@
 }
 .ai-key-input:focus { outline: none; border-color: var(--accent); }
 .ai-key-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+
+/* weekly summary modal */
+.ai-summary-box { max-width: 640px; }
+.ai-summary-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.ai-summary-head h3 { margin: 0; }
+.ai-summary-body {
+  max-height: 60vh; overflow-y: auto;
+  font-size: 14px; line-height: 1.7; color: var(--ink);
+}
+.ai-summary-body code { font-size: 13px; background: var(--paper-2); padding: 1px 5px; }
+
