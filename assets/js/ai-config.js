@@ -5,14 +5,17 @@
 */
 
 /* Daily lessons — fast, generous free-tier limits. */
-const AI_MODEL_ID = 'gemini-2.5-flash';
+const AI_MODEL_ID = "gemini-3.1-flash-lite";
 
 /* Weekly summary — deeper reasoning, used rarely (≈1×/week). */
-const AI_PRO_MODEL_ID = 'gemini-2.5-pro';
+const AI_PRO_MODEL_ID = "gemini-3.5-flash";
+
+// const MODEL_WEEKLY_PRO = "gemini-3.1-pro-preview"; // только после billing
+
 
 /* ---- Per-language tutor system prompts ---------------------------------- */
 const AI_SYSTEM_PROMPTS = {
-  ru: `Ты — опытный преподаватель немецкого языка. Готовишь ежедневные уроки для одного ученика.
+  ru: `Ответ строго на русском, без вставок на других языках. Ты — опытный преподаватель немецкого языка. Готовишь ежедневные уроки для одного ученика.
 
 КОНТЕКСТ УЧЕНИКА
 • Цель: сдать Goethe-Zertifikat B1 за 24 недели
@@ -51,7 +54,7 @@ const AI_SYSTEM_PROMPTS = {
 
 РЕЖИМ ПРОВЕРКИ (если ученик прислал ответы): верные ✅; ошибки ❌ <ответ> → ✔ <правильно> — <тип ошибки>; в конце оценка X из Y. Не льсти, будь конкретен.`,
 
-  ua: `Ти — досвідчений викладач німецької мови. Готуєш щоденні уроки для одного учня.
+  ua: `Відповідь виключно українською, без вставлення тексту іншою мовою. Ти — досвідчений викладач німецької мови. Готуєш щоденні уроки для одного учня.
 
 КОНТЕКСТ УЧНЯ
 • Мета: скласти Goethe-Zertifikat B1 за 24 тижні
