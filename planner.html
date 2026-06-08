@@ -212,7 +212,7 @@ function summaryHasReply(week) {
 }
 
 function scrollChatToBottom() {
-  setTimeout(() => { const el = document.getElementById('chatMessages'); if (el) el.scrollTop = el.scrollHeight; }, 30);
+  setTimeout(() => { const el = document.getElementById('chatInput'); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'end' }); }, 30);
 }
 
 function escHtml(s) {
@@ -362,9 +362,10 @@ function renderAiSection(d) {
     ${chatState.loading && chatState.summaryWeek === null ? '<div class="ai-msg model ai-loading"><div class="ai-thinking-dots"><span></span><span></span><span></span></div></div>' : ''}
   </div>
   <div class="ai-input-row">
-    <input class="ai-input" id="chatInput" placeholder="${T('ai_input_hint')}"
+    <textarea class="ai-input" id="chatInput" rows="1" placeholder="${T('ai_input_hint')}"
       ${chatState.loading ? 'disabled' : ''}
-      onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChatMessage(${d.day});}">
+      oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'"
+      onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChatMessage(${d.day});}"></textarea>
     <button class="ai-send" onclick="sendChatMessage(${d.day})" ${chatState.loading ? 'disabled' : ''}>${T('ai_send')}</button>
   </div>
 </div>`;
