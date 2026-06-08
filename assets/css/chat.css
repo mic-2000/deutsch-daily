@@ -41,7 +41,8 @@
 
 /* message list */
 .ai-messages {
-  max-height: 460px; overflow-y: auto; overflow-x: hidden;
+  height: min(65vh, 640px); min-height: 300px;
+  overflow-y: scroll; overflow-x: hidden;
   display: flex; flex-direction: column; gap: 10px;
   margin-bottom: 14px; scroll-behavior: smooth;
 }
