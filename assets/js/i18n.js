@@ -10,6 +10,7 @@ const DEFAULT_LANG = 'en';
 
 let _lang = localStorage.getItem('ui_lang') || DEFAULT_LANG;
 if (!LANG_NAMES[_lang]) _lang = DEFAULT_LANG;
+if (typeof document !== 'undefined' && document.documentElement) document.documentElement.lang = _lang;
 
 const _localeLoads = {}; // code -> Promise (dedupes repeat/concurrent loads)
 
@@ -46,6 +47,7 @@ async function setLang(code, skipSave) {
   if (!LANG_NAMES[code]) return;
   try { await loadLocale(code); } catch (e) { if (typeof showToast === 'function') showToast('Localization failed to load'); return; }
   _lang = code;
+  if (typeof document !== 'undefined' && document.documentElement) document.documentElement.lang = code;
   localStorage.setItem('ui_lang', code);
   if (!skipSave && typeof saveLangToCloud === 'function') saveLangToCloud(code);
   if (typeof render === 'function') render();

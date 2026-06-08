@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -453,23 +453,10 @@ function toggleDone(day) {
 }
 
 /* ==========================================================================
-   RENDER
+   RENDER (composed from section builders below)
    ========================================================================== */
-function render() {
-  const d = getLocalizedDay(DAYS[state.viewingDay - 1]);
-  const doneCount = Object.values(state.completed).filter(Boolean).length;
-  const pct = Math.round(doneCount / TOTAL_DAYS * 100);
-  const isDone = !!state.completed[d.day];
-  const isViewingCurrent = state.viewingDay === state.currentDay;
-
-  const weekOptions = WEEKS.map(w => {
-    const localeObj = window['LOCALE_' + getLang().toUpperCase()] || window.LOCALE_RU || {};
-    const wLoc = (localeObj.weeks || {})[w.n];
-    const theme = (wLoc && wLoc.theme) || w.theme;
-    return `<option value="${w.n}" ${w.n === d.week ? 'selected' : ''}>${T('planner_week_option', w.n, esc(theme))}</option>`;
-  }).join('');
-
-  let html = `
+function renderHeader() {
+  return `
 <header>
   <div class="container">
     <div class="title-cat">${T('planner_title_cat')}</div>
@@ -489,17 +476,22 @@ function render() {
       </div>
     </div>
   </div>
-</header>
+</header>`;
+}
 
+function renderProgress(doneCount, pct) {
+  return `
 <section class="container prog-section">
   <div class="prog-head">
     <span>${T('planner_progress', doneCount, TOTAL_DAYS)}</span>
     <span>${pct}%</span>
   </div>
   <div class="prog-bar"><div class="prog-fill" style="width:${pct}%"></div></div>
-</section>
+</section>`;
+}
 
-<main class="container">
+function renderDayCard(d, isDone) {
+  return `
   <div class="day-card">
     <div class="day-top">
       <div class="day-num num">${d.day}<small>${T('planner_day_of', TOTAL_DAYS)}</small></div>
@@ -534,8 +526,18 @@ function render() {
       <button class="btn copy" id="copyBtn" onclick="copyPlan(${d.day})">${T('planner_copy')}</button>
       <button class="btn done ${isDone ? 'is-done' : ''}" onclick="toggleDone(${d.day})">${isDone ? T('planner_undo') : T('planner_done')}</button>
     </div>
-  </div>
+  </div>`;
+}
 
+function renderNav(d, isViewingCurrent) {
+  const weekOptions = WEEKS.map(w => {
+    const localeObj = window['LOCALE_' + getLang().toUpperCase()] || window.LOCALE_RU || {};
+    const wLoc = (localeObj.weeks || {})[w.n];
+    const theme = (wLoc && wLoc.theme) || w.theme;
+    return `<option value="${w.n}" ${w.n === d.week ? 'selected' : ''}>${T('planner_week_option', w.n, esc(theme))}</option>`;
+  }).join('');
+
+  return `
   <div class="nav-row">
     <button class="nav-btn" onclick="goDay(${d.day - 1})" ${d.day <= 1 ? 'disabled' : ''}>${T('planner_prev')}</button>
     <div class="nav-center">
@@ -543,18 +545,37 @@ function render() {
     </div>
     <button class="nav-btn" onclick="goDay(${d.day + 1})" ${d.day >= TOTAL_DAYS ? 'disabled' : ''}>${T('planner_next')}</button>
   </div>
-  ${!isViewingCurrent ? `<div style="text-align:center;margin-top:14px"><span class="today-link" onclick="goToCurrent()">${T('planner_back_current', state.currentDay)}</span></div>` : ''}
+  ${!isViewingCurrent ? `<div style="text-align:center;margin-top:14px"><span class="today-link" onclick="goToCurrent()">${T('planner_back_current', state.currentDay)}</span></div>` : ''}`;
+}
 
-  ${!getGeminiKey() ? `<div class="info-box">${T('planner_how_to')}</div>` : ''}
-  ${renderAiSection(d)}
-</main>
-
+function renderFooter() {
+  return `
 <footer>
   <div class="container f-row">
     <span>${T('planner_footer')} · ${esc(currentUser ? currentUser.email : '')} · <a class="gh-link" href="https://github.com/mic-2000/deutsch-daily" target="_blank" rel="noopener">GitHub</a></span>
     <span style="font-family:var(--serif);font-style:italic">«Schritt für Schritt»</span>
   </div>
-</footer>
+</footer>`;
+}
+
+function render() {
+  const d = getLocalizedDay(DAYS[state.viewingDay - 1]);
+  const doneCount = Object.values(state.completed).filter(Boolean).length;
+  const pct = Math.round(doneCount / TOTAL_DAYS * 100);
+  const isDone = !!state.completed[d.day];
+  const isViewingCurrent = state.viewingDay === state.currentDay;
+
+  let html = `${renderHeader()}
+${renderProgress(doneCount, pct)}
+
+<main class="container">
+  ${renderDayCard(d, isDone)}
+  ${renderNav(d, isViewingCurrent)}
+
+  ${!getGeminiKey() ? `<div class="info-box">${T('planner_how_to')}</div>` : ''}
+  ${renderAiSection(d)}
+</main>
+${renderFooter()}
   `;
   if (chatState.showKeyModal) html += renderKeyModal();
   if (chatState.summaryWeek !== null) html += renderSummaryModal();

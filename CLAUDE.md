@@ -5,7 +5,7 @@ Full reference: **[ARCHITECTURE.md](ARCHITECTURE.md)**. This file is **rules onl
 
 Orientation: vanilla HTML/CSS/JS, no framework/bundler; Supabase auth + cloud progress; deployed
 on Vercel (HTTPS). `index.html` = login, `auth.html` = redirect stub, `planner.html` /
-`vocab.html` = the app pages. (Details: ARCHITECTURE.md §1–§3.)
+`vocab.html` / `verbs.html` = the app pages. (Details: ARCHITECTURE.md §1–§3.)
 
 ## Build
 - `npm run build` (`node build.js`) injects `NEXT_PUBLIC_SUPABASE_*` into
@@ -13,7 +13,7 @@ on Vercel (HTTPS). `index.html` = login, `auth.html` = redirect stub, `planner.h
 
 ## Rules
 - **Render = full re-render of `#app`** from template strings; handlers are inline `onclick`, so
-  every handler function must be **global** in the page `<script>`. (§8–§9)
+  every handler function must be **global** in the page `<script>`. (§8–§10)
 - **`esc()` every dynamic value** before it enters `innerHTML`. (§4)
 - **User-facing text only via `T('key', …)`**, and add the key to **all three** locales
   (`ru`/`ua`/`en`; EN is the default + `T()` fallback). (§6)
@@ -26,15 +26,15 @@ on Vercel (HTTPS). `index.html` = login, `auth.html` = redirect stub, `planner.h
   verb key (not index-matched). (§6–§7)
 - **Cloud is the source of truth.** Before calling `initApp()`, a page must define `CLOUD_FIELD`,
   `getCloudPayload()`, `applyCloudData(d)`, `render()`. Never store progress in `localStorage`
-  (only `ui_lang` / `auth_redirect` belong there). (§4–§5)
+  (only `ui_lang` / `ui_theme` / `auth_redirect` / `gemini_key` belong there). (§4–§5)
 - **Reuse the design tokens** in `assets/css/base.css`; don't introduce a new color/type system.
-  (§10)
+  (§11)
 - **Bump the vocab `version`/`KEY` only on an incompatible format change — and write a migration.**
   (§9)
 - **Preserve the defensive patterns:** clipboard fallback, `onvoiceschanged` listener, in-page
   confirm modal (never native `confirm()`), and never swallow handler errors (surface via
-  `showToast`). (§11)
-- **Don't reintroduce the already-fixed bugs in ARCHITECTURE.md §13.**
+  `showToast`). (§12)
+- **Don't reintroduce the already-fixed bugs in ARCHITECTURE.md §14.**
 
 ## Before finishing
 - Syntax-check: extract the inline `<script>` and run `node --check`. (Running the app locally

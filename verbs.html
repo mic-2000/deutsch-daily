@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -18,6 +18,8 @@
 <script src="assets/js/i18n.js"></script>
 <script src="assets/js/theme.js"></script>
 <script src="assets/js/utils.js"></script>
+<script src="assets/js/leitner.js"></script>
+<script src="assets/js/speech.js"></script>
 <script src="assets/js/supabase.js"></script>
 <script src="assets/js/cloud-sync.js"></script>
 <script src="data/verbs.js"></script>
@@ -35,20 +37,6 @@
    ========================================================================== */
 
 /* ---------- helpers ---------- */
-function normalize(s){ return String(s).toLowerCase().trim().replace(/ä/g,'ae').replace(/ö/g,'oe').replace(/ü/g,'ue').replace(/ß/g,'ss').replace(/\s+/g,' '); }
-
-/* Character-level diff (LCS): wrong/extra chars in a → diff-bad, missing chars in b → diff-miss. */
-function diffChars(a, b){
-  const A=[...a], B=[...b], al=A.map(c=>c.toLowerCase()), bl=B.map(c=>c.toLowerCase());
-  const m=A.length, n=B.length, dp=Array.from({length:m+1},()=>new Array(n+1).fill(0));
-  for(let i=m-1;i>=0;i--) for(let j=n-1;j>=0;j--) dp[i][j]= al[i]===bl[j]? dp[i+1][j+1]+1 : Math.max(dp[i+1][j],dp[i][j+1]);
-  let i=0,j=0,aHtml='',bHtml='';
-  while(i<m&&j<n){ if(al[i]===bl[j]){aHtml+=esc(A[i]);bHtml+=esc(B[j]);i++;j++;} else if(dp[i+1][j]>=dp[i][j+1]){aHtml+=`<span class="diff-bad">${esc(A[i])}</span>`;i++;} else {bHtml+=`<span class="diff-miss">${esc(B[j])}</span>`;j++;} }
-  while(i<m){aHtml+=`<span class="diff-bad">${esc(A[i])}</span>`;i++;}
-  while(j<n){bHtml+=`<span class="diff-miss">${esc(B[j])}</span>`;j++;}
-  return { aHtml, bHtml };
-}
-
 function verbGloss(key){
   const loc = window['LOCALE_'+getLang().toUpperCase()];
   const v = loc && loc.verbs && loc.verbs[key];
@@ -60,35 +48,20 @@ function auxHtml(aux){ return `<span class="aux ${aux}">${aux}</span>`; }
 /* full triad e.g. "gehen · ging · ist gegangen" */
 function triadHtml(key){ const e=VERBS[key]; return `<span class="t-inf">${esc(key)}</span> <span class="t-sep">·</span> <span class="t-praet">${esc(e.praet)}</span> <span class="t-sep">·</span> ${auxHtml(e.aux)} ${esc(e.pp)}`; }
 
-/* ---------- speech ---------- */
-let GERMAN_VOICE=null;
-function pickVoice(){ if(!window.speechSynthesis) return; const vs=window.speechSynthesis.getVoices(); GERMAN_VOICE=vs.find(v=>/de[-_]/i.test(v.lang))||vs.find(v=>/german|deutsch/i.test(v.name))||null; }
-if(window.speechSynthesis){ pickVoice(); window.speechSynthesis.onvoiceschanged=pickVoice; }
-function speak(text, btn){
-  if(!window.speechSynthesis){ showToast(T('toast_no_speech')); return; }
-  window.speechSynthesis.cancel();
-  const u=new SpeechSynthesisUtterance(text); u.lang='de-DE'; u.rate=0.9;
-  if(GERMAN_VOICE) u.voice=GERMAN_VOICE;
-  if(btn){ btn.classList.add('speaking'); u.onend=()=>btn.classList.remove('speaking'); u.onerror=()=>btn.classList.remove('speaking'); }
-  window.speechSynthesis.speak(u);
-}
-function speakVerb(key, btn){ const e=VERBS[key]; speak(`${key}, ${e.praet}, ${e.aux} ${e.pp}`, btn); }
+/* ---------- speech (shared core in assets/js/speech.js) ---------- */
+function speakVerb(key, btn){ const e=VERBS[key]; speak(`${key}, ${e.praet}, ${e.aux} ${e.pp}`, btn, 0.9); }
 
 /* ==========================================================================
-   LEITNER (shared model with the vocab trainer; keyed by verb key)
+   LEITNER (box model in assets/js/leitner.js; keyed by verb key)
    ========================================================================== */
-const DAY=86400000;
-const BOX_INTERVAL={1:1*DAY,2:2*DAY,3:4*DAY,4:8*DAY,5:16*DAY};
-const MAX_BOX=5;
-function getCard(k){ return state.mastery[k] || {box:0,due:0,right:0,wrong:0,seen:0}; }
-function isDue(k,now){ const c=state.mastery[k]; return !c || c.due<=now; }
-function isSeen(k){ const c=state.mastery[k]; return c && c.seen>0; }
-function cardBox(k){ const c=state.mastery[k]; return c?c.box:0; }
-function isMastered(k){ return cardBox(k)>=MAX_BOX; }
+function getCard(k){ return state.mastery[k] || leitnerBlank(); }
+function isDue(k,now){ return leitnerIsDue(state.mastery[k], now); }
+function isSeen(k){ return leitnerIsSeen(state.mastery[k]); }
+function cardBox(k){ return leitnerBoxOf(state.mastery[k]); }
+function isMastered(k){ return leitnerIsMastered(state.mastery[k]); }
 function updateCard(k,correct){
-  const c=getCard(k); c.seen++;
-  if(correct){ c.right++; c.box=Math.min(MAX_BOX,c.box+1); } else { c.wrong++; c.box=1; }
-  c.due=Date.now()+BOX_INTERVAL[c.box];
+  const c=getCard(k);
+  leitnerApply(c, correct);
   state.mastery[k]=c; save();
 }
 
@@ -104,10 +77,10 @@ function save(){ saveToCloud(); }
 /* ---------- reset (in-page confirm, never native confirm()) ---------- */
 function resetVerb(k){ askConfirm(T('confirm_reset_word'), {key:k}); }
 function resetAll(){ askConfirm(T('confirm_reset_all'), 'all'); }
-function askConfirm(message, action){ state.confirm={message,action}; render(); }
-function confirmNo(){ state.confirm=null; render(); }
+function askConfirm(message, action){ stageConfirm(state, message, action); render(); }
+function confirmNo(){ clearConfirm(state); render(); }
 function confirmYes(){
-  const a=state.confirm&&state.confirm.action; state.confirm=null;
+  const a=state.confirm&&state.confirm.action; clearConfirm(state);
   if(a==='all'){ state.mastery={}; save(); render(); showToast(T('toast_progress_reset')); }
   else if(a&&typeof a==='object'){ delete state.mastery[a.key]; save(); render(); showToast(T('toast_word_reset')); }
   else render();

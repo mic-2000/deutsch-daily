@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -17,6 +17,8 @@
 <script src="assets/js/i18n.js"></script>
 <script src="assets/js/theme.js"></script>
 <script src="assets/js/utils.js"></script>
+<script src="assets/js/leitner.js"></script>
+<script src="assets/js/speech.js"></script>
 <script src="assets/js/supabase.js"></script>
 <script src="assets/js/cloud-sync.js"></script>
 <script src="data/vocab.js"></script>
@@ -34,7 +36,6 @@
 /* ==========================================================================
    HELPERS
    ========================================================================== */
-function normalize(s){ return String(s).toLowerCase().trim().replace(/ä/g,'ae').replace(/ö/g,'oe').replace(/ü/g,'ue').replace(/ß/g,'ss').replace(/\s+/g,' '); }
 function getTranslation(week, idx) {
   const lang = getLang();
   const locale = window['LOCALE_' + lang.toUpperCase()];
@@ -43,27 +44,6 @@ function getTranslation(week, idx) {
   // fallback: try RU locale
   const ruWt = window.LOCALE_RU && window.LOCALE_RU.vocab && window.LOCALE_RU.vocab[week];
   return (ruWt && ruWt[idx] !== undefined) ? ruWt[idx] : '';
-}
-
-/* Character-level diff (LCS). Highlights extra/wrong chars in a, missing chars in b.
-   Matching is case-insensitive so capitalization differences aren't flagged as errors. */
-function diffChars(a, b){
-  const A = [...a], B = [...b];
-  const al = A.map(c=>c.toLowerCase()), bl = B.map(c=>c.toLowerCase());
-  const m = A.length, n = B.length;
-  const dp = Array.from({length:m+1}, ()=>new Array(n+1).fill(0));
-  for (let i=m-1;i>=0;i--) for (let j=n-1;j>=0;j--){
-    dp[i][j] = al[i]===bl[j] ? dp[i+1][j+1]+1 : Math.max(dp[i+1][j], dp[i][j+1]);
-  }
-  let i=0, j=0, aHtml='', bHtml='';
-  while (i<m && j<n){
-    if (al[i]===bl[j]){ aHtml+=esc(A[i]); bHtml+=esc(B[j]); i++; j++; }
-    else if (dp[i+1][j] >= dp[i][j+1]){ aHtml+=`<span class="diff-bad">${esc(A[i])}</span>`; i++; }
-    else { bHtml+=`<span class="diff-miss">${esc(B[j])}</span>`; j++; }
-  }
-  while (i<m){ aHtml+=`<span class="diff-bad">${esc(A[i])}</span>`; i++; }
-  while (j<n){ bHtml+=`<span class="diff-miss">${esc(B[j])}</span>`; j++; }
-  return { aHtml, bHtml };
 }
 
 function parseArticle(de){
@@ -84,38 +64,15 @@ function deColored(de){
   return `<span class="art ${art.article}">${art.article}</span> ${esc(art.core)}`;
 }
 
-/* speech synthesis */
-let GERMAN_VOICE = null;
-function pickVoice(){
-  if (!window.speechSynthesis) return;
-  const vs = window.speechSynthesis.getVoices();
-  GERMAN_VOICE = vs.find(v => /de[-_]/i.test(v.lang)) || vs.find(v => /german|deutsch/i.test(v.name)) || null;
-}
-if (window.speechSynthesis){
-  pickVoice();
-  window.speechSynthesis.onvoiceschanged = pickVoice;
-}
-function speak(text, btnEl){
-  if (!window.speechSynthesis){ showToast(T('toast_no_speech')); return; }
-  window.speechSynthesis.cancel();
-  const u = new SpeechSynthesisUtterance(text);
-  u.lang = 'de-DE'; u.rate = 0.88; u.pitch = 1;
-  if (GERMAN_VOICE) u.voice = GERMAN_VOICE;
-  if (btnEl){ btnEl.classList.add('speaking'); u.onend = () => btnEl.classList.remove('speaking'); u.onerror = () => btnEl.classList.remove('speaking'); }
-  window.speechSynthesis.speak(u);
-}
+/* speech: shared core (GERMAN_VOICE/pickVoice/speak) lives in assets/js/speech.js */
 function speakWord(week, idx, btnEl){
   const de = VOCAB[week].words[idx].split('—')[0].trim(); // strip Perfekt extra
-  speak(de, btnEl);
+  speak(de, btnEl, 0.88);
 }
 
 /* ==========================================================================
-   LEITNER SPACED REPETITION
+   LEITNER SPACED REPETITION (box model in assets/js/leitner.js)
    ========================================================================== */
-const DAY = 86400000;
-const BOX_INTERVAL = { 1: 1*DAY, 2: 2*DAY, 3: 4*DAY, 4: 8*DAY, 5: 16*DAY };
-const MAX_BOX = 5;
-
 function key(week, idx){ return week + '-' + idx; }
 
 /* Cross-cutting verb progress: if a word is one of our master verbs, its mastery lives in the
@@ -130,23 +87,16 @@ function vkOf(week, idx){ return verbKeyForWord(VOCAB[week].words[idx]); }
 function mRec(week, idx){ const vk = vkOf(week,idx); return vk ? verbStore.mastery[vk] : state.mastery[key(week,idx)]; }
 
 function getCard(week, idx){
-  return mRec(week,idx) || { box: 0, due: 0, right: 0, wrong: 0, seen: 0 };
+  return mRec(week,idx) || leitnerBlank();
 }
-function isDue(week, idx, now){
-  const c = mRec(week,idx);
-  if (!c) return true;           // new = always available
-  return c.due <= now;
-}
-function isSeen(week, idx){ const c = mRec(week,idx); return c && c.seen > 0; }
-function cardBox(week, idx){ const c = mRec(week,idx); return c ? c.box : 0; }
-function isMastered(week, idx){ return cardBox(week,idx) >= MAX_BOX; }
+function isDue(week, idx, now){ return leitnerIsDue(mRec(week,idx), now); }
+function isSeen(week, idx){ return leitnerIsSeen(mRec(week,idx)); }
+function cardBox(week, idx){ return leitnerBoxOf(mRec(week,idx)); }
+function isMastered(week, idx){ return leitnerIsMastered(mRec(week,idx)); }
 
 function updateCard(week, idx, correct){
   const c = getCard(week, idx);
-  c.seen++;
-  if (correct){ c.right++; c.box = Math.min(MAX_BOX, c.box + 1); }  // +1 box per correct (new 0→1)
-  else { c.wrong++; c.box = 1; }                                    // a miss sends it back to box 1
-  c.due = Date.now() + BOX_INTERVAL[c.box];
+  leitnerApply(c, correct);
   const vk = vkOf(week,idx);
   if (vk){ verbStore.mastery[vk] = c; saveVerbStore(); }            // shared verb store
   else { state.mastery[key(week,idx)] = c; save(); }
@@ -154,11 +104,11 @@ function updateCard(week, idx, correct){
 
 function resetAll(){ askConfirm(T('confirm_reset_all'), 'all'); }
 function resetWord(week, idx){ askConfirm(T('confirm_reset_word'), { week, idx }); }
-function askConfirm(message, action){ state.confirm = { message, action }; render(); }
-function confirmNo(){ state.confirm = null; render(); }
+function askConfirm(message, action){ stageConfirm(state, message, action); render(); }
+function confirmNo(){ clearConfirm(state); render(); }
 function confirmYes(){
   const a = state.confirm && state.confirm.action;
-  state.confirm = null;
+  clearConfirm(state);
   if (a === 'all'){ state.mastery = {}; save(); render(); showToast(T('toast_progress_reset')); }
   else if (a && typeof a === 'object'){
     const vk = vkOf(a.week, a.idx);
@@ -665,7 +615,7 @@ function renderSpelling(card, s){
     }
   }
   return `
-    <div class="card-prompt-label">Напиши по-немецки</div>
+    <div class="card-prompt-label">${T('spelling_prompt')}</div>
     <div class="card-word" style="font-size:40px">${esc(card.ru)}</div>
     <div><input class="spell-input ${s.answered ? (s.spellCorrect?'correct':'wrong') : ''}" id="spellInput"
       autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
@@ -674,31 +624,30 @@ function renderSpelling(card, s){
     ${s.answered ? `
       ${answeredBlock}
       <button class="audio-btn" id="cardAudio" onclick="speakWord(${card.week},${card.idx},this)" style="margin-top:8px">🔊</button>
-      <div class="card-actions"><button class="next-btn" onclick="nextCard()">Дальше →</button></div>
+      <div class="card-actions"><button class="next-btn" onclick="nextCard()">${T('spelling_next')}</button></div>
     ` : `
-      <div class="card-actions"><button class="reveal-btn" onclick="submitSpelling()">Проверить</button></div>
-      <div class="kbd-hint">ä=ae, ö=oe, ü=ue, ß=ss принимаются · Enter — проверить</div>
+      <div class="card-actions"><button class="reveal-btn" onclick="submitSpelling()">${T('spelling_check')}</button></div>
+      <div class="kbd-hint">${T('spelling_accept_hint')}</div>
     `}`;
 }
 
 function renderEnd(){
   const s = state.session;
   const pct = s.uniqueTotal ? Math.round(s.uniqueRight / s.uniqueTotal * 100) : 0;
-  let msg = 'Готово!';
-  if (pct === 100) msg = 'Безупречно! Все слова с первого раза.';
-  else if (pct >= 80) msg = 'Отличный результат!';
-  else if (pct >= 60) msg = 'Неплохо — слова с ошибками вернутся раньше.';
-  else msg = 'Эти слова ещё в работе. Они скоро повторятся.';
+  let msg = T('end_msg_inwork');
+  if (pct === 100) msg = T('end_msg_perfect');
+  else if (pct >= 80) msg = T('end_msg_great');
+  else if (pct >= 60) msg = T('end_msg_good');
 
   document.getElementById('app').innerHTML = `
 <div class="session-bg">
   <div class="session-body"><div class="session-end">
-    <div class="card-prompt-label">Тренировка завершена</div>
+    <div class="card-prompt-label">${T('end_title')}</div>
     <div class="end-score num">${s.uniqueRight}<span style="font-size:24px;color:var(--ink-soft)">/${s.uniqueTotal}</span></div>
     <div class="end-msg">${msg}</div>
-    <div class="end-detail">${pct}% слов с первого раза · всего показов: ${s.queue.length}<br>Слова с ошибками опустились в коробку 1 и вернутся в ближайшие дни.</div>
-    <button class="btn primary big" onclick="closeSession()">Готово</button>
-    <button class="btn big" style="margin-left:8px" onclick='startSession(${JSON.stringify(s.scope)})'>Ещё раз</button>
+    <div class="end-detail">${T('end_detail', pct, s.queue.length)}</div>
+    <button class="btn primary big" onclick="closeSession()">${T('end_back')}</button>
+    <button class="btn big" style="margin-left:8px" onclick='startSession(${JSON.stringify(s.scope)})'>${T('end_again')}</button>
   </div></div>
 </div>`;
   if (window.speechSynthesis) window.speechSynthesis.cancel();
