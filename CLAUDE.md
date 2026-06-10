@@ -25,8 +25,12 @@ on Vercel (HTTPS). `index.html` = login, `auth.html` = redirect stub, `planner.h
   live in `data/verbs.js` (`VERBS`); verb glosses live in `locales/*.verbs[key]`, keyed by the same
   verb key (not index-matched). (§6–§7)
 - **Cloud is the source of truth.** Before calling `initApp()`, a page must define `CLOUD_FIELD`,
-  `getCloudPayload()`, `applyCloudData(d)`, `render()`. Never store progress in `localStorage`
-  (only `ui_lang` / `ui_theme` / `auth_redirect` / `gemini_key` belong there). (§4–§5)
+  `getCloudPayload()`, `applyCloudData(d)`, `render()`. Never use `localStorage` as a progress
+  *store* — only `ui_lang` / `ui_theme` / `auth_redirect` / `gemini_key` / `gemini_key_sync` are
+  persistent app state (`gemini_key_sync` = the "remember key on my account" opt-in flag).
+  The one exception is `cloud_outbox`: a **transient** retry buffer that `cloud-sync.js` writes only
+  when a cloud write fails (offline) and clears the moment the queued writes replay. Don't read it
+  as state or repurpose it. (§4–§5, §13)
 - **Reuse the design tokens** in `assets/css/base.css`; don't introduce a new color/type system.
   (§11)
 - **Bump the vocab `version`/`KEY` only on an incompatible format change — and write a migration.**

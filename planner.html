@@ -30,11 +30,8 @@
 <script>
 /* ==========================================================================
    CURRICULUM (24 weeks) lives in data/weeks.js (global `WEEKS`).
+   Task-type labels come from the `type_<type>` UI key (see locales/*.ui).
    ========================================================================== */
-const TYPE_LABEL = {
-  test: "Диагностика", grammar: "Грамматика", listen: "Аудирование",
-  write: "Письмо", speak: "Говорение", read: "Чтение", review: "Повторение / Экзамен"
-};
 
 /* Flatten weeks into days (one task = one day) */
 const DAYS = [];
@@ -54,7 +51,7 @@ const TOTAL_DAYS = DAYS.length;
 
 /* Return a day object with content translated to the active UI language */
 function getLocalizedDay(d) {
-  const localeObj = window['LOCALE_' + getLang().toUpperCase()] || window.LOCALE_RU || {};
+  const localeObj = window['LOCALE_' + getLang().toUpperCase()] || window.LOCALE_EN || {};
   const weekLoc = (localeObj.weeks || {})[d.week];
   if (!weekLoc) return d;
   return {
@@ -79,14 +76,40 @@ function _storeGeminiKey(k) {
   if (k) localStorage.setItem('gemini_key', k.trim());
   else localStorage.removeItem('gemini_key');
 }
+/* Whether the user opted to keep the key on their account (synced across devices). */
+function keySynced() { return localStorage.getItem('gemini_key_sync') === '1'; }
+function _setKeySync(on) {
+  if (on) localStorage.setItem('gemini_key_sync', '1');
+  else localStorage.removeItem('gemini_key_sync');
+}
+
+/* Called by cloud-sync.initApp when the account carries a saved key — adopt it locally so this
+   device works without re-pasting; clear the synced flag if the account no longer has one. */
+function applyCloudKey(key) {
+  if (key) { _storeGeminiKey(key); _setKeySync(true); }
+  else _setKeySync(false);
+}
+
 function saveGeminiKeyAndClose() {
   const inp = document.getElementById('geminiKeyInput');
-  if (inp) _storeGeminiKey(inp.value);
+  const syncEl = document.getElementById('geminiKeySync');
+  const key = inp ? inp.value.trim() : '';
+  const wantSync = !!(syncEl && syncEl.checked) && !!key;
+  const wasSynced = keySynced();
+  _storeGeminiKey(key);
+  _setKeySync(wantSync);
+  if (typeof saveGeminiKeyToCloud === 'function') {
+    if (wantSync) saveGeminiKeyToCloud(key);            // keep the account copy in sync
+    else if (wasSynced) saveGeminiKeyToCloud('');       // opted out → wipe the account copy
+  }
   chatState.showKeyModal = false;
   render();
 }
 function removeGeminiKey() {
+  const wasSynced = keySynced();
   _storeGeminiKey('');
+  _setKeySync(false);
+  if (wasSynced && typeof saveGeminiKeyToCloud === 'function') saveGeminiKeyToCloud('');
   chatState.showKeyModal = false;
   render();
 }
@@ -296,6 +319,11 @@ function renderKeyModal() {
     <input id="geminiKeyInput" class="ai-key-input" type="password"
       placeholder="${T('ai_key_placeholder')}" value="${cur}"
       onkeydown="if(event.key==='Enter')saveGeminiKeyAndClose()">
+    <label class="ai-key-sync">
+      <input type="checkbox" id="geminiKeySync" ${keySynced() ? 'checked' : ''}>
+      <span>${T('ai_key_sync_label')}</span>
+    </label>
+    <div class="ai-key-sync-hint">${T('ai_key_sync_hint')}</div>
     <div class="ai-key-actions">
       <button class="btn done" onclick="saveGeminiKeyAndClose()">${T('ai_key_save')}</button>
       <button class="btn" onclick="closeKeyModal()">${T('ai_key_cancel')}</button>
@@ -531,7 +559,7 @@ function renderDayCard(d, isDone) {
 
 function renderNav(d, isViewingCurrent) {
   const weekOptions = WEEKS.map(w => {
-    const localeObj = window['LOCALE_' + getLang().toUpperCase()] || window.LOCALE_RU || {};
+    const localeObj = window['LOCALE_' + getLang().toUpperCase()] || window.LOCALE_EN || {};
     const wLoc = (localeObj.weeks || {})[w.n];
     const theme = (wLoc && wLoc.theme) || w.theme;
     return `<option value="${w.n}" ${w.n === d.week ? 'selected' : ''}>${T('planner_week_option', w.n, esc(theme))}</option>`;
@@ -580,11 +608,17 @@ ${renderFooter()}
   if (chatState.showKeyModal) html += renderKeyModal();
   if (chatState.summaryWeek !== null) html += renderSummaryModal();
   document.getElementById('app').innerHTML = html;
-  scrollChatToBottom();
+  // Only follow the chat to the bottom while a turn is in flight (start/send a message);
+  // plain navigation/toggles shouldn't yank the viewport down into the chat.
+  if (chatState.loading) scrollChatToBottom();
 }
 
 document.addEventListener('keydown', e => {
-  if (e.target.tagName === 'SELECT') return;
+  // Don't hijack typing in a form field (chat textarea, API-key input) or the week dropdown.
+  const tag = e.target.tagName;
+  if (tag === 'SELECT' || tag === 'INPUT' || tag === 'TEXTAREA' || e.target.isContentEditable) return;
+  // A modal owns the keyboard while it's open.
+  if (chatState.showKeyModal || chatState.summaryWeek !== null) return;
   if (e.key === 'ArrowLeft') goDay(state.viewingDay - 1);
   else if (e.key === 'ArrowRight') goDay(state.viewingDay + 1);
   else if (e.key === 'c' || e.key === 'C' || e.key === 'с' || e.key === 'С') copyPlan(state.viewingDay);

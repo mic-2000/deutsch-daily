@@ -12,8 +12,12 @@ create table if not exists public.progress (
   verbs_data   jsonb       default '{}'::jsonb,
   lang         text        default 'en'::text,
   theme        text,
+  gemini_key   text,                          -- opt-in: user's Gemini API key, synced across devices
   updated_at   timestamptz default now()
 );
+
+-- For existing databases (table already created without the column):
+alter table public.progress add column if not exists gemini_key text;
 
 alter table public.progress enable row level security;
 

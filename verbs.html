@@ -41,8 +41,8 @@ function verbGloss(key){
   const loc = window['LOCALE_'+getLang().toUpperCase()];
   const v = loc && loc.verbs && loc.verbs[key];
   if (v !== undefined && v !== '') return v;
-  const ru = window.LOCALE_RU && window.LOCALE_RU.verbs;
-  return (ru && ru[key]) || '';
+  const en = window.LOCALE_EN && window.LOCALE_EN.verbs;
+  return (en && en[key]) || '';
 }
 function auxHtml(aux){ return `<span class="aux ${aux}">${aux}</span>`; }
 /* full triad e.g. "gehen · ging · ist gegangen" */

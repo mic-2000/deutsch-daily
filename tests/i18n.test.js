@@ -26,7 +26,7 @@ test('all three locales expose the SAME set of ui keys', () => {
 
 test('keys used by the end/spelling screens exist in every locale', () => {
   const needed = [
-    'spelling_prompt', 'spelling_check', 'spelling_next', 'spelling_hint',
+    'spelling_prompt', 'spelling_check', 'spelling_next', 'spelling_accept_hint',
     'end_title', 'end_score', 'end_back', 'end_again',
   ];
   for (const lang of Object.keys(UI)) {

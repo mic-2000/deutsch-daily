@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Deutsch · Вход</title>
+<title>Deutsch · Meinkurs</title>
 <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
 <script defer src="/_vercel/insights/script.js"></script>
 <script defer src="/_vercel/speed-insights/script.js"></script>
@@ -20,13 +20,13 @@
   <div class="container">
     <div class="title-cat">Deutsch · A1 → B1</div>
     <h1>Mein<em>kurs</em></h1>
-    <div class="subtitle">Вход в личный кабинет</div>
+    <div class="subtitle" id="auth-subtitle"></div>
   </div>
 </header>
 
 <main>
   <div class="container">
-    <div id="auth-form"><div class="loading-msg">Загрузка…</div></div>
+    <div id="auth-form"><div class="loading-msg">…</div></div>
   </div>
 </main>
 
@@ -43,6 +43,9 @@ let loading = false;
 
 function render() {
   const isReg = mode === 'register';
+  // Header subtitle lives outside #auth-form, so localize it here too (covers language switching).
+  const sub = document.getElementById('auth-subtitle');
+  if (sub) sub.textContent = T('auth_subtitle');
   document.getElementById('auth-form').innerHTML = `
     <div class="auth-box">
       <div style="display:flex;justify-content:flex-end;align-items:center;gap:8px;margin-bottom:16px">${renderLangSwitcher()}${renderThemeToggle()}</div>

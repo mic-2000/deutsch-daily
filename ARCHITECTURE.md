@@ -1,21 +1,22 @@
 # Architecture — Deutsch Daily (German A1 → B1 learning tools)
 
 Comprehensive technical reference for this project. Re-derived directly from the source on
-2026-06-08. For day-to-day editing rules and gotchas see [CLAUDE.md](CLAUDE.md); this document
-is the deeper "how it all fits together" reference.
+2026-06-10 (after the shared-module refactor: `leitner.js` / `speech.js` / `utils.js`, decomposed
+planner render, lazy locales, and the `tests/` suite). For day-to-day editing rules and gotchas see
+[CLAUDE.md](CLAUDE.md); this document is the deeper "how it all fits together" reference.
 
 ---
 
 ## 1. What the product is
 
 A small web app that helps one user study German from ~A1 to the **Goethe-Zertifikat B1** exam
-over a ~6-month, 24-week plan. The system has three cooperating parts:
+over a ~6-month, 24-week plan. The system has three trainers plus a built-in AI tutor:
 
-1. **Planner** (`index.html` → `planner.html`) — one study day = one main task. Contains a
-   **built-in AI tutor chat** (Gemini) and a clipboard-copy button for the day plan.
-2. **Vocabulary trainer** (`vocab.html`) — ~600 words across 24 weekly sets, three exercise modes
+1. **Planner** (`index.html` → `planner.html`) — one study day = one main task (118 days total).
+   Contains a **built-in AI tutor chat** (Gemini) and a clipboard-copy button for the day plan.
+2. **Vocabulary trainer** (`vocab.html`) — 504 words across 24 weekly sets, three exercise modes
    mixed together, Leitner spaced repetition, and text-to-speech.
-3. **Verb trainer** (`verbs.html`) — drills ~306 irregular verbs (three Stammformen) in cloze,
+3. **Verb trainer** (`verbs.html`) — drills 306 irregular verbs (three Stammformen) in cloze,
    triad-flashcard, and table modes; mastery is shared with the vocabulary page.
 4. **AI Lehrer chat** — the planner has a built-in Gemini chat per study day. The user clicks
    "Start lesson" and the day plan is sent automatically as the opening message; subsequent
@@ -144,6 +145,15 @@ and the data files; `auth.html` loads nothing).
   `skipSave` is used when applying the language loaded *from* the cloud, to avoid a write-back loop.
 - `getLang()`, `renderLangSwitcher()` (renders the EN/UA/RU buttons).
 
+### `theme.js` — light/dark theme (mirrors the i18n pattern)
+Loaded by every page. `_theme` is initialised from `localStorage['ui_theme']` (default `'light'`;
+valid `light`/`dark`) and applied as `data-theme` on `<html>` immediately on load.
+- `setTheme(code, skipSave)` — set + persist to `localStorage`, apply `data-theme`, push to cloud
+  via `saveThemeToCloud` (unless `skipSave`), then `render()`. `skipSave` is used when applying the
+  theme loaded *from* the cloud (during `initApp`), to avoid a write-back loop — same contract as
+  `setLang`.
+- `toggleTheme()`, `getTheme()`, `renderThemeToggle()` (the ☾/☀ button in the user bar).
+
 ### `ai-config.js` — Gemini configuration (planner-only)
 Loaded only by `planner.html`. Exports two constants and two functions:
 - `AI_MODEL_ID` — model for daily lessons (currently `gemini-3.1-flash-lite`).
@@ -212,21 +222,36 @@ Each page must define these globals **before** calling `initApp()`:
   default) **before** the first render, then `await setLang(lang, true)` loads that one locale,
   syncs it into `localStorage`, and renders **once** — so there's no language flash and only the
   chosen locale is fetched.
-- `saveToCloud()` — `upsert` `{ user_id, [CLOUD_FIELD]: getCloudPayload(), updated_at }` with
-  `onConflict: 'user_id'`.
-- `saveLangToCloud(code)` — `upsert` `{ user_id, lang, updated_at }`.
-- `saveThemeToCloud(theme)` / `saveVerbsToCloud(payload)` — `upsert` the `theme` / `verbs_data` column.
+- `saveToCloud()` / `saveLangToCloud(code)` / `saveThemeToCloud(theme)` / `saveVerbsToCloud(payload)`
+  — all route through the internal `_pushProgress(fields)`, which `upsert`s
+  `{ user_id, …fields, updated_at }` on the `progress` row (`onConflict: 'user_id'`). They write
+  only their own column(s), so they compose without clobbering each other.
 - During `initApp`, if the page defines `applyVerbProgress(d)`, the shared `verbs_data` is loaded
   into it (separate query, before render) — this is how the vocabulary page gets cross-cutting verb
   mastery without changing its own `CLOUD_FIELD`.
 - `logout()` — `sb.auth.signOut()` then go to `/`.
 
+**Offline outbox (write resilience).** Every write goes to Supabase directly; cloud stays the
+source of truth. If a write **fails** (offline / transient), the payload is parked in
+`localStorage['cloud_outbox']` instead of being lost, and a one-time `T('toast_offline_saved')`
+fires. `flushOutbox()` replays the queue and clears it (firing `T('toast_sync_restored')`) when
+connectivity returns — it's wired to the `window` `online` event, `document` `visibilitychange`
+(tab refocus), the next `initApp`, and the next successful write. The outbox is a **transient
+retry buffer, not a progress store** (§12/§13):
+- *Shape* — `{ uid, progress?: {user_id, …columns, updated_at}, lessons?: { "<day>": {op:'upsert', messages} | {op:'delete'} } }`.
+- *Merge* — progress upserts are idempotent (PK = `user_id`), so queued partial field-updates **merge
+  into one row**; lesson writes **dedupe per day** (latest op wins, e.g. upsert-then-delete collapses
+  to a delete).
+- *Safety* — the queue is tagged with `uid`; a queue belonging to a different signed-in user is
+  discarded on flush (it would fail RLS anyway), so it can never write one user's data to another.
+
 **Lessons (AI chat history) — separate table `lessons`:**
 - `loadLessonsFromCloud()` — `SELECT day, messages` for the current user; returns `[]` on error.
 - `saveLessonToCloud(day, messages)` — `upsert` `{ user_id, day, messages, updated_at }` with
-  `onConflict: 'user_id,day'`. `day > 0` = daily lesson; `day < 0` = weekly summary for week
-  `(-day)` (e.g. `day = -3` stores the week-3 summary).
-- `deleteLessonFromCloud(day)` — `DELETE` the row for that `user_id` + `day` pair.
+  `onConflict: 'user_id,day'`; on failure queues `{op:'upsert'}` in the outbox. `day > 0` = daily
+  lesson; `day < 0` = weekly summary for week `(-day)` (e.g. `day = -3` stores the week-3 summary).
+- `deleteLessonFromCloud(day)` — `DELETE` the row for that `user_id` + `day` pair; on failure queues
+  `{op:'delete'}`.
 
 ---
 
@@ -244,6 +269,7 @@ single table, `public.progress`, one row per user (confirmed schema):
 | `verbs_data` | `jsonb` | yes | `'{}'::jsonb` | verbs `getCloudPayload()` **and** vocab `saveVerbStore()` | `{ app, version, savedAt, modes, sel, mastery }` — `mastery` keyed by **verb key**; `sel` = saved training selection |
 | `lang` | `text` | yes | `'en'::text` | `saveLangToCloud` | `'ru' \| 'ua' \| 'en'` |
 | `theme` | `text` | yes | — | `saveThemeToCloud` | `'light' \| 'dark'` |
+| `gemini_key` | `text` | yes | — | `saveGeminiKeyToCloud` (planner, opt-in) | the user's Gemini API key, or `null`. Written only when the user ticks "remember on my account"; cleared (→ `null`) when they untick or remove the key. See §8. |
 | `updated_at` | `timestamptz` | yes | `now()` | every upsert | ISO string |
 
 > `verbs_data` was added with `alter table public.progress add column if not exists verbs_data jsonb default '{}'::jsonb;`. RLS is row-level (per `user_id`), so it covers new columns automatically. **Cross-cutting progress is live:** verb `mastery` is keyed by the verb key (e.g. `gehen`), so a verb counts the same wherever it appears. `verbs.html` owns the column via its `CLOUD_FIELD`. `vocab.html` ALSO reads/writes it: `cloud-sync` loads it into a `verbStore` via the page's `applyVerbProgress(d)` hook, and any vocabulary word that resolves to a master-verb key (`verbKeyForWord` strips the `—` form and looks it up in `VERBS`, ~69 of the vocab entries) routes its mastery to `verbStore` and persists via `saveVerbsToCloud`. `sel` (the verb-trainer's saved training selection) round-trips through the same column.
@@ -258,14 +284,18 @@ single table, `public.progress`, one row per user (confirmed schema):
   browser is safe — it cannot touch other users' rows.) Note: the policy only takes effect if RLS
   is enabled on the table (`alter table public.progress enable row level security`).
 
-Equivalent DDL:
+The canonical, idempotent DDL lives in **[`schema.sql`](schema.sql)** at the repo root (safe to
+re-run; uses `if not exists` / guarded `create policy`). Equivalent shape:
 
 ```sql
 create table public.progress (
-  user_id      uuid primary key references auth.users(id),
+  user_id      uuid        primary key references auth.users(id),
   planner_data jsonb       default '{}'::jsonb,
   vocab_data   jsonb       default '{}'::jsonb,
+  verbs_data   jsonb       default '{}'::jsonb,
   lang         text        default 'en'::text,
+  theme        text,                          -- no default; null → client default 'light'
+  gemini_key   text,                          -- opt-in: user's Gemini API key, synced across devices
   updated_at   timestamptz default now()
 );
 alter table public.progress enable row level security;
@@ -364,7 +394,7 @@ const DAYS = [];
 WEEKS.forEach(w => w.tasks.forEach(([type, text], taskIdx) =>
   DAYS.push({ day: DAYS.length+1, week:w.n, weekTheme:w.theme, grammar:w.grammar,
               vocab:w.vocab, type, text, taskIdx })));
-const TOTAL_DAYS = DAYS.length;   // currently ~115 days
+const TOTAL_DAYS = DAYS.length;   // currently 118 days (sum of all WEEKS[n].tasks)
 ```
 
 `getLocalizedDay(d)` returns a copy of the day with `theme/grammar/vocab/text` replaced by the
@@ -442,7 +472,16 @@ let chatState = { loading: false, showKeyModal: false, summaryWeek: null };
 ```
 
 **API key:** stored in `localStorage['gemini_key']` (user-provided). `getGeminiKey()` reads it;
-`_storeGeminiKey(k)` writes/removes it. The key is never sent to Supabase; it stays local.
+`_storeGeminiKey(k)` writes/removes it. **By default the key is local-only** and never sent to
+Supabase. The key modal also offers an **opt-in "remember this key on my account" checkbox**
+(`keySynced()` ↔ `localStorage['gemini_key_sync']`): when ticked, `saveGeminiKeyAndClose()` also calls
+`saveGeminiKeyToCloud(key)` so the key persists in the `progress.gemini_key` column and follows the
+user to other devices. On a fresh device, `cloud-sync.initApp` reads that column and hands it to the
+planner's `applyCloudKey(key)` hook, which writes it into `localStorage` (and sets the sync flag) so
+the page works without re-pasting. Unticking the box — or `removeGeminiKey()` — clears the account
+copy (`saveGeminiKeyToCloud('')` → `null`). The cloud write rides the offline outbox like any other
+progress write (§4), so it's resilient to a flaky connection. The key is still sent *only* to the
+user's own RLS-protected row and to Google; it never reaches other users.
 
 **`geminiRequest(model, systemPrompt, messages)`** — direct fetch to
 `https://generativelanguage.googleapis.com/v1beta/models/<model>:generateContent?key=…`.
@@ -481,9 +520,13 @@ headings (`#`–`####`), horizontal rules (`---`), unordered/ordered lists, GFM 
 - `goDay(n)`, `goToCurrent()`, `jumpWeek(weekNum)` — navigation (clamped to `[1, TOTAL_DAYS]`).
 - `toggleDone(day)` — toggles completion; completing the current day advances `currentDay`.
 - `render()` — single full re-render of `#app` (header + progress bar + day card + nav + info box +
-  footer) from template strings.
-- Keyboard: `←/→` page days; `c` / `C` / `с` / `С` (Latin & Cyrillic) copies. `SELECT` focus is
-  ignored so the week dropdown keeps working.
+  footer) from template strings, composed from the `render*` section builders. It calls
+  `scrollChatToBottom()` **only while `chatState.loading`** (a lesson turn is in flight) so plain
+  day navigation / toggling done doesn't yank the viewport down into the chat; the chat-turn
+  functions (`runLessonTurn`, `generateWeeklySummary`) scroll explicitly after they finish.
+- Keyboard: `←/→` page days; `c` / `C` / `с` / `С` (Latin & Cyrillic) copies. The handler **bails
+  on form fields** (`INPUT` / `TEXTAREA` / `SELECT` / `contentEditable`) so typing in the chat
+  textarea or the API-key input isn't hijacked, and **bails while a modal is open** (key/summary).
 
 ---
 
@@ -614,8 +657,10 @@ Pedagogical selection based on box: box 0–1 → triad; box 2–3 → cloze; bo
 | `scope.type` | Cards selected |
 |---|---|
 | `'due'` | All verbs with `seen>0 && !mastered && due<=now` (across all verbs) |
-| `'filter'` | All verbs matching `state.filter`, regardless of due date |
+| `'filter'` | Within the verbs matching `state.filter`: due (seen, not mastered) first, then up to **15** new; if that set is empty, fall back to the whole filter set |
 | `'selected'` | Verbs in `state.sel`, capped at **40 cards** |
+
+Non-`selected` sessions are shuffled and capped at **20 cards**; `selected` at **40**.
 
 Wrong answer → re-queued once as easy `triad` (`requeued: true`). `uniqueRight / uniqueTotal`
 drive the end-screen score.
@@ -670,30 +715,61 @@ still matter and should be preserved:
 a Supabase session, so auth/sync don't work there. Treat `file://` as out of scope unless that
 explicitly changes.
 
-`localStorage` is used for four keys: `ui_lang` (language preference), `ui_theme`
-(`light`|`dark`, written by `theme.js`), `auth_redirect` (post-login return URL), and
-`gemini_key` (user's Gemini API key — never sent to Supabase). All learning progress and
-chat history lives in Supabase.
+`localStorage` holds five persistent preference keys — `ui_lang` (language), `ui_theme`
+(`light`|`dark`, written by `theme.js`), `auth_redirect` (post-login return URL), `gemini_key`
+(user's Gemini API key) and `gemini_key_sync` (`'1'` if the user opted to mirror the key to their
+account — §8) — plus one **transient** key, `cloud_outbox`: the
+offline write queue (§4). It exists only while a cloud write is pending after a failure and is
+cleared the moment those writes replay; it is a retry buffer, not a progress store. All learning
+progress and chat history lives in Supabase.
 
 ---
 
 ## 13. Known gaps / things to watch
 
-- **Index-match fragility.** Curriculum/vocab edits must stay index-aligned across the base data
-  file and all three locale files (§6). There is no runtime validation; a shifted index causes
-  silent translation mismatches.
-- **Gemini key lives only in localStorage.** If the user clears browser storage, the key is lost
-  silently — there is no recovery prompt except re-opening the settings modal.
-- **No conversation length limit for AI chat.** `lessonsCache[day]` grows unbounded; very long
-  sessions may hit Gemini token limits or inflate cloud storage.
-- **Cloud writes are fire-and-forget.** `saveToCloud` / `saveLessonToCloud` ignore errors silently.
-  Offline edits are lost if the page is closed before connectivity is restored.
+Each item below names the gap, its **severity**, and the **recommended mitigation** if/when it's
+worth doing. Ordered roughly by impact.
+
+- **No conversation-length limit for AI chat.** *(severity: medium)* `lessonsCache[day]` grows
+  unbounded; every turn re-sends the whole history to Gemini, so a long lesson eventually hits the
+  model's context limit (hard error) and inflates the `lessons` row.
+  → *Mitigation:* window the `contents` sent to `geminiRequest` (e.g. keep the seed day-plan message
+  + the last N turns), or summarise-and-truncate past a threshold. Storage stays full-fidelity; only
+  the request is trimmed.
+
+- **Index/key alignment across base data + locales.** *(severity: low, now guarded)* Curriculum,
+  vocab, and verb edits must stay aligned across `data/` and all three `locales/*` (§6). This is now
+  **structurally enforced** by `tests/data-align.test.js` (length/coverage for vocab, weeks, verbs)
+  and `tests/i18n.test.js` (identical `ui` key sets). The guard catches a shifted index or a
+  forgotten slot — it does **not** verify that a translation is *semantically* right, only that a
+  non-empty value of the correct shape exists. Run `npm test` after any data/locale edit.
 
 > **Already resolved (kept for history):**
+> - **Gemini key was localStorage-only** (lost on clearing browser storage, no cross-device use) —
+>   the key modal now has an opt-in "remember this key on my account" checkbox that mirrors the key
+>   to `progress.gemini_key` and restores it on other devices via `applyCloudKey` (§8). Default stays
+>   local-only; the cloud write rides the offline outbox. (Guarded by `tests/outbox.test.js`.)
+> - **Cloud writes were fire-and-forget** — a failed write is now parked in the offline outbox
+>   (`localStorage['cloud_outbox']`) and replayed on reconnect, with `toast_offline_saved` /
+>   `toast_sync_restored` feedback. See §4. (Guarded by `tests/outbox.test.js`.)
+> - **Data-overlay fallback pointed at RU, not EN** — `getLocalizedDay` (planner),
+>   `getTranslation` (vocab) and `verbGloss` (verbs) now fall back to `LOCALE_EN`, consistent with
+>   `DEFAULT_LANG` and the rest of the i18n layer.
 > - Untranslated spelling/end-screen strings — `T()` keys are now wired everywhere.
 > - Orphaned `settings_*` / `toast_sync_*` locale keys — removed when FSA auto-sync was dropped.
-> - `<html lang="ru">` hardcoded — `i18n.js` sets `document.documentElement.lang` dynamically on
->   init (line 13) and on every `setLang()` call (line 50), so the static attribute is a no-op.
+> - Dead locale keys (`ai_thinking`, `spelling_hint`, `spelling_hint_next`, `spelling_input_placeholder`,
+>   `lang_label`) — removed from all three locales; `auth_loading` was repurposed into `auth_subtitle`.
+> - **`index.html` hardcoded Russian** (page subtitle + "Загрузка…") — the subtitle now reads from
+>   `T('auth_subtitle')` in `render()` (so it follows the language switcher) and the loading text is
+>   a neutral `…`; the page title is the language-neutral "Deutsch · Meinkurs".
+> - **Planner keyboard hijack** — `←/→`/`c` no longer fire while typing in the chat textarea or
+>   API-key input (the handler now bails on form fields and open modals).
+> - **Chat auto-scroll on navigation** — `render()` only follows the chat to the bottom while a turn
+>   is loading, so paging through days no longer jumps the viewport into the chat.
+> - **Dead code** — the unused `TYPE_LABEL` map was removed from `planner.html` (labels come from the
+>   `type_<type>` UI keys).
+> - `<html lang="ru">` hardcoded — `i18n.js` sets `document.documentElement.lang` dynamically on init
+>   and on every `setLang()` call, so the static attribute is a no-op.
 > - `lessons` DDL not in repo — `schema.sql` added at project root (idempotent, safe to re-run).
 
 ---
@@ -715,3 +791,31 @@ chat history lives in Supabase.
 6. **"Create/Open file" buttons did nothing** — File System Access API isn't available everywhere
    and the error was swallowed. Resolution: the FSA auto-sync feature was removed; only Blob
    export/import remains (and any user-facing failures should toast).
+
+---
+
+## 15. Tests (`tests/`)
+
+The app has **no build step**, so the test harness reproduces what a browser loads. `npm test`
+runs `node --test tests/`; `npm run test:regression` runs the curated subset.
+
+- **`harness.js`** — `loadPage({ page, extraFiles, exports, voices, shims })` reads a page's local
+  `<script src>` deps (skipping a denylist of side-effectful modules — `supabase.js`,
+  `cloud-sync.js`, `theme.js`, `ai-config.js` — which are shimmed), concatenates them with the
+  page's inline `<script>` (bootstrap neutralised), evaluates it all as **one script** in a fresh
+  `vm` sandbox seeded with browser shims (`document`, `localStorage`, `speechSynthesis`, …), and
+  returns the captured globals. Because it follows the real `<script src>` list, it keeps working as
+  helpers move between modules — top-level `const`/`function` from `assets/js/*` are in scope for the
+  inline page code, exactly as in the browser.
+- **What's covered:** `leitner.test.js` (box transitions/scheduling), `helpers.test.js`
+  (`esc`/`normalize`/`diffChars`/article parsing), `speech.test.js` (voice pick + per-page utterance
+  text/rate), `confirm.test.js` (in-page confirm staging), `markdown.test.js` (`renderMd`),
+  `render-smoke.test.js` (each page's `render()` runs and fills `#app`), `i18n.test.js` (identical
+  `ui` key sets across locales + function-valued keys), `data-align.test.js` (base-data ↔ locale
+  index/key alignment — see §13), `refactor-guards.test.js` (source-level guards: no hardcoded
+  Russian in the trainer session UI, no orphaned/dead locale keys, no hardcoded `<html lang="ru">`),
+  and `outbox.test.js` (the offline write queue — see §4 — eval'd directly with a toggleable mock
+  Supabase client, since the page harness shims `cloud-sync.js`).
+- **What it can't cover:** anything requiring a live Supabase session / network against the real
+  backend (auth, end-to-end cloud sync, real Gemini calls). Verify those manually in the deployed
+  HTTPS app.

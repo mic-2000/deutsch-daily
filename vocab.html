@@ -41,9 +41,9 @@ function getTranslation(week, idx) {
   const locale = window['LOCALE_' + lang.toUpperCase()];
   const wt = locale && locale.vocab && locale.vocab[week];
   if (wt && wt[idx] !== undefined) return wt[idx];
-  // fallback: try RU locale
-  const ruWt = window.LOCALE_RU && window.LOCALE_RU.vocab && window.LOCALE_RU.vocab[week];
-  return (ruWt && ruWt[idx] !== undefined) ? ruWt[idx] : '';
+  // fallback: try the default (EN) locale
+  const enWt = window.LOCALE_EN && window.LOCALE_EN.vocab && window.LOCALE_EN.vocab[week];
+  return (enWt && enWt[idx] !== undefined) ? enWt[idx] : '';
 }
 
 function parseArticle(de){
@@ -128,6 +128,7 @@ let state = {
   modes: { flashcard: true, article: true, spelling: true },
   levels: { A1: false, A2: false, B1: false },
   session: null,
+  confirm: null,
 };
 const KEY = 'de-vocab-trainer-v2'; // kept for export/import format version reference
 

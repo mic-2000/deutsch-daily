@@ -96,17 +96,23 @@
   display: flex; align-items: center; justify-content: center;
   padding: 20px;
 }
-.ai-key-box { background: var(--paper); padding: 28px 32px; max-width: 540px; width: 100%; }
+.ai-key-box { background: var(--paper); padding: 28px 32px; max-width: 540px; width: 100%; max-height: 90vh; overflow-y: auto; }
 .ai-key-box h3 { font-family: var(--serif); font-size: 20px; font-weight: 400; margin-bottom: 6px; }
 .ai-key-box p  { font-size: 13px; color: var(--ink-soft); margin-bottom: 18px; line-height: 1.55; }
+.ai-key-box p a { color: var(--accent); }
+.ai-key-box p ol { margin: 8px 0 0 18px; padding: 0; }
 .ai-key-input {
   width: 100%; box-sizing: border-box;
-  padding: 10px 12px; margin-bottom: 16px;
+  padding: 10px 12px; margin-bottom: 14px;
   border: 1px solid var(--line);
   background: var(--paper); color: var(--ink);
   font-size: 14px; font-family: var(--sans);
 }
 .ai-key-input:focus { outline: none; border-color: var(--accent); }
+/* "remember on my account" opt-in */
+.ai-key-sync { display: flex; align-items: flex-start; gap: 8px; cursor: pointer; font-size: 13px; color: var(--ink); }
+.ai-key-sync input { margin-top: 2px; flex: none; width: 16px; height: 16px; accent-color: var(--accent); cursor: pointer; }
+.ai-key-sync-hint { font-size: 12px; color: var(--ink-soft); line-height: 1.5; margin: 6px 0 18px 24px; }
 .ai-key-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
 
 /* weekly summary modal */
