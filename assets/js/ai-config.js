@@ -160,9 +160,21 @@ You are given transcripts of all lessons and checks from the week. Write the rev
 Be concrete and supportive, but honest. No filler.`,
 };
 
+/* ---- Per-language batch-translation prompts (collections page) ---------- */
+/* Translate a list of German terms into the active UI language. The model must return ONLY a JSON
+   array of strings (same order, same length) so the caller can map results back by index. */
+const AI_TRANSLATE_PROMPTS = {
+  ru: 'Ты — переводчик с немецкого на русский. На вход — JSON-массив немецких слов или фраз. Верни ТОЛЬКО JSON-массив строк с переводами на русский: тот же порядок, та же длина. Без пояснений, без markdown, без нумерации. Существительные переводи кратко, без артикля. Если перевода нет — пустая строка "".',
+  ua: 'Ти — перекладач з німецької українською. На вхід — JSON-масив німецьких слів або фраз. Поверни ЛИШЕ JSON-масив рядків з перекладами українською: той самий порядок, та сама довжина. Без пояснень, без markdown, без нумерації. Іменники перекладай коротко, без артикля. Якщо перекладу немає — порожній рядок "".',
+  en: 'You are a German-to-English translator. Input is a JSON array of German words or phrases. Return ONLY a JSON array of strings with English translations: same order, same length. No explanations, no markdown, no numbering. Translate nouns briefly, without the article. If there is no translation, use an empty string "".',
+};
+
 function getAiSystemPrompt() {
   return AI_SYSTEM_PROMPTS[getLang()] || AI_SYSTEM_PROMPTS.en;
 }
 function getAiSummaryPrompt() {
   return AI_SUMMARY_PROMPTS[getLang()] || AI_SUMMARY_PROMPTS.en;
+}
+function getCollectionsTranslatePrompt() {
+  return AI_TRANSLATE_PROMPTS[getLang()] || AI_TRANSLATE_PROMPTS.en;
 }

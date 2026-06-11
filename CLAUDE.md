@@ -5,7 +5,8 @@ Full reference: **[ARCHITECTURE.md](ARCHITECTURE.md)**. This file is **rules onl
 
 Orientation: vanilla HTML/CSS/JS, no framework/bundler; Supabase auth + cloud progress; deployed
 on Vercel (HTTPS). `index.html` = login, `auth.html` = redirect stub, `planner.html` /
-`vocab.html` / `verbs.html` = the app pages. (Details: ARCHITECTURE.md §1–§3.)
+`vocab.html` / `verbs.html` / `collections.html` = the app pages. (Details: ARCHITECTURE.md §1–§3,
+collections = §16.)
 
 ## Build
 - `npm run build` (`node build.js`) injects `NEXT_PUBLIC_SUPABASE_*` into
@@ -24,8 +25,10 @@ on Vercel (HTTPS). `index.html` = login, `auth.html` = redirect stub, `planner.h
   German base in `data/` **and** the same index in all three `locales/*.{vocab,weeks}`. Verb forms
   live in `data/verbs.js` (`VERBS`); verb glosses live in `locales/*.verbs[key]`, keyed by the same
   verb key (not index-matched). (§6–§7)
-- **Cloud is the source of truth.** Before calling `initApp()`, a page must define `CLOUD_FIELD`,
-  `getCloudPayload()`, `applyCloudData(d)`, `render()`. Never use `localStorage` as a progress
+- **Cloud is the source of truth.** Before calling `initApp()`, a page must define `render()` and —
+  if it owns a `progress` column — `CLOUD_FIELD`, `getCloudPayload()`, `applyCloudData(d)`. A page
+  with its **own table** (`collections.html` → `collections`) omits `CLOUD_FIELD` and loads via its
+  own CRUD after `initApp` (like the planner's lessons). Never use `localStorage` as a progress
   *store* — only `ui_lang` / `ui_theme` / `auth_redirect` / `gemini_key` / `gemini_key_sync` are
   persistent app state (`gemini_key_sync` = the "remember key on my account" opt-in flag).
   The one exception is `cloud_outbox`: a **transient** retry buffer that `cloud-sync.js` writes only

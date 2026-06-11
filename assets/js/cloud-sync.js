@@ -1,9 +1,11 @@
 /* cloud-sync.js — shared Supabase session + progress sync.
    Requires: supabase.js (sb), i18n.js (setLang), utils.js (showToast, T).
    The page must define these globals before initApp() runs:
-     CLOUD_FIELD        — column on `progress` ('planner_data' | 'vocab_data' | 'verbs_data')
-     applyCloudData(d)  — apply the loaded field payload to state
-     getCloudPayload()  — return the object to persist into CLOUD_FIELD
+     CLOUD_FIELD        — column on `progress` ('planner_data' | 'vocab_data' | 'verbs_data').
+                          OPTIONAL: a page that owns a separate table (e.g. collections.html) may
+                          omit it (and getCloudPayload/applyCloudData) and just define render().
+     applyCloudData(d)  — apply the loaded field payload to state   (omit if no CLOUD_FIELD)
+     getCloudPayload()  — return the object to persist into CLOUD_FIELD  (omit if no CLOUD_FIELD)
      render()           — re-render the UI
 
    Cloud is the source of truth. Writes are still made directly to Supabase; if a write FAILS
@@ -17,17 +19,23 @@ let currentUser = null;
 /* ==========================================================================
    OFFLINE OUTBOX — replay failed writes when back online.
    Shape: { uid, progress?: {user_id, <columns…>, updated_at},
-            lessons?: { "<day>": {op:'upsert', messages} | {op:'delete'} } }
+            lessons?:     { "<day>": {op:'upsert', messages} | {op:'delete'} },
+            collections?: { "<id>":  {op:'upsert', row}      | {op:'delete'} } }
    Progress upserts are idempotent (PK = user_id) so partial field-updates MERGE into one row;
-   lesson writes dedupe per day (latest op wins).
+   lesson writes dedupe per day; collection upserts MERGE row columns per id (so a queued
+   create + later mastery update collapse into one correct row). Latest op wins.
    ========================================================================== */
 const OUTBOX_KEY = 'cloud_outbox';
 let _offlineNotified = false;
 
+function _outboxEmpty(o) {
+  return !o || (!o.progress
+    && !(o.lessons && Object.keys(o.lessons).length)
+    && !(o.collections && Object.keys(o.collections).length));
+}
 function _readOutbox() { try { return JSON.parse(localStorage.getItem(OUTBOX_KEY)) || {}; } catch (e) { return {}; } }
 function _writeOutbox(o) {
-  const empty = !o || (!o.progress && !(o.lessons && Object.keys(o.lessons).length));
-  if (empty) { localStorage.removeItem(OUTBOX_KEY); return; }
+  if (_outboxEmpty(o)) { localStorage.removeItem(OUTBOX_KEY); return; }
   o.uid = currentUser && currentUser.id;
   localStorage.setItem(OUTBOX_KEY, JSON.stringify(o));
 }
@@ -45,6 +53,19 @@ function _queueLesson(day, entry) {
   _writeOutbox(o);
   _notifyOffline();
 }
+function _queueCollection(id, entry) {
+  const o = _readOutbox();
+  o.collections = o.collections || {};
+  if (entry.op === 'delete') {
+    o.collections[id] = { op: 'delete' };
+  } else { // merge row columns onto any prior pending upsert (create + later mastery → one row)
+    const prev = o.collections[id];
+    const prevRow = (prev && prev.op === 'upsert') ? prev.row : {};
+    o.collections[id] = { op: 'upsert', row: Object.assign({}, prevRow, entry.row) };
+  }
+  _writeOutbox(o);
+  _notifyOffline();
+}
 function _notifyOffline() {
   if (_offlineNotified) return;
   _offlineNotified = true;
@@ -56,7 +77,7 @@ async function flushOutbox() {
   if (!currentUser) return;
   const o = _readOutbox();
   if (o.uid && o.uid !== currentUser.id) { localStorage.removeItem(OUTBOX_KEY); return; } // foreign/stale queue
-  if (!o.progress && !(o.lessons && Object.keys(o.lessons).length)) return;
+  if (_outboxEmpty(o)) return;
   let allOk = true;
 
   if (o.progress) {
@@ -84,6 +105,23 @@ async function flushOutbox() {
       } catch (e) { allOk = false; }
     }
     if (o.lessons && !Object.keys(o.lessons).length) delete o.lessons;
+  }
+  if (o.collections) {
+    for (const id of Object.keys(o.collections)) {
+      const entry = o.collections[id];
+      try {
+        if (entry.op === 'delete') {
+          const { error } = await sb.from('collections').delete().eq('id', id).eq('user_id', currentUser.id);
+          if (error) throw error;
+        } else {
+          const row = Object.assign({}, entry.row, { id: id, user_id: currentUser.id, updated_at: new Date().toISOString() });
+          const { error } = await sb.from('collections').upsert(row, { onConflict: 'id' });
+          if (error) throw error;
+        }
+        delete o.collections[id];
+      } catch (e) { allOk = false; }
+    }
+    if (o.collections && !Object.keys(o.collections).length) delete o.collections;
   }
   _writeOutbox(o);
 
@@ -119,13 +157,16 @@ async function initApp() {
   // Resolve language + progress from the cloud BEFORE the first render, so the page renders once
   // in the correct language (no flash) and only that one locale is fetched.
   let lang = getLang();
+  const hasField = (typeof CLOUD_FIELD !== 'undefined' && CLOUD_FIELD); // a table-only page (collections) has none
   try {
     const { data } = await sb.from('progress')
-      .select(CLOUD_FIELD + ', lang')
+      .select((hasField ? CLOUD_FIELD + ', ' : '') + 'lang')
       .eq('user_id', session.user.id)
       .single();
-    const payload = data && data[CLOUD_FIELD];
-    if (payload && Object.keys(payload).length) applyCloudData(payload); // skip empty default ({}::jsonb)
+    if (hasField && typeof applyCloudData === 'function') {
+      const payload = data && data[CLOUD_FIELD];
+      if (payload && Object.keys(payload).length) applyCloudData(payload); // skip empty default ({}::jsonb)
+    }
     if (data && data.lang && LANG_NAMES[data.lang]) lang = data.lang;
   } catch(e) { /* offline or no record yet */ }
 
@@ -161,7 +202,7 @@ async function initApp() {
   else { await loadLocale(lang).catch(()=>{}); render(); }
 }
 
-async function saveToCloud()        { return _pushProgress({ [CLOUD_FIELD]: getCloudPayload() }); }
+async function saveToCloud()        { if (typeof CLOUD_FIELD === 'undefined' || !CLOUD_FIELD) return; return _pushProgress({ [CLOUD_FIELD]: getCloudPayload() }); }
 async function saveLangToCloud(code) { return _pushProgress({ lang: code }); }
 async function saveThemeToCloud(theme) { return _pushProgress({ theme: theme }); }
 // Persist the shared verb-mastery store (verbs_data). Used by the vocabulary page, which writes
@@ -207,6 +248,52 @@ async function deleteLessonFromCloud(day) {
     if (error) throw error;
     if (_offlineNotified) flushOutbox();
   } catch(e) { _queueLesson(day, { op: 'delete' }); }
+}
+
+/* ==========================================================================
+   COLLECTIONS — user-supplied word sets (table `collections`, one row per set).
+   ids are client-generated (crypto.randomUUID). `words` is rewritten only on edit;
+   training answers go through saveCollectionMastery (writes only the `mastery` column).
+   ========================================================================== */
+async function loadCollectionsFromCloud() {
+  if (!currentUser) return [];
+  try {
+    const { data } = await sb.from('collections')
+      .select('id, name, words, mastery, created_at, updated_at')
+      .eq('user_id', currentUser.id)
+      .order('created_at', { ascending: true });
+    return data || [];
+  } catch(e) { return []; }
+}
+
+async function saveCollectionToCloud(c) {
+  if (!currentUser || !c || !c.id) return;
+  const row = { id: c.id, user_id: currentUser.id, name: c.name, words: c.words || [], mastery: c.mastery || {}, updated_at: new Date().toISOString() };
+  try {
+    const { error } = await sb.from('collections').upsert(row, { onConflict: 'id' });
+    if (error) throw error;
+    if (_offlineNotified) flushOutbox();
+  } catch(e) { _queueCollection(c.id, { op: 'upsert', row: { name: row.name, words: row.words, mastery: row.mastery } }); }
+}
+
+/* Hot path: persist only the mastery column after a training answer (leaves words/name untouched). */
+async function saveCollectionMastery(id, mastery) {
+  if (!currentUser || !id) return;
+  const row = { id: id, user_id: currentUser.id, mastery: mastery || {}, updated_at: new Date().toISOString() };
+  try {
+    const { error } = await sb.from('collections').upsert(row, { onConflict: 'id' });
+    if (error) throw error;
+    if (_offlineNotified) flushOutbox();
+  } catch(e) { _queueCollection(id, { op: 'upsert', row: { mastery: row.mastery } }); }
+}
+
+async function deleteCollectionFromCloud(id) {
+  if (!currentUser || !id) return;
+  try {
+    const { error } = await sb.from('collections').delete().eq('id', id).eq('user_id', currentUser.id);
+    if (error) throw error;
+    if (_offlineNotified) flushOutbox();
+  } catch(e) { _queueCollection(id, { op: 'delete' }); }
 }
 
 /* Replay the outbox as soon as the browser reports connectivity / the tab is refocused. */

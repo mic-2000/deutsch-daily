@@ -10,7 +10,8 @@ planner render, lazy locales, and the `tests/` suite). For day-to-day editing ru
 ## 1. What the product is
 
 A small web app that helps one user study German from ~A1 to the **Goethe-Zertifikat B1** exam
-over a ~6-month, 24-week plan. The system has three trainers plus a built-in AI tutor:
+over a ~6-month, 24-week plan. The system has three built-in trainers, a user-collections trainer,
+and a built-in AI tutor:
 
 1. **Planner** (`index.html` → `planner.html`) — one study day = one main task (118 days total).
    Contains a **built-in AI tutor chat** (Gemini) and a clipboard-copy button for the day plan.
@@ -23,6 +24,9 @@ over a ~6-month, 24-week plan. The system has three trainers plus a built-in AI 
    turns are a live chat with a tutor persona. Conversation history is persisted per-day in
    the `lessons` Supabase table. A weekly-summary feature (PRO model) rolls up all lesson
    transcripts into feedback. (Requires the user to supply their own Gemini API key.)
+5. **Collections** (`collections.html`) — user-supplied word sets imported from CSV or pasted from
+   Excel/Sheets, drilled with the **same** flashcard/article/spelling trainers and Leitner model.
+   Unlimited collections; optional one-click AI translation of missing entries. (See §16.)
 
 The curriculum runs 24 weeks in 3 phases:
 
@@ -67,10 +71,11 @@ deutsch-daily/
 ├── planner.html        # Daily planner + AI Lehrer chat.
 ├── vocab.html          # Vocabulary trainer (thin: page markup + page logic).
 ├── verbs.html          # Irregular-verb trainer (3-form triad / cloze / table modes).
+├── collections.html    # User word-set trainer (import CSV/paste, edit, drill, AI translate). §16
 ├── assets/
-│   ├── css/  base.css · components.css · planner.css · chat.css · vocab.css · verbs.css · auth.css
+│   ├── css/  base.css · components.css · planner.css · chat.css · vocab.css · verbs.css · auth.css · collections.css
 │   └── js/   i18n.js · theme.js · utils.js · supabase.js · cloud-sync.js · ai-config.js
-│             leitner.js · speech.js
+│             gemini.js · leitner.js · speech.js
 ├── data/   weeks.js (WEEKS) · vocab.js (VOCAB) · verbs.js (VERBS — master verb dictionary)
 ├── locales/  ru.js · ua.js · en.js   (window.LOCALE_RU / _UA / _EN = { ui, vocab, verbs, weeks })
 ├── build.js · package.json · vercel.json
@@ -92,7 +97,8 @@ Supabase CDN
 → assets/js/utils.js               (esc, showToast)
 → assets/js/supabase.js            (sb client)
 → assets/js/cloud-sync.js          (initApp, saveToCloud, … logout, currentUser, lessons functions)
-→ assets/js/ai-config.js           (AI_MODEL_ID, AI_PRO_MODEL_ID, getAiSystemPrompt, getAiSummaryPrompt)
+→ assets/js/ai-config.js           (AI_MODEL_ID, AI_PRO_MODEL_ID, getAiSystemPrompt, getAiSummaryPrompt, getCollectionsTranslatePrompt)
+→ assets/js/gemini.js              (getGeminiKey, geminiRequest)
 → data/weeks.js                    (WEEKS)
 → inline page <script>             (state, chat state, render, page logic)
    initApp().then(loadLessonsThenRender)
@@ -116,6 +122,15 @@ Supabase CDN
 → speech.js
 → data/verbs.js                    (VERBS)
 → inline page <script>             (state, render, page logic; calls initApp() last)
+```
+
+**collections.html:** (no `data/` files — words come from the user / cloud `collections` table)
+```
+Supabase CDN
+→ i18n.js → theme.js → utils.js → leitner.js → speech.js → supabase.js → cloud-sync.js
+→ ai-config.js                     (getCollectionsTranslatePrompt) → gemini.js (getGeminiKey, geminiRequest)
+→ inline page <script>             (state, parseDelimited, ported trainer engine, render)
+   initApp().then(loadCollectionsThenRender)   // no CLOUD_FIELD — owns the `collections` table
 ```
 
 **Locale files are NOT in this list — they load on demand.** `i18n.loadLocale(code)` injects
@@ -154,18 +169,29 @@ valid `light`/`dark`) and applied as `data-theme` on `<html>` immediately on loa
   `setLang`.
 - `toggleTheme()`, `getTheme()`, `renderThemeToggle()` (the ☾/☀ button in the user bar).
 
-### `ai-config.js` — Gemini configuration (planner-only)
-Loaded only by `planner.html`. Exports two constants and two functions:
-- `AI_MODEL_ID` — model for daily lessons (currently `gemini-3.1-flash-lite`).
+### `ai-config.js` — Gemini configuration (planner + collections)
+Loaded by `planner.html` and `collections.html`. Exports two model-id constants and three prompt
+getters:
+- `AI_MODEL_ID` — model for daily lessons + collection translation (currently `gemini-3.1-flash-lite`).
 - `AI_PRO_MODEL_ID` — model for weekly summaries (currently `gemini-3.5-flash`).
 - `getAiSystemPrompt()` — returns the tutor system prompt for the active UI language (RU/UA/EN).
   The prompt sets the persona, student context (A1→B1, lives in Berlin), output format (theory +
   examples + exercises + answer key), formatting rules for German (nouns with article/plural,
   verb conjugation tables), and per-task-type adaptation rules.
 - `getAiSummaryPrompt()` — returns the weekly-summary system prompt (also per language).
+- `getCollectionsTranslatePrompt()` — returns the batch-translation prompt (per language): translate
+  a JSON array of German terms into the active UI language, returning ONLY a same-order JSON array.
 
-All prompts are pure string constants — edit this file to change models or tune the tutor persona
-without touching `planner.html`.
+All prompts are pure string constants — edit this file to change models or tune the personas without
+touching the pages.
+
+### `gemini.js` — minimal Gemini client (planner + collections)
+The two functions extracted so both AI features share one implementation:
+- `getGeminiKey()` — reads the user's key from `localStorage['gemini_key']` (key *management* /
+  cloud-sync stays in `planner.html`; see §8).
+- `geminiRequest(model, systemPrompt, messages)` — one `generateContent` fetch; maps
+  `role:'model'|'user'`, throws on `data.error`, returns the reply text. No app-specific globals, so
+  it's safe to load anywhere.
 
 ### `leitner.js` — spaced-repetition core (shared by vocab + verbs)
 A small pure-logic library; no DOM access.
@@ -208,10 +234,16 @@ Each page must define these globals **before** calling `initApp()`:
 
 | Global | Purpose |
 | --- | --- |
-| `CLOUD_FIELD` | column on the `progress` table: `'planner_data'`, `'vocab_data'`, or `'verbs_data'` |
-| `applyCloudData(d)` | apply the loaded JSON payload into local `state` |
-| `getCloudPayload()` | return the object to persist into `CLOUD_FIELD` |
+| `CLOUD_FIELD` | column on the `progress` table: `'planner_data'`, `'vocab_data'`, or `'verbs_data'`. **Optional** — a page that owns a *separate* table (`collections.html`) omits it (and `getCloudPayload`/`applyCloudData`); `initApp` then just enforces the session and loads `lang`/`theme`. |
+| `applyCloudData(d)` | apply the loaded JSON payload into local `state` (omit if no `CLOUD_FIELD`) |
+| `getCloudPayload()` | return the object to persist into `CLOUD_FIELD` (omit if no `CLOUD_FIELD`) |
 | `render()` | (re)draw the UI |
+
+**Collections CRUD (separate `collections` table, §5):** `loadCollectionsFromCloud()` (all rows for
+the user), `saveCollectionToCloud(c)` (full-row upsert on create/edit), `saveCollectionMastery(id,
+mastery)` (partial upsert of just the `mastery` column — the per-answer hot path),
+`deleteCollectionFromCloud(id)`. All ride the offline outbox like the lessons functions; queued
+collection upserts **merge per id** so a create + later mastery update collapse into one row.
 
 `cloud-sync.js` provides:
 - `currentUser` (global, set after auth).
@@ -312,6 +344,20 @@ create table public.lessons (
 );
 alter table public.lessons enable row level security;
 create policy "own lessons" on public.lessons
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+-- user-supplied word sets (one row per collection; §16)
+create table public.collections (
+  id         uuid        primary key default gen_random_uuid(),  -- client-supplied (crypto.randomUUID)
+  user_id    uuid        not null references auth.users(id),
+  name       text        not null,
+  words      jsonb       default '[]'::jsonb,   -- [ {id, de, tr, note?}, ... ]  (rewritten on edit)
+  mastery    jsonb       default '{}'::jsonb,   -- { "<word.id>": leitner card }  (per-answer hot path)
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+alter table public.collections enable row level security;
+create policy "own collections" on public.collections
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 ```
 
@@ -814,8 +860,52 @@ runs `node --test tests/`; `npm run test:regression` runs the curated subset.
   `ui` key sets across locales + function-valued keys), `data-align.test.js` (base-data ↔ locale
   index/key alignment — see §13), `refactor-guards.test.js` (source-level guards: no hardcoded
   Russian in the trainer session UI, no orphaned/dead locale keys, no hardcoded `<html lang="ru">`),
-  and `outbox.test.js` (the offline write queue — see §4 — eval'd directly with a toggleable mock
-  Supabase client, since the page harness shims `cloud-sync.js`).
+  `outbox.test.js` (the offline write queue — see §4 — eval'd directly with a toggleable mock
+  Supabase client, since the page harness shims `cloud-sync.js`; covers progress/lessons/collections
+  queueing), and `collections.test.js` (`parseDelimited`/`parseTranslations` parsers, `colAvailableModes`,
+  and list/import render-smoke — see §16).
 - **What it can't cover:** anything requiring a live Supabase session / network against the real
   backend (auth, end-to-end cloud sync, real Gemini calls). Verify those manually in the deployed
   HTTPS app.
+
+---
+
+## 16. `collections.html` (user-supplied word sets)
+
+A standalone trainer for the user's *own* word lists, reusing the vocab trainers and Leitner model
+on data that lives in the `collections` table (§5) instead of `VOCAB`. vocab.html is untouched; the
+session-render engine (`renderFlashcard`/`renderArticle`/`renderSpelling`/`renderEnd`,
+`parseArticle`, `deColored`, `submitSpelling`, keyboard) is **ported** here with the data source
+swapped from `VOCAB[week][idx]` to a collection's word list, and styling reused from `vocab.css`
+(plus `collections.css` for the management UI).
+
+### State & data
+```js
+let state = { collections, view:'list'|'import'|'edit', draft, session, confirm, translating };
+// collection: { id, name, words:[{id,de,tr,note?}], mastery:{ wid:leitnerCard } }
+```
+- **No `CLOUD_FIELD`** — the page owns the `collections` table. Bootstrap is
+  `initApp().then(loadCollectionsThenRender)` (mirrors the planner's lessons load); `initApp` still
+  enforces the session and loads `lang`/`theme` (§4).
+- IDs (collection + each word) are **client-generated** via `crypto.randomUUID()`; mastery is keyed
+  by the stable `word.id` so editing/deleting words never misaligns progress.
+- **Saving:** create/edit/rename → `saveCollectionToCloud(col)` (full row); **each training answer →
+  `saveCollectionMastery(col.id, col.mastery)`** (writes only the small `mastery` column — keeps
+  large collections cheap to drill). Delete → `deleteCollectionFromCloud(id)` behind the in-page
+  confirm modal. All ride the offline outbox (§4).
+- **Soft cap `MAX_WORDS = 1000`** per collection (import + manual add) — number of collections is
+  unlimited.
+
+### Screens (single `render()`)
+- **List** — a card per collection (name, `total/mastered/due` stats) with Train (due + up to 15
+  new, shuffled, capped 25), Train all, Edit, Export CSV, Delete.
+- **Import** — name + CSV upload (`FileReader`) and/or a paste box; `parseDelimited(text)` (auto-detects
+  `\t` / `;` / `,`, minimal CSV quoting, header skip) → review table. Append + dedupe by German.
+- **Edit** — same editable table on an existing collection: edit translations, delete words,
+  `+ Add word`, rename. Inputs are read back via `syncDraftFromDom()` before any structural change or
+  save (so re-render doesn't lose unsaved typing).
+- **AI translate** — if a Gemini key is set, `translateMissing()` sends empty-translation German
+  terms (chunked ~50) to `geminiRequest(AI_MODEL_ID, getCollectionsTranslatePrompt(), …)` and fills
+  the parsed JSON reply (`parseTranslations` tolerates ``` fences / line lists) into the inputs.
+- **Session** — the ported flashcard/article/spelling trainer; spelling is offered only when a word
+  has a translation, article only when the German carries der/die/das (`colAvailableModes`).

@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Deutsch · Sammlungen</title>
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<script defer src="/_vercel/insights/script.js"></script>
+<script defer src="/_vercel/speed-insights/script.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500;9..144,600&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/base.css">
+<link rel="stylesheet" href="assets/css/components.css">
+<link rel="stylesheet" href="assets/css/vocab.css">
+<link rel="stylesheet" href="assets/css/collections.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="assets/js/i18n.js"></script>
+<script src="assets/js/theme.js"></script>
+<script src="assets/js/utils.js"></script>
+<script src="assets/js/leitner.js"></script>
+<script src="assets/js/speech.js"></script>
+<script src="assets/js/supabase.js"></script>
+<script src="assets/js/cloud-sync.js"></script>
+<script src="assets/js/ai-config.js"></script>
+<script src="assets/js/gemini.js"></script>
+</head>
+<body>
+<div id="app"></div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ==========================================================================
+   COLLECTIONS — user-supplied word sets, drilled with the same trainers as the
+   vocabulary page (flashcard / article / spelling). Each collection is one row
+   in the `collections` table (see cloud-sync.js). Mastery is keyed by a stable
+   per-word id; training answers write only the small `mastery` column.
+   ========================================================================== */
+const MAX_WORDS = 1000;
+
+let state = {
+  collections: [],   // [{ id, name, words:[{id,de,tr,note?}], mastery:{ wid:card } }]
+  view: 'list',      // 'list' | 'import' | 'edit'
+  draft: null,       // { id, name, rows:[{id,de,tr}] }  working copy for import/edit
+  session: null,
+  confirm: null,
+  translating: false,
+};
+
+/* No CLOUD_FIELD: this page owns the separate `collections` table. cloud-sync.initApp tolerates a
+   missing CLOUD_FIELD and still enforces the session + loads lang/theme. */
+function uid(){
+  return (window.crypto && crypto.randomUUID) ? crypto.randomUUID()
+    : 'id-' + Date.now() + '-' + Math.random().toString(16).slice(2);
+}
+
+async function loadCollectionsThenRender(){
+  const rows = await loadCollectionsFromCloud();
+  state.collections = rows.map(r => ({ id:r.id, name:r.name, words:r.words||[], mastery:r.mastery||{} }));
+  render();
+}
+
+/* ==========================================================================
+   WORD / MODE HELPERS (ported from the vocab trainer — card.de / card.ru based)
+   ========================================================================== */
+function parseArticle(de){ const m = String(de).match(/^(der|die|das)\s+(.+)$/); return m ? { article:m[1], core:m[2] } : null; }
+function deColored(de){ const a = parseArticle(de); return a ? `<span class="art ${a.article}">${a.article}</span> ${esc(a.core)}` : esc(de); }
+function colAvailableModes(w){
+  const modes = ['flashcard'];
+  const art = parseArticle(w.de);
+  if (art) modes.push('article');
+  const core = art ? art.core : w.de;
+  const hasTr = !!(w.tr && w.tr.trim());
+  if (hasTr && !/[\s?…—\/]/.test(core) && core.length >= 2) modes.push('spelling');
+  return modes;
+}
+function pickMode(w, col){
+  const avail = colAvailableModes(w);
+  const box = leitnerBoxOf(col.mastery[w.id]);
+  if (box >= 3 && avail.includes('spelling') && Math.random() < 0.6) return 'spelling';
+  if (box <= 1 && avail.includes('article') && Math.random() < 0.5) return 'article';
+  return avail[Math.floor(Math.random() * avail.length)];
+}
+function speakDe(de, btn){ speak(String(de).split('—')[0].trim(), btn, 0.88); }
+/* Safely embed a string argument inside a double-quoted onclick="" attribute (cf. verbs.html). */
+function jsq(s){ return JSON.stringify(String(s)).replace(/"/g, '&quot;'); }
+
+/* ==========================================================================
+   CSV / paste parsing (pure — unit-tested)
+   ========================================================================== */
+function splitDelim(line, delim){
+  if (delim === '\t') return line.split('\t');
+  const out = []; let cur = '', q = false;
+  for (let i = 0; i < line.length; i++){
+    const ch = line[i];
+    if (q){ if (ch === '"'){ if (line[i+1] === '"'){ cur += '"'; i++; } else q = false; } else cur += ch; }
+    else { if (ch === '"') q = true; else if (ch === delim){ out.push(cur); cur = ''; } else cur += ch; }
+  }
+  out.push(cur); return out;
+}
+/* Parse CSV / tab-separated (Excel paste) text → [{de, tr, note}]. German is column 0 (required). */
+function parseDelimited(text){
+  text = String(text).replace(/\r\n?/g, '\n');
+  const delim = text.indexOf('\t') >= 0 ? '\t' : (text.indexOf(';') >= 0 ? ';' : ',');
+  const rows = [];
+  for (const raw of text.split('\n')){
+    if (!raw.trim()) continue;
+    const cells = splitDelim(raw, delim).map(c => c.trim());
+    const de = cells[0] || ''; if (!de) continue;
+    rows.push({ de, tr: cells[1] || '', note: cells[2] || '' });
+  }
+  if (rows.length && /^(de|deutsch|german|wort|word)$/i.test(rows[0].de)) rows.shift(); // header
+  return rows;
+}
+
+/* ==========================================================================
+   STATS
+   ========================================================================== */
+function colStats(col){
+  const now = Date.now(); let mastered = 0, learning = 0, due = 0;
+  for (const w of col.words){
+    const c = col.mastery[w.id];
+    if (leitnerIsMastered(c)) mastered++; else if (leitnerIsSeen(c)) learning++;
+    if (leitnerIsSeen(c) && !leitnerIsMastered(c) && leitnerIsDue(c, now)) due++;
+  }
+  return { total: col.words.length, mastered, learning, due };
+}
+
+/* ==========================================================================
+   SESSION
+   ========================================================================== */
+function makeCard(w, col){ return { wid:w.id, de:w.de, ru:w.tr || '', mode: pickMode(w, col), requeued:false, firstTry:null }; }
+
+function startSession(colId, scope){
+  const col = state.collections.find(c => c.id === colId); if (!col) return;
+  const now = Date.now();
+  let words;
+  if (scope === 'all'){ words = col.words.slice(); }
+  else { // 'due' — due review + a few new
+    const due = [], neu = [];
+    for (const w of col.words){
+      const c = col.mastery[w.id];
+      if (leitnerIsMastered(c) && !leitnerIsDue(c, now)) continue;
+      if (leitnerIsSeen(c)){ if (leitnerIsDue(c, now)) due.push(w); }
+      else neu.push(w);
+    }
+    words = due.concat(neu.slice(0, 15));
+    if (!words.length) words = col.words.slice();
+  }
+  let queue = words.map(w => makeCard(w, col)).sort(() => Math.random() - 0.5).slice(0, 25);
+  if (!queue.length){ showToast(T('toast_no_words')); return; }
+  state.session = { col, scope, queue, pos:0, revealed:false, answered:false, lastCorrect:null, uniqueRight:0, uniqueTotal:queue.length, spellValue:'' };
+  render();
+}
+
+function updateCard(col, wid, correct){
+  let c = col.mastery[wid]; if (!c){ c = leitnerBlank(); col.mastery[wid] = c; }
+  leitnerApply(c, correct);
+  saveCollectionMastery(col.id, col.mastery); // hot path: writes only the mastery column
+}
+
+function answer(correct){
+  const s = state.session; if (!s) return;
+  const card = s.queue[s.pos];
+  if (card.firstTry === null){ card.firstTry = correct; if (correct) s.uniqueRight++; }
+  updateCard(s.col, card.wid, correct);
+  if (!correct && !card.requeued) s.queue.push({ ...card, mode:'flashcard', requeued:true });
+  if (card.mode === 'flashcard'){ nextCard(); return; }
+  s.lastCorrect = correct; s.answered = true; s.revealed = true; render();
+  setTimeout(() => { const b = document.getElementById('cardAudio'); if (b) speakDe(card.de, b); }, 150);
+}
+function nextCard(){
+  const s = state.session; if (!s) return;
+  s.pos++; s.revealed = false; s.answered = false; s.lastCorrect = null; s.spellValue = '';
+  render();
+  setTimeout(() => { const inp = document.getElementById('spellInput'); if (inp) inp.focus(); }, 50);
+}
+function revealFlash(){
+  state.session.revealed = true; render();
+  const card = state.session.queue[state.session.pos];
+  setTimeout(() => { const b = document.getElementById('cardAudio'); if (b) speakDe(card.de, b); }, 120);
+}
+function chooseArticle(a){
+  const s = state.session; if (s.answered) return;
+  const card = s.queue[s.pos]; const art = parseArticle(card.de);
+  s.chosenArticle = a; answer(a === art.article);
+}
+function submitSpelling(){
+  const s = state.session; if (!s || s.answered) return;
+  const card = s.queue[s.pos];
+  const inp = document.getElementById('spellInput');
+  s.spellValue = inp ? inp.value : '';
+  const art = parseArticle(card.de);
+  const u = normalize(s.spellValue), full = normalize(card.de);
+  let correct = false, note = '';
+  if (u === full){ correct = true; }
+  else if (art){
+    const core = normalize(art.core);
+    const noArt = u.replace(/^(der|die|das)\s+/, '');
+    if (noArt === core){
+      if (u === core){ correct = true; note = T('note_almost', `<span class="correct-answer">${art.article}</span>`); }
+      else { correct = false; note = T('note_core_correct'); }
+    }
+  }
+  if (!correct && art && normalize(art.core) === u){ correct = true; note = T('note_no_article', `<span class="correct-answer">${art.article}</span>`, esc(art.core)); }
+  s.spellCorrect = correct; s.spellNote = note;
+  answer(correct);
+}
+function closeSession(){ if (window.speechSynthesis) window.speechSynthesis.cancel(); state.session = null; render(); }
+
+/* ==========================================================================
+   IMPORT / EDIT (draft working copy)
+   ========================================================================== */
+function startImport(){ state.draft = { id: uid(), name: '', rows: [] }; state.view = 'import'; render(); }
+function startEdit(colId){
+  const col = state.collections.find(c => c.id === colId); if (!col) return;
+  state.draft = { id: col.id, name: col.name, rows: col.words.map(w => ({ id:w.id, de:w.de, tr:w.tr || '' })) };
+  state.view = 'edit'; render();
+}
+function cancelEditor(){ state.draft = null; state.view = 'list'; render(); }
+
+/* Read the live input values back into the draft before any structural change / save. */
+function syncDraftFromDom(){
+  if (!state.draft) return;
+  const nameEl = document.getElementById('colName'); if (nameEl) state.draft.name = nameEl.value;
+  document.querySelectorAll('#colRows .col-row').forEach(rowEl => {
+    const i = +rowEl.getAttribute('data-i');
+    const de = rowEl.querySelector('.col-de'), tr = rowEl.querySelector('.col-tr');
+    if (state.draft.rows[i]){ if (de) state.draft.rows[i].de = de.value; if (tr) state.draft.rows[i].tr = tr.value; }
+  });
+}
+function addParsedToDraft(parsed){
+  const have = new Set(state.draft.rows.map(r => (r.de || '').toLowerCase()));
+  let added = 0, capped = false;
+  for (const p of parsed){
+    if (state.draft.rows.length >= MAX_WORDS){ capped = true; break; }
+    const k = p.de.toLowerCase(); if (have.has(k)) continue; have.add(k);
+    state.draft.rows.push({ id: uid(), de: p.de, tr: p.tr || '' });
+    added++;
+  }
+  if (capped) showToast(T('collections_toast_capped', MAX_WORDS));
+  else if (added) showToast(T('collections_toast_imported', added));
+}
+function uploadCsv(){
+  syncDraftFromDom();
+  const inp = document.createElement('input');
+  inp.type = 'file'; inp.accept = '.csv,text/csv,text/plain';
+  inp.onchange = () => {
+    const f = inp.files && inp.files[0]; if (!f) return;
+    const r = new FileReader();
+    r.onload = () => { try { addParsedToDraft(parseDelimited(r.result)); } catch(e){ showToast(T('toast_file_read_err')); } render(); };
+    r.readAsText(f);
+  };
+  inp.click();
+}
+function loadPasted(){
+  syncDraftFromDom();
+  const ta = document.getElementById('pasteArea'); const txt = ta ? ta.value : '';
+  const parsed = parseDelimited(txt);
+  if (!parsed.length){ showToast(T('collections_toast_need_words')); return; }
+  addParsedToDraft(parsed);
+  render();
+}
+function addWordRow(){ syncDraftFromDom(); state.draft.rows.push({ id: uid(), de: '', tr: '' }); render();
+  setTimeout(() => { const rows = document.querySelectorAll('#colRows .col-row .col-de'); const last = rows[rows.length-1]; if (last) last.focus(); }, 30); }
+function removeWordRow(i){ syncDraftFromDom(); state.draft.rows.splice(i, 1); render(); }
+
+async function translateMissing(){
+  if (!getGeminiKey()){ showToast(T('collections_toast_no_key')); return; }
+  syncDraftFromDom();
+  const missing = state.draft.rows.map((r, i) => ({ i, de: (r.de || '').trim() }))
+    .filter(x => x.de && !(state.draft.rows[x.i].tr || '').trim());
+  if (!missing.length){ showToast(T('collections_toast_nothing_translate')); return; }
+  state.translating = true; render();
+  try {
+    const CHUNK = 50;
+    for (let s = 0; s < missing.length; s += CHUNK){
+      const part = missing.slice(s, s + CHUNK);
+      const reply = await geminiRequest(AI_MODEL_ID, getCollectionsTranslatePrompt(), [{ role:'user', text: JSON.stringify(part.map(x => x.de)) }]);
+      const arr = parseTranslations(reply, part.length);
+      part.forEach((x, j) => { if (arr[j]) state.draft.rows[x.i].tr = arr[j]; });
+    }
+  } catch(e){ showToast(e.message || T('collections_toast_translate_fail')); }
+  finally { state.translating = false; render(); }
+}
+function parseTranslations(reply, n){
+  let t = String(reply).trim().replace(/^```(json)?/i, '').replace(/```$/, '').trim();
+  try { const a = JSON.parse(t); if (Array.isArray(a)) return a.map(x => String(x == null ? '' : x).trim()); } catch(e){}
+  return t.split('\n').map(s => s.replace(/^\s*[\d.)\-]+\s*/, '').replace(/^"|"$/g, '').trim()).slice(0, n);
+}
+
+function saveDraft(){
+  syncDraftFromDom();
+  const name = (state.draft.name || '').trim();
+  if (!name){ showToast(T('collections_toast_need_name')); return; }
+  const words = state.draft.rows.filter(r => (r.de || '').trim())
+    .map(r => { const w = { id: r.id || uid(), de: r.de.trim(), tr: (r.tr || '').trim() }; if ((r.note || '').trim()) w.note = r.note.trim(); return w; });
+  if (!words.length){ showToast(T('collections_toast_need_words')); return; }
+  let col = state.collections.find(c => c.id === state.draft.id);
+  if (col){
+    const valid = new Set(words.map(w => w.id));
+    const mastery = {}; for (const id of valid){ if (col.mastery[id]) mastery[id] = col.mastery[id]; }
+    col.name = name; col.words = words; col.mastery = mastery;
+  } else {
+    col = { id: state.draft.id, name, words, mastery: {} };
+    state.collections.push(col);
+  }
+  saveCollectionToCloud(col);
+  state.draft = null; state.view = 'list'; render();
+  showToast(T('collections_toast_saved'));
+}
+
+/* ==========================================================================
+   DELETE (in-page confirm)
+   ========================================================================== */
+function askDeleteCollection(colId){
+  const col = state.collections.find(c => c.id === colId); if (!col) return;
+  stageConfirm(state, T('collections_confirm_delete', col.name), { type:'delcol', id: colId }); render();
+}
+function confirmNo(){ clearConfirm(state); render(); }
+function confirmYes(){
+  const a = state.confirm && state.confirm.action; clearConfirm(state);
+  if (a && a.type === 'delcol'){
+    state.collections = state.collections.filter(c => c.id !== a.id);
+    deleteCollectionFromCloud(a.id);
+    render(); showToast(T('collections_toast_deleted'));
+  } else render();
+}
+
+/* ==========================================================================
+   EXPORT
+   ========================================================================== */
+function csvCell(s){ s = String(s == null ? '' : s); return /[",;\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; }
+function exportCollection(colId){
+  const col = state.collections.find(c => c.id === colId); if (!col) return;
+  const csv = col.words.map(w => csvCell(w.de) + ',' + csvCell(w.tr || '')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = (col.name || 'collection').replace(/[^\w\-]+/g, '_') + '.csv';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+/* ==========================================================================
+   RENDER
+   ========================================================================== */
+function header(){
+  return `
+<header><div class="container">
+  <div class="title-cat">${T('collections_title_cat')}</div>
+  <h1>Meine <em>Sammlungen</em></h1>
+  <div class="subtitle">${T('collections_subtitle')}</div>
+  <div class="user-bar">
+    <div class="nav-tabs">
+      <a class="nav-tab" href="planner.html">${T('nav_planner')}</a>
+      <a class="nav-tab" href="vocab.html">${T('nav_vocab')}</a>
+      <a class="nav-tab" href="verbs.html">${T('nav_verbs')}</a>
+      <a class="nav-tab active" href="collections.html">${T('nav_collections')}</a>
+    </div>
+    <div style="display:flex;align-items:center;gap:12px">
+      <div class="lang-switcher">${renderLangSwitcher()}</div>
+      ${typeof renderThemeToggle === 'function' ? renderThemeToggle() : ''}
+      <span class="user-email">${esc(currentUser ? currentUser.email : '')}</span>
+      <button class="btn-logout" onclick="logout()">${T('logout')}</button>
+    </div>
+  </div>
+</div></header>`;
+}
+
+function render(){
+  if (state.session){ renderSession(); return; }
+  if (state.view === 'import' || state.view === 'edit'){ renderEditor(); return; }
+  renderList();
+}
+
+function renderList(){
+  const cards = state.collections.map(col => {
+    const s = colStats(col);
+    return `
+    <div class="col-card">
+      <div class="col-card-head">
+        <div class="col-card-name">${esc(col.name)}</div>
+        <div class="col-card-meta num">${T('collections_meta', s.total, s.mastered, s.due)}</div>
+      </div>
+      <div class="col-actions">
+        <button class="btn accent" onclick="startSession('${col.id}','due')">${T('collections_train')}${s.due > 0 ? ' · ' + s.due : ''}</button>
+        <button class="btn" onclick="startSession('${col.id}','all')">${T('collections_train_all')}</button>
+        <button class="btn" onclick="startEdit('${col.id}')">${T('collections_edit')}</button>
+        <button class="btn" onclick="exportCollection('${col.id}')">${T('collections_export')}</button>
+        <button class="btn col-del" onclick="askDeleteCollection('${col.id}')">${T('collections_delete')}</button>
+      </div>
+    </div>`;
+  }).join('');
+
+  let html = header() + `
+<main class="container">
+  <div class="col-top">
+    <button class="btn accent big" onclick="startImport()">${T('collections_new')}</button>
+  </div>
+  ${state.collections.length
+    ? `<div class="col-list">${cards}</div>`
+    : `<div class="col-empty"><div class="col-empty-title">${T('collections_empty')}</div><div class="col-empty-hint">${T('collections_empty_hint')}</div></div>`}
+</main>`;
+
+  if (state.confirm){
+    html += `
+<div class="confirm-bg" onclick="if(event.target===this)confirmNo()">
+  <div class="confirm-box">
+    <div class="confirm-msg">${esc(state.confirm.message)}</div>
+    <div class="confirm-actions">
+      <button class="btn" onclick="confirmNo()">${T('confirm_no')}</button>
+      <button class="btn accent" onclick="confirmYes()">${T('confirm_yes')}</button>
+    </div>
+  </div>
+</div>`;
+  }
+  document.getElementById('app').innerHTML = html;
+}
+
+function renderEditor(){
+  const d = state.draft;
+  const isImport = state.view === 'import';
+  const missing = d.rows.filter(r => (r.de || '').trim() && !(r.tr || '').trim()).length;
+
+  const rowsHtml = d.rows.map((r, i) => `
+    <div class="col-row" data-i="${i}">
+      <input class="col-de" value="${esc(r.de || '')}" placeholder="${T('collections_th_de')}" autocomplete="off" spellcheck="false">
+      <input class="col-tr" value="${esc(r.tr || '')}" placeholder="${T('collections_th_tr')}" autocomplete="off" spellcheck="false">
+      <button class="col-row-del" title="✕" onclick="removeWordRow(${i})">✕</button>
+    </div>`).join('');
+
+  let html = header() + `
+<main class="container">
+  <div class="col-editor">
+    <div class="col-editor-head">
+      <input id="colName" class="col-name-input" value="${esc(d.name || '')}" placeholder="${T('collections_name_placeholder')}" autocomplete="off">
+      <span class="col-name-label">${T('collections_name_label')}</span>
+    </div>
+
+    ${isImport ? `
+    <div class="col-import">
+      <button class="chip" onclick="uploadCsv()">${T('collections_source_upload')}</button>
+      <div class="col-paste-label">${T('collections_source_paste')}</div>
+      <textarea id="pasteArea" class="col-paste" rows="5" placeholder="${esc(T('collections_paste_placeholder'))}"></textarea>
+      <button class="btn" onclick="loadPasted()">${T('collections_parse')}</button>
+      <div class="col-format-hint">${T('collections_format_hint')}</div>
+    </div>` : ''}
+
+    ${d.rows.length ? `
+    <div class="col-table-bar">
+      <span class="col-count num">${T('collections_words_count', d.rows.length)}</span>
+      ${getGeminiKey() ? `<button class="chip ${missing ? '' : 'col-dim'}" ${state.translating ? 'disabled' : ''} onclick="translateMissing()">${state.translating ? T('collections_translating') : T('collections_translate_ai')}</button>` : ''}
+    </div>
+    <div class="col-rows" id="colRows">
+      <div class="col-row col-row-head"><span>${T('collections_th_de')}</span><span>${T('collections_th_tr')}</span><span></span></div>
+      ${rowsHtml}
+    </div>
+    <button class="chip col-add" onclick="addWordRow()">${T('collections_add_word')}</button>
+    ` : ''}
+
+    <div class="col-editor-actions">
+      <button class="btn" onclick="cancelEditor()">${T('collections_cancel')}</button>
+      <button class="btn accent" onclick="saveDraft()">${isImport ? T('collections_save') : T('collections_save_changes')}</button>
+    </div>
+  </div>
+</main>`;
+  document.getElementById('app').innerHTML = html;
+}
+
+/* ---- session views (ported from the vocab trainer) ---- */
+function renderSession(){
+  const s = state.session;
+  if (s.pos >= s.queue.length){ renderEnd(); return; }
+  const card = s.queue[s.pos];
+  const progress = (s.pos / s.queue.length) * 100;
+  const modeLabel = { flashcard: T('mode_flashcard'), article: T('mode_article').split(' ')[0], spelling: T('mode_spelling').split(' ')[0] }[card.mode];
+  const body = card.mode === 'flashcard' ? renderFlashcard(card, s) : card.mode === 'article' ? renderArticle(card, s) : renderSpelling(card, s);
+
+  document.getElementById('app').innerHTML = `
+<div class="session-bg">
+  <div class="session-top"><div class="container session-top-row">
+    <span class="session-mode-badge ${card.mode}">${modeLabel}</span>
+    <span class="session-counter">${s.pos + 1} / ${s.queue.length} · ${esc(s.col.name)}</span>
+    <button class="session-close" onclick="closeSession()">×</button>
+  </div>
+  <div class="container"><div class="session-progress"><div class="session-progress-fill" style="width:${progress}%"></div></div></div>
+  </div>
+  <div class="session-body"><div class="card">${body}</div></div>
+</div>`;
+  if (card.mode === 'spelling' && !s.answered){
+    setTimeout(() => { const inp = document.getElementById('spellInput'); if (inp){ inp.focus(); inp.value = s.spellValue || ''; } }, 30);
+  }
+}
+
+function renderFlashcard(card, s){
+  return `
+    <div class="card-prompt-label">${T('flashcard_prompt')}</div>
+    <button class="audio-btn" id="cardAudio" onclick="speakDe(${jsq(card.de)},this)">🔊</button>
+    <div class="card-word">${deColored(card.de)}</div>
+    <div class="card-sub">${s.revealed ? esc(card.ru) : '&nbsp;'}</div>
+    <div class="card-actions">
+      ${!s.revealed
+        ? `<button class="reveal-btn" onclick="revealFlash()">${T('flashcard_show')}</button>`
+        : `<button class="mark wrong" onclick="answer(false)">${T('flashcard_wrong')}</button>
+           <button class="mark right" onclick="answer(true)">${T('flashcard_right')}</button>`}
+    </div>
+    <div class="kbd-hint">${T('flashcard_hint')}</div>`;
+}
+
+function renderArticle(card, s){
+  const art = parseArticle(card.de);
+  const btns = ['der','die','das'].map(a => {
+    let cls = 'art-btn ' + a;
+    if (s.answered){
+      if (a === s.chosenArticle) cls += (a === art.article) ? ' chosen-correct' : ' chosen-wrong';
+      else if (a === art.article) cls += ' reveal-correct';
+    }
+    return `<button class="${cls}" ${s.answered ? 'disabled' : ''} onclick="chooseArticle('${a}')">${a}</button>`;
+  }).join('');
+  return `
+    <div class="card-prompt-label">${T('article_prompt')}</div>
+    <div class="card-word">${esc(art.core)}</div>
+    <div class="art-btns">${btns}</div>
+    ${s.answered ? `
+      <div class="feedback ${s.lastCorrect ? 'ok' : 'bad'}">
+        ${s.lastCorrect ? T('article_correct') : T('article_wrong')} <span class="correct-answer"><span class="art ${art.article}" style="font-weight:600">${art.article}</span> ${esc(art.core)}</span>${card.ru ? ' — ' + esc(card.ru) : ''}
+      </div>
+      <button class="audio-btn" id="cardAudio" onclick="speakDe(${jsq(card.de)},this)" style="margin-top:8px">🔊</button>
+      <div class="card-actions"><button class="next-btn" onclick="nextCard()">${T('article_next')}</button></div>
+      <div class="kbd-hint">${T('article_hint_next')}</div>
+    ` : `<div class="kbd-hint">${T('article_hint')}</div>`}`;
+}
+
+function renderSpelling(card, s){
+  let answeredBlock = '';
+  if (s.answered){
+    const userRaw = (s.spellValue || '').trim();
+    if (s.spellCorrect){
+      answeredBlock = `<div class="feedback ok">${T('spelling_correct')} <span class="correct-answer">${deColored(card.de)}</span>${s.spellNote ? '<br><span class="spell-note">' + s.spellNote + '</span>' : ''}</div>`;
+    } else {
+      const dc = diffChars(userRaw, card.de);
+      const userShow = userRaw ? `<span class="cmp-val">${dc.aHtml}</span>` : `<span class="spell-empty">${T('spelling_empty')}</span>`;
+      answeredBlock = `
+        <div class="spell-compare">
+          <div class="cmp-row"><span class="cmp-label">${T('spelling_your')}</span>${userShow}</div>
+          <div class="cmp-row"><span class="cmp-label">${T('spelling_right_ans')}</span><span class="cmp-val">${dc.bHtml}</span></div>
+          ${card.ru ? `<div class="cmp-ru">${esc(card.ru)}</div>` : ''}
+        </div>`;
+    }
+  }
+  return `
+    <div class="card-prompt-label">${T('spelling_prompt')}</div>
+    <div class="card-word" style="font-size:40px">${esc(card.ru)}</div>
+    <div><input class="spell-input ${s.answered ? (s.spellCorrect ? 'correct' : 'wrong') : ''}" id="spellInput"
+      autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
+      ${s.answered ? `disabled value="${esc(s.spellValue || '')}"` : ''} placeholder="der … / …"
+      onkeydown="if(event.key==='Enter'){event.preventDefault(); ${s.answered ? 'nextCard()' : 'submitSpelling()'}}"></div>
+    ${s.answered ? `
+      ${answeredBlock}
+      <button class="audio-btn" id="cardAudio" onclick="speakDe(${jsq(card.de)},this)" style="margin-top:8px">🔊</button>
+      <div class="card-actions"><button class="next-btn" onclick="nextCard()">${T('spelling_next')}</button></div>
+    ` : `
+      <div class="card-actions"><button class="reveal-btn" onclick="submitSpelling()">${T('spelling_check')}</button></div>
+      <div class="kbd-hint">${T('spelling_accept_hint')}</div>
+    `}`;
+}
+
+function renderEnd(){
+  const s = state.session;
+  const pct = s.uniqueTotal ? Math.round(s.uniqueRight / s.uniqueTotal * 100) : 0;
+  let msg = T('end_msg_inwork');
+  if (pct === 100) msg = T('end_msg_perfect');
+  else if (pct >= 80) msg = T('end_msg_great');
+  else if (pct >= 60) msg = T('end_msg_good');
+  document.getElementById('app').innerHTML = `
+<div class="session-bg">
+  <div class="session-body"><div class="session-end">
+    <div class="card-prompt-label">${T('end_title')}</div>
+    <div class="end-score num">${s.uniqueRight}<span style="font-size:24px;color:var(--ink-soft)">/${s.uniqueTotal}</span></div>
+    <div class="end-msg">${msg}</div>
+    <div class="end-detail">${T('end_detail', pct, s.queue.length)}</div>
+    <button class="btn primary big" onclick="closeSession()">${T('collections_back')}</button>
+    <button class="btn big" style="margin-left:8px" onclick="startSession('${s.col.id}','${s.scope}')">${T('end_again')}</button>
+  </div></div>
+</div>`;
+  if (window.speechSynthesis) window.speechSynthesis.cancel();
+}
+
+/* ==========================================================================
+   KEYBOARD (session only)
+   ========================================================================== */
+document.addEventListener('keydown', e => {
+  const s = state.session; if (!s) return;
+  if (s.pos >= s.queue.length){ if (e.key === 'Escape') closeSession(); return; }
+  if (e.key === 'Escape'){ closeSession(); return; }
+  const card = s.queue[s.pos];
+  if (e.target.id === 'spellInput') return;
+  if (card.mode === 'flashcard'){
+    if (e.key === ' '){ e.preventDefault(); if (!s.revealed) revealFlash(); }
+    else if (s.revealed){ if (e.key === '1' || e.key === 'ArrowLeft') answer(false); else if (e.key === '2' || e.key === 'ArrowRight') answer(true); }
+  } else if (card.mode === 'article'){
+    if (s.answered){ if (e.key === 'Enter') nextCard(); }
+    else { if (e.key === '1') chooseArticle('der'); else if (e.key === '2') chooseArticle('die'); else if (e.key === '3') chooseArticle('das'); }
+  } else if (card.mode === 'spelling'){
+    if (s.answered && e.key === 'Enter') nextCard();
+  }
+});
+
+initApp().then(loadCollectionsThenRender);
+</script>
+</body>
+</html>

@@ -165,6 +165,12 @@ function loadPage(opts) {
     AI_PRO_MODEL_ID: 'test-pro-model',
     getAiSystemPrompt: () => '',
     getAiSummaryPrompt: () => '',
+    getCollectionsTranslatePrompt: () => '',
+    // collections table CRUD (cloud-sync is shimmed)
+    loadCollectionsFromCloud: async () => [],
+    saveCollectionToCloud: () => {},
+    saveCollectionMastery: () => {},
+    deleteCollectionFromCloud: () => {},
     ...shims,
   };
   sandbox.window = sandbox;

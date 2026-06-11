@@ -60,7 +60,8 @@ function makeEnv({ online = true } = {}) {
   vm.createContext(sandbox);
   const epilogue = `\n;currentUser = { id: 'user-1' };
     globalThis.__fns = { saveToCloud, saveLangToCloud, saveThemeToCloud, saveVerbsToCloud,
-                         saveGeminiKeyToCloud, saveLessonToCloud, deleteLessonFromCloud, flushOutbox };`;
+                         saveGeminiKeyToCloud, saveLessonToCloud, deleteLessonFromCloud, flushOutbox,
+                         saveCollectionToCloud, saveCollectionMastery, deleteCollectionFromCloud };`;
   vm.runInContext(SRC + epilogue, sandbox, { filename: 'cloud-sync.js' });
   const outbox = () => { const s = store.get('cloud_outbox'); return s ? JSON.parse(s) : null; };
   const seedOutbox = (obj) => store.set('cloud_outbox', JSON.stringify(obj));
@@ -152,6 +153,40 @@ test('gemini key: clearing (empty string) is stored as null', async () => {
   const ups = env.calls.filter((c) => c.table === 'progress' && c.op === 'upsert');
   assert.equal(ups.length, 1);
   assert.equal(ups[0].row.gemini_key, null);
+});
+
+test('collection: offline create + mastery update MERGE per id; flush replays one full row', async () => {
+  const env = makeEnv({ online: false });
+  await env.fns.saveCollectionToCloud({ id: 'col-1', name: 'Kitchen', words: [{ id: 'w1', de: 'der Tisch', tr: 'table' }], mastery: {} });
+  await env.fns.saveCollectionMastery('col-1', { w1: { box: 1, due: 0, right: 1, wrong: 0, seen: 1 } });
+  const entry = env.outbox().collections['col-1'];
+  assert.equal(entry.op, 'upsert');
+  assert.equal(entry.row.name, 'Kitchen');               // name survived from the create
+  assert.equal(entry.row.mastery.w1.box, 1);              // mastery merged in
+
+  env.calls.length = 0;
+  env.state.online = true;
+  await env.fns.flushOutbox();
+  const ups = env.calls.filter((c) => c.table === 'collections' && c.op === 'upsert');
+  assert.equal(ups.length, 1, 'one merged collection upsert');
+  assert.equal(ups[0].row.name, 'Kitchen');
+  assert.equal(ups[0].row.id, 'col-1');
+  assert.equal(ups[0].row.user_id, 'user-1');
+  assert.equal(env.outbox(), null);
+});
+
+test('collection: offline delete is parked, then replayed on flush', async () => {
+  const env = makeEnv({ online: false });
+  await env.fns.deleteCollectionFromCloud('col-9');
+  assert.deepEqual(env.outbox().collections['col-9'], { op: 'delete' });
+
+  env.calls.length = 0;
+  env.state.online = true;
+  await env.fns.flushOutbox();
+  const del = env.calls.filter((c) => c.table === 'collections' && c.op === 'delete');
+  assert.equal(del.length, 1);
+  assert.equal(del[0].eqs.id, 'col-9');
+  assert.equal(env.outbox(), null);
 });
 
 test('a foreign queue (different uid) is discarded on flush, never written to cloud', async () => {
