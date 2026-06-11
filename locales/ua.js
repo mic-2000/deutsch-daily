@@ -196,6 +196,7 @@ window.LOCALE_UA = {
     collections_meta: (total, mastered, due) => `${total} слів · вивчено ${mastered} · пора ${due}`,
     collections_train: 'Тренувати',
     collections_train_all: 'Усі слова',
+    collections_open: 'Відкрити',
     collections_edit: 'Змінити',
     collections_export: 'Експорт CSV',
     collections_delete: 'Видалити',

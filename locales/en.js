@@ -201,6 +201,7 @@ window.LOCALE_EN = {
     collections_meta: (total, mastered, due) => `${total} words · ${mastered} mastered · ${due} due`,
     collections_train: 'Train',
     collections_train_all: 'Train all',
+    collections_open: 'Open',
     collections_edit: 'Edit',
     collections_export: 'Export CSV',
     collections_delete: 'Delete',

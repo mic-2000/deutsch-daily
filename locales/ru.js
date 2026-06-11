@@ -197,6 +197,7 @@ window.LOCALE_RU = {
     collections_meta: (total, mastered, due) => `${total} слов · выучено ${mastered} · пора ${due}`,
     collections_train: 'Тренировать',
     collections_train_all: 'Все слова',
+    collections_open: 'Открыть',
     collections_edit: 'Изменить',
     collections_export: 'Экспорт CSV',
     collections_delete: 'Удалить',

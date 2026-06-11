@@ -40,7 +40,8 @@ const MAX_WORDS = 1000;
 
 let state = {
   collections: [],   // [{ id, name, words:[{id,de,tr,note?}], mastery:{ wid:card } }]
-  view: 'list',      // 'list' | 'import' | 'edit'
+  view: 'list',      // 'list' | 'view' | 'import' | 'edit'
+  viewId: null,      // collection id being viewed (word list with mastery)
   draft: null,       // { id, name, rows:[{id,de,tr}] }  working copy for import/edit
   session: null,
   confirm: null,
@@ -217,7 +218,14 @@ function startEdit(colId){
   state.draft = { id: col.id, name: col.name, rows: col.words.map(w => ({ id:w.id, de:w.de, tr:w.tr || '' })) };
   state.view = 'edit'; render();
 }
-function cancelEditor(){ state.draft = null; state.view = 'list'; render(); }
+function cancelEditor(){ afterEditorClose(); }
+/* Return to the collection's word view if we edited an existing one; otherwise the list. */
+function afterEditorClose(){
+  state.draft = null;
+  if (state.viewId && state.collections.find(c => c.id === state.viewId)){ state.view = 'view'; }
+  else { state.view = 'list'; state.viewId = null; }
+  render();
+}
 
 /* Read the live input values back into the draft before any structural change / save. */
 function syncDraftFromDom(){
@@ -306,7 +314,7 @@ function saveDraft(){
     state.collections.push(col);
   }
   saveCollectionToCloud(col);
-  state.draft = null; state.view = 'list'; render();
+  afterEditorClose();
   showToast(T('collections_toast_saved'));
 }
 
@@ -323,7 +331,12 @@ function confirmYes(){
   if (a && a.type === 'delcol'){
     state.collections = state.collections.filter(c => c.id !== a.id);
     deleteCollectionFromCloud(a.id);
+    if (state.viewId === a.id){ state.view = 'list'; state.viewId = null; } // deleted the open one
     render(); showToast(T('collections_toast_deleted'));
+  } else if (a && a.type === 'resetword'){
+    const col = state.collections.find(c => c.id === a.colId);
+    if (col && col.mastery[a.wid]){ delete col.mastery[a.wid]; saveCollectionMastery(col.id, col.mastery); }
+    render(); showToast(T('toast_word_reset'));
   } else render();
 }
 
@@ -371,8 +384,12 @@ function header(){
 function render(){
   if (state.session){ renderSession(); return; }
   if (state.view === 'import' || state.view === 'edit'){ renderEditor(); return; }
+  if (state.view === 'view'){ renderView(); return; }
   renderList();
 }
+
+function openView(colId){ state.viewId = colId; state.view = 'view'; render(); }
+function backToList(){ state.view = 'list'; state.viewId = null; render(); }
 
 function renderList(){
   const cards = state.collections.map(col => {
@@ -380,15 +397,12 @@ function renderList(){
     return `
     <div class="col-card">
       <div class="col-card-head">
-        <div class="col-card-name">${esc(col.name)}</div>
+        <button class="col-card-name" onclick="openView('${col.id}')">${esc(col.name)}</button>
         <div class="col-card-meta num">${T('collections_meta', s.total, s.mastered, s.due)}</div>
       </div>
       <div class="col-actions">
         <button class="btn accent" onclick="startSession('${col.id}','due')">${T('collections_train')}${s.due > 0 ? ' · ' + s.due : ''}</button>
-        <button class="btn" onclick="startSession('${col.id}','all')">${T('collections_train_all')}</button>
-        <button class="btn" onclick="startEdit('${col.id}')">${T('collections_edit')}</button>
-        <button class="btn" onclick="exportCollection('${col.id}')">${T('collections_export')}</button>
-        <button class="btn col-del" onclick="askDeleteCollection('${col.id}')">${T('collections_delete')}</button>
+        <button class="btn" onclick="openView('${col.id}')">${T('collections_open')}</button>
       </div>
     </div>`;
   }).join('');
@@ -403,8 +417,12 @@ function renderList(){
     : `<div class="col-empty"><div class="col-empty-title">${T('collections_empty')}</div><div class="col-empty-hint">${T('collections_empty_hint')}</div></div>`}
 </main>`;
 
-  if (state.confirm){
-    html += `
+  document.getElementById('app').innerHTML = html + confirmHtml();
+}
+
+function confirmHtml(){
+  if (!state.confirm) return '';
+  return `
 <div class="confirm-bg" onclick="if(event.target===this)confirmNo()">
   <div class="confirm-box">
     <div class="confirm-msg">${esc(state.confirm.message)}</div>
@@ -414,8 +432,48 @@ function renderList(){
     </div>
   </div>
 </div>`;
-  }
-  document.getElementById('app').innerHTML = html;
+}
+
+/* ---- collection detail / word view (mastery boxes per word, like the vocab list) ---- */
+function renderView(){
+  const col = state.collections.find(c => c.id === state.viewId);
+  if (!col){ state.view = 'list'; state.viewId = null; renderList(); return; }
+  const s = colStats(col);
+  const rows = col.words.map(w => {
+    const box = leitnerBoxOf(col.mastery[w.id]);
+    const mastered = box >= MAX_BOX;
+    const segs = [1,2,3,4,5].map(b => `<div class="box-seg ${b <= box ? 'fill' : ''} ${b <= box && mastered ? 'full' : ''}"></div>`).join('');
+    return `<div class="vocab-row ${mastered ? 'mastered' : ''}">
+      <div class="vocab-de">${deColored(w.de)}</div>
+      <div class="vocab-ru">${esc(w.tr || '')}</div>
+      <button class="box-bar" onclick="resetColWord('${col.id}','${w.id}')" title="${T('box_title', box)}">${segs}</button>
+      <button class="mini-audio" onclick="speakDe(${jsq(w.de)},this)" title="🔊">🔊</button>
+    </div>`;
+  }).join('');
+
+  const html = header() + `
+<main class="container">
+  <div class="col-view-top"><button class="col-back" onclick="backToList()">${T('collections_back')}</button></div>
+  <div class="wk-header">
+    <div class="wk-meta">
+      <div class="wk-theme">${esc(col.name)}</div>
+      <div class="wk-count">${T('collections_meta', s.total, s.mastered, s.due)}</div>
+    </div>
+    <button class="btn accent big" onclick="startSession('${col.id}','due')">${T('collections_train')}${s.due > 0 ? ' · ' + s.due : ''}</button>
+  </div>
+  <div class="col-view-actions">
+    <button class="btn" onclick="startSession('${col.id}','all')">${T('collections_train_all')}</button>
+    <button class="btn" onclick="startEdit('${col.id}')">${T('collections_edit')}</button>
+    <button class="btn" onclick="exportCollection('${col.id}')">${T('collections_export')}</button>
+    <button class="btn col-del" onclick="askDeleteCollection('${col.id}')">${T('collections_delete')}</button>
+  </div>
+  <div class="vocab-list">${rows}</div>
+</main>`;
+  document.getElementById('app').innerHTML = html + confirmHtml();
+}
+
+function resetColWord(colId, wid){
+  stageConfirm(state, T('confirm_reset_word'), { type:'resetword', colId, wid }); render();
 }
 
 function renderEditor(){

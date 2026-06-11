@@ -896,9 +896,14 @@ let state = { collections, view:'list'|'import'|'edit', draft, session, confirm,
 - **Soft cap `MAX_WORDS = 1000`** per collection (import + manual add) — number of collections is
   unlimited.
 
-### Screens (single `render()`)
-- **List** — a card per collection (name, `total/mastered/due` stats) with Train (due + up to 15
-  new, shuffled, capped 25), Train all, Edit, Export CSV, Delete.
+### Screens (single `render()` → `renderList`/`renderView`/`renderEditor`/`renderSession`)
+- **List** — a card per collection (clickable name → detail view, `total/mastered/due` stats) with
+  Train (due + up to 15 new, shuffled, capped 25) and Open.
+- **View / detail** (`view:'view'`, `viewId`) — opened from the list. Shows the **word list with
+  per-word Leitner box-bars** (same `.vocab-row`/`.box-seg` markup as the vocabulary page), German +
+  translation + audio; clicking a word's box-bar resets just that word (confirm modal). Header has
+  the collection name + stats and the actions Train / Train all / Edit / Export CSV / Delete. Editing
+  from here returns to this view on save/cancel.
 - **Import** — name + CSV upload (`FileReader`) and/or a paste box; `parseDelimited(text)` (auto-detects
   `\t` / `;` / `,`, minimal CSV quoting, header skip) → review table. Append + dedupe by German.
 - **Edit** — same editable table on an existing collection: edit translations, delete words,

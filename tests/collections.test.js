@@ -88,3 +88,23 @@ test('render: import editor shows the paste area', () => {
   p.render();
   assert.match(p.app.innerHTML, /pasteArea/);
 });
+
+test('render: collection word-view shows each word with a mastery box-bar', () => {
+  p.state.collections = [{
+    id: 'c1', name: 'Kitchen',
+    words: [{ id: 'w1', de: 'der Tisch', tr: 'table' }, { id: 'w2', de: 'die Lampe', tr: 'lamp' }],
+    mastery: { w1: { box: 5, due: 0, right: 5, wrong: 0, seen: 5 } }, // w1 mastered
+  }];
+  p.state.view = 'view';
+  p.state.viewId = 'c1';
+  p.state.draft = null;
+  p.state.session = null;
+  p.render();
+  const html = p.app.innerHTML;
+  assert.match(html, /der Tisch/);
+  assert.match(html, /die Lampe/);
+  assert.match(html, /box-bar/);                  // per-word mastery bars rendered
+  assert.match(html, /class="vocab-row mastered"/); // w1 (box 5) shows as mastered
+  assert.match(html, /resetColWord\('c1','w1'\)/);  // box-bar click resets that word
+  assert.match(html, /backToList\(\)/);             // back navigation present
+});
