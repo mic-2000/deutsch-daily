@@ -2,7 +2,7 @@
 .info-box { margin-top: 22px; }
 main { padding: 24px 0 60px; }
 
-.stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 22px; padding: 18px 0; border-bottom: 1px solid var(--line); }
+.stats { display: grid; grid-template-columns: repeat(4, auto); justify-content: space-between; gap: 22px; padding: 18px 0; border-bottom: 1px solid var(--line); }
 .stat-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.25em; color: var(--ink-soft); }
 .stat-big { font-family: var(--serif); font-size: 32px; font-weight: 300; margin-top: 2px; }
 .stat-big.accent { color: var(--accent); }
