@@ -29,13 +29,22 @@ function read(rel) {
   return fs.readFileSync(path.join(ROOT, rel), 'utf8');
 }
 
+/* Resolve a page html path: the app pages live in views/ (login index.html stays at root),
+   so callers can pass the bare filename (e.g. 'vocab.html') and we find it wherever it is. */
+function resolvePage(page) {
+  if (fs.existsSync(path.join(ROOT, page))) return page;
+  const inViews = path.join('views', page);
+  if (fs.existsSync(path.join(ROOT, inViews))) return inViews;
+  return page; // fall through → read() throws a clear ENOENT
+}
+
 /* Pull the local `<script src="…">` paths (assets/js/* or data/*) from a page, in order. */
 function localScriptSrcs(html) {
   const out = [];
   const re = /<script\s+src="([^"]+)"><\/script>/g;
   let m;
   while ((m = re.exec(html))) {
-    const src = m[1];
+    const src = m[1].replace(/^\//, ''); // pages use root-absolute paths (/assets/.., /data/..)
     if (src.startsWith('assets/js/') || src.startsWith('data/')) out.push(src);
   }
   return out;
@@ -126,7 +135,7 @@ function loadPage(opts) {
 
   const parts = [];
   if (page) {
-    const html = read(page);
+    const html = read(resolvePage(page));
     for (const src of localScriptSrcs(html)) {
       const base = path.basename(src);
       if (src.startsWith('assets/js/') && DENY.has(base)) continue; // shimmed

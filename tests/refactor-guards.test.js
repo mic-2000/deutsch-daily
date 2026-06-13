@@ -18,7 +18,7 @@ const read = (p) => fs.readFileSync(path.join(ROOT, p), 'utf8');
 
 /* ---------- Phase 2: no hardcoded Russian in the trainer session UI ---------- */
 test('[Phase 2] vocab.html renderSpelling/renderEnd contain no hardcoded Russian strings', () => {
-  const src = read('vocab.html');
+  const src = read('views/vocab.html');
   const offenders = [
     'Напиши по-немецки',
     'Тренировка завершена',
@@ -48,7 +48,7 @@ test('[Phase 4] orphaned locale keys are removed from all locales', () => {
 });
 
 test('[Phase 4] orphaned keys are not referenced via T() anywhere', () => {
-  const pages = ['planner.html', 'vocab.html', 'verbs.html', 'index.html'];
+  const pages = ['views/planner.html', 'views/vocab.html', 'views/verbs.html', 'index.html'];
   for (const p of pages) {
     const src = read(p);
     const used = DEAD_KEYS.filter((k) => src.includes(`T('${k}'`) || src.includes(`T("${k}"`));
@@ -58,7 +58,7 @@ test('[Phase 4] orphaned keys are not referenced via T() anywhere', () => {
 
 /* ---------- Phase 4: <html lang> no longer hardcoded to ru ---------- */
 test('[Phase 4] no page hardcodes <html lang="ru">', () => {
-  for (const p of ['planner.html', 'vocab.html', 'verbs.html', 'index.html', 'auth.html']) {
+  for (const p of ['views/planner.html', 'views/vocab.html', 'views/verbs.html', 'index.html']) {
     const src = read(p);
     assert.ok(!/<html[^>]*\blang="ru"/.test(src), `${p} hardcodes lang="ru"`);
   }

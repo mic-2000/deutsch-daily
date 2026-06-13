@@ -63,4 +63,10 @@
 @media (max-width: 600px) {
   .col-actions .btn { flex: 1 1 auto; }
   .col-card-head { flex-direction: column; gap: 4px; }
+  .col-view-actions .btn { flex: 1 1 auto; }
+  .col-row { grid-template-columns: 1fr 1fr 30px; }
+  .col-de, .col-tr { font-size: 13px; padding: 9px 8px; }
+  .col-import { padding: 12px; }
+  .col-editor-actions { flex-wrap: wrap; }
+  .col-editor-actions .btn { flex: 1 1 auto; }
 }

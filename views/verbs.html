@@ -3,26 +3,29 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="light dark">
+<script>try{document.documentElement.setAttribute('data-theme',localStorage.getItem('ui_theme')==='dark'?'dark':'light');}catch(e){}</script>
 <title>Deutsch · Verben</title>
-<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
 <script defer src="/_vercel/insights/script.js"></script>
 <script defer src="/_vercel/speed-insights/script.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500;9..144,600&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/css/base.css">
-<link rel="stylesheet" href="assets/css/components.css">
-<link rel="stylesheet" href="assets/css/vocab.css">
-<link rel="stylesheet" href="assets/css/verbs.css">
+<link rel="stylesheet" href="/assets/css/base.css">
+<link rel="stylesheet" href="/assets/css/components.css">
+<link rel="stylesheet" href="/assets/css/vocab.css">
+<link rel="stylesheet" href="/assets/css/verbs.css">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-<script src="assets/js/i18n.js"></script>
-<script src="assets/js/theme.js"></script>
-<script src="assets/js/utils.js"></script>
-<script src="assets/js/leitner.js"></script>
-<script src="assets/js/speech.js"></script>
-<script src="assets/js/supabase.js"></script>
-<script src="assets/js/cloud-sync.js"></script>
-<script src="data/verbs.js"></script>
+<script src="/assets/js/i18n.js"></script>
+<script src="/assets/js/theme.js"></script>
+<script src="/assets/js/utils.js"></script>
+<script src="/assets/js/leitner.js"></script>
+<script src="/assets/js/speech.js"></script>
+<script src="/assets/js/supabase.js"></script>
+<script src="/assets/js/cloud-sync.js"></script>
+<script src="/assets/js/header.js"></script>
+<script src="/data/verbs.js"></script>
 </head>
 <body>
 <div id="app"></div>
@@ -199,25 +202,7 @@ function render(){
   const fk=filterKeys(state.filter);
 
   let html = `
-<header><div class="container">
-  <div class="title-cat">${T('vocab_title_cat')}</div>
-  <h1>Unregelmäßige <em>Verben</em></h1>
-  <div class="subtitle">${T('verbs_subtitle')}</div>
-  <div class="user-bar">
-    <div class="nav-tabs">
-      <a class="nav-tab" href="planner.html">${T('nav_planner')}</a>
-      <a class="nav-tab" href="vocab.html">${T('nav_vocab')}</a>
-      <a class="nav-tab active" href="verbs.html">${T('nav_verbs')}</a>
-      <a class="nav-tab" href="collections.html">${T('nav_collections')}</a>
-    </div>
-    <div style="display:flex;align-items:center;gap:12px">
-      <div class="lang-switcher">${renderLangSwitcher()}</div>
-      ${typeof renderThemeToggle==='function'?renderThemeToggle():''}
-      <span class="user-email">${esc(currentUser?currentUser.email:'')}</span>
-      <button class="btn-logout" onclick="logout()">${T('logout')}</button>
-    </div>
-  </div>
-</div></header>
+${appHeader('verbs', { cat: 'vocab_title_cat', h1: 'Unregelm\u00e4\u00dfige <em>Verben</em>', subtitle: 'verbs_subtitle' })}
 
 <section class="container stats">
   <div><div class="stat-label">${T('stat_total')}</div><div class="stat-big num">${g.total}</div><div class="stat-sub">${T('verbs_total_sub')}</div></div>

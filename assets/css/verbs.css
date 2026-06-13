@@ -63,6 +63,12 @@
 .aux-btn.reveal-correct { border-color: var(--green); color: var(--green); }
 
 @media (max-width: 600px) {
-  .triad, .cloze-line { font-size: 24px; }
+  .triad, .cloze-line { font-size: 24px; line-height: 1.4; }
   .cloze-input { width: 150px; font-size: 20px; }
+  /* table mode: stack each label above its input so nothing is cramped */
+  .form-grid { grid-template-columns: 1fr; gap: 4px 0; max-width: 100%; }
+  .form-grid label { margin-top: 10px; }
+  .form-grid .spell-input { font-size: 18px; }
+  .aux-row { flex-wrap: wrap; gap: 8px; }
+  .verb-de { font-size: 16px; }
 }

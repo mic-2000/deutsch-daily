@@ -1,7 +1,4 @@
 /* planner.css — page-specific styles for the daily planner. */
-.container { max-width: 820px; }
-header { padding: 28px 0 22px; }
-
 .prog-section { padding: 22px 0 6px; }
 .prog-head { display: flex; justify-content: space-between; font-size: 11px; text-transform: uppercase; letter-spacing: 0.2em; color: var(--ink-soft); margin-bottom: 8px; }
 .prog-bar { height: 12px; background: var(--paper-2); border: 1px solid var(--line); position: relative; }
@@ -58,5 +55,10 @@ header { padding: 28px 0 22px; }
   .day-num { font-size: 40px; }
   .day-week-theme { font-size: 18px; }
   .task-main { font-size: 20px; }
-  .day-top { flex-wrap: wrap; gap: 12px; }
+  .day-top { flex-wrap: wrap; gap: 12px; padding: 18px; }
+  .day-body { padding: 18px; }
+  .day-actions { padding: 0 18px 18px; }
+  .btn.copy { min-width: 0; flex: 1 1 100%; }
+  .nav-row { gap: 8px; }
+  .nav-btn { padding: 9px 12px; }
 }

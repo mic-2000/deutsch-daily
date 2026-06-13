@@ -148,7 +148,7 @@ async function initApp() {
   const { data: { session } } = await sb.auth.getSession();
   if (!session) {
     localStorage.setItem('auth_redirect', location.href);
-    location.href = 'index.html';
+    location.href = '/';
     return;
   }
   currentUser = session.user;

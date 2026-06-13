@@ -15,6 +15,7 @@
   --das: #3F7A3A;
   --serif: 'Fraunces', Georgia, serif;
   --sans: 'Manrope', system-ui, sans-serif;
+  --page-max: 920px;
 }
 [data-theme="dark"] {
   --paper: #1A1815;
@@ -37,7 +38,7 @@ body { font-family: var(--sans); background: var(--paper); color: var(--ink); mi
 button { font-family: inherit; cursor: pointer; border: none; background: none; color: inherit; }
 input { font-family: inherit; }
 .serif { font-family: var(--serif); }
-.container { max-width: 920px; margin: 0 auto; padding: 0 24px; }
+.container { max-width: var(--page-max); margin: 0 auto; padding: 0 24px; }
 .uppercase-mini { font-size: 10px; text-transform: uppercase; letter-spacing: 0.3em; color: var(--ink-soft); }
 .num { font-variant-numeric: tabular-nums; }
 
@@ -61,5 +62,7 @@ footer { border-top: 1px solid var(--line); padding: 18px 0; margin-top: 36px; }
 .toast.show { opacity: 1; }
 
 @media (max-width: 600px) {
+  .container { padding: 0 16px; }
   h1 { font-size: 34px; }
+  main { padding: 20px 0 48px; }
 }

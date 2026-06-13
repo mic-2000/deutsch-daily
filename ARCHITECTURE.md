@@ -13,11 +13,11 @@ A small web app that helps one user study German from ~A1 to the **Goethe-Zertif
 over a ~6-month, 24-week plan. The system has three built-in trainers, a user-collections trainer,
 and a built-in AI tutor:
 
-1. **Planner** (`index.html` → `planner.html`) — one study day = one main task (118 days total).
+1. **Planner** (`/planner`) — one study day = one main task (118 days total).
    Contains a **built-in AI tutor chat** (Gemini) and a clipboard-copy button for the day plan.
-2. **Vocabulary trainer** (`vocab.html`) — 504 words across 24 weekly sets, three exercise modes
+2. **Vocabulary trainer** (`/vocab`) — 504 words across 24 weekly sets, three exercise modes
    mixed together, Leitner spaced repetition, and text-to-speech.
-3. **Verb trainer** (`verbs.html`) — drills 306 irregular verbs (three Stammformen) in cloze,
+3. **Verb trainer** (`/verbs`) — drills 306 irregular verbs (three Stammformen) in cloze,
    triad-flashcard, and table modes; mastery is shared with the vocabulary page.
 4. **AI Lehrer chat** — the planner has a built-in Gemini chat per study day. The user clicks
    "Start lesson" and the day plan is sent automatically as the opening message; subsequent
@@ -48,7 +48,9 @@ language.
   markup + an inline `<script>` plus a few shared `<script src>` modules.
 - **Supabase** (`@supabase/supabase-js@2` from jsDelivr CDN) for auth + per-user progress storage.
 - **Google Fonts** (Fraunces + Manrope) via `<link>` — the only other external load.
-- **Hosting:** Vercel, static (`vercel.json` → `{ "outputDirectory": "." }`). Production URL is
+- **Hosting:** Vercel, static. `vercel.json` keeps `outputDirectory: "."` and adds
+  `cleanUrls: true` + `rewrites` that map the **pretty URLs** `/planner` `/vocab` `/verbs`
+  `/collections` to the physical `views/<page>.html` files. Production URL is
   `https://deutsch-daily-red.vercel.app/` (referenced as the OAuth `redirectTo`).
 - **Build:** `npm run build` → `node build.js`. `build.js` reads `NEXT_PUBLIC_SUPABASE_URL` and
   `NEXT_PUBLIC_SUPABASE_ANON_KEY` from the environment and replaces the `YOUR_PROJECT_ID` /
@@ -66,26 +68,28 @@ language.
 
 ```
 deutsch-daily/
-├── index.html          # LOGIN / REGISTER page (email + Google OAuth). Default entry point.
-├── auth.html           # Legacy stub: <meta refresh> redirect to "/" (i.e. index.html).
-├── planner.html        # Daily planner + AI Lehrer chat.
-├── vocab.html          # Vocabulary trainer (thin: page markup + page logic).
-├── verbs.html          # Irregular-verb trainer (3-form triad / cloze / table modes).
-├── collections.html    # User word-set trainer (import CSV/paste, edit, drill, AI translate). §16
+├── index.html          # LOGIN / REGISTER page (email + Google OAuth). Root entry point ( / ).
+├── views/              # all authenticated app pages live here; served via pretty-URL rewrites
+│   ├── planner.html     # Daily planner + AI Lehrer chat.            ( /planner )
+│   ├── vocab.html       # Vocabulary trainer.                         ( /vocab )
+│   ├── verbs.html       # Irregular-verb trainer (triad / cloze / table). ( /verbs )
+│   └── collections.html # User word-set trainer (import/edit/drill/AI translate). ( /collections ) §16
 ├── assets/
 │   ├── css/  base.css · components.css · planner.css · chat.css · vocab.css · verbs.css · auth.css · collections.css
 │   └── js/   i18n.js · theme.js · utils.js · supabase.js · cloud-sync.js · ai-config.js
-│             gemini.js · leitner.js · speech.js
+│             gemini.js · leitner.js · speech.js · header.js
 ├── data/   weeks.js (WEEKS) · vocab.js (VOCAB) · verbs.js (VERBS — master verb dictionary)
 ├── locales/  ru.js · ua.js · en.js   (window.LOCALE_RU / _UA / _EN = { ui, vocab, verbs, weeks })
 ├── build.js · package.json · vercel.json
 ├── ARCHITECTURE.md · CLAUDE.md · README.md · LICENSE
 ```
 
-**Important correction vs. older notes:** `index.html` *is* the auth screen (the full
-login/register form, ~138 lines). `auth.html` is a 9-line redirect stub kept for any old links
-pointing at it. There is no separate "router" page — routing is done by the session check inside
-each page (`initApp`).
+**Routing model:** `index.html` *is* the auth screen (the full login/register form) and is the only
+HTML at the repo root, served at `/`. The four authenticated pages live in `views/` and are reached
+via the `vercel.json` pretty-URL rewrites (`/planner` → `/views/planner.html`, …). All inter-page
+navigation (the nav tabs in `header.js`, the post-login redirect, the session-loss redirect) uses
+these pretty URLs / `/`. There is no separate "router" page — per-page session checks (`initApp`) do
+the gating. The legacy `auth.html` redirect stub was deleted.
 
 ### Script load order
 
@@ -99,10 +103,16 @@ Supabase CDN
 → assets/js/cloud-sync.js          (initApp, saveToCloud, … logout, currentUser, lessons functions)
 → assets/js/ai-config.js           (AI_MODEL_ID, AI_PRO_MODEL_ID, getAiSystemPrompt, getAiSummaryPrompt, getCollectionsTranslatePrompt)
 → assets/js/gemini.js              (getGeminiKey, geminiRequest)
+→ assets/js/header.js              (appHeader — shared header/nav markup)
 → data/weeks.js                    (WEEKS)
 → inline page <script>             (state, chat state, render, page logic)
    initApp().then(loadLessonsThenRender)
 ```
+
+> All in-page `<script src>` / `<link href>` use **root-absolute paths** (`/assets/…`, `/data/…`,
+> `/locales/…`) so the pages work from `/views/*` and from the pretty-URL rewrites alike (§2). The
+> first thing in every `<head>` is a tiny inline `<script>` that sets `data-theme` from
+> `localStorage` synchronously — see the theme-FOUC note in §4.
 
 **vocab.html:**
 ```
@@ -110,6 +120,7 @@ Supabase CDN
 → i18n.js → theme.js → utils.js → supabase.js → cloud-sync.js
 → leitner.js                       (leitnerApply, leitnerIsDue, leitnerIsMastered, …)
 → speech.js                        (speak, pickVoice)
+→ header.js                        (appHeader)
 → data/vocab.js                    (VOCAB)
 → inline page <script>             (state, verbStore, render, page logic; calls initApp() last)
 ```
@@ -120,6 +131,7 @@ Supabase CDN
 → i18n.js → theme.js → utils.js → supabase.js → cloud-sync.js
 → leitner.js
 → speech.js
+→ header.js                        (appHeader)
 → data/verbs.js                    (VERBS)
 → inline page <script>             (state, render, page logic; calls initApp() last)
 ```
@@ -129,18 +141,19 @@ Supabase CDN
 Supabase CDN
 → i18n.js → theme.js → utils.js → leitner.js → speech.js → supabase.js → cloud-sync.js
 → ai-config.js                     (getCollectionsTranslatePrompt) → gemini.js (getGeminiKey, geminiRequest)
+→ header.js                        (appHeader)
 → inline page <script>             (state, parseDelimited, ported trainer engine, render)
    initApp().then(loadCollectionsThenRender)   // no CLOUD_FIELD — owns the `collections` table
 ```
 
 **Locale files are NOT in this list — they load on demand.** `i18n.loadLocale(code)` injects
-`locales/<code>.js` for the active language only (and caches it); the page bootstrap awaits
+`/locales/<code>.js` for the active language only (and caches it); the page bootstrap awaits
 `loadLocale(getLang())` before the first render (`initApp()` for planner/vocab; the init chain in
 `index.html`). Switching language fetches that one locale once. So a user downloads a single
 locale, not all three.
 
-`index.html` and `auth.html` load only the subset they need (`index.html` skips `cloud-sync.js`
-and the data files; `auth.html` loads nothing).
+`index.html` (the login page, at the repo root) loads only the subset it needs (it skips
+`cloud-sync.js`, `header.js`, and the data files). The legacy `auth.html` redirect stub was removed.
 
 ---
 
@@ -149,9 +162,10 @@ and the data files; `auth.html` loads nothing).
 ### `i18n.js` — translation core (lazy locale loading)
 - `_lang` initialised from `localStorage['ui_lang']`, default `'en'` (`DEFAULT_LANG`). Valid:
   `en`, `ua`, `ru`.
-- `loadLocale(code)` — injects `locales/<code>.js` once and returns a cached Promise that resolves
-  when `window.LOCALE_<CODE>` is set. This is how only the active language is fetched; nothing
-  preloads all three. Pages **must `await loadLocale(getLang())` before the first render**.
+- `loadLocale(code)` — injects `/locales/<code>.js` once (root-absolute, so it resolves from
+  `/views/*` too) and returns a cached Promise that resolves when `window.LOCALE_<CODE>` is set.
+  This is how only the active language is fetched; nothing preloads all three. Pages **must
+  `await loadLocale(getLang())` before the first render**.
 - `T(key, ...args)` — look up `LOCALE_<lang>.ui[key]`, fall back to the `DEFAULT_LANG` (EN) value,
   then to the raw key (and tolerates a not-yet-loaded locale by returning the key). If the value is
   a **function**, it's called with `args` (e.g. `planner_progress: (done, total) => ...`).
@@ -168,6 +182,25 @@ valid `light`/`dark`) and applied as `data-theme` on `<html>` immediately on loa
   theme loaded *from* the cloud (during `initApp`), to avoid a write-back loop — same contract as
   `setLang`.
 - `toggleTheme()`, `getTheme()`, `renderThemeToggle()` (the ☾/☀ button in the user bar).
+
+> **Theme FOUC fix.** `theme.js` is an external script loaded *after* the blocking Supabase CDN
+> `<script>`, so on its own the browser could paint the light default before `theme.js` runs. To
+> prevent the dark→light flash, every page (incl. `index.html`) carries a tiny **inline** `<script>`
+> as the first thing in `<head>` that reads `localStorage['ui_theme']` and sets `data-theme`
+> synchronously — before any CSS paints. `theme.js` keeps the same API; the inline snippet just wins
+> the first paint. (Guarded by `tests/ui-refactor.test.js`.)
+
+### `header.js` — shared app chrome (planner / vocab / verbs / collections)
+The single source of truth for the header + nav, so all four sections render an **identical** header
+(same markup, same 920px width, same nav tabs) — the app reads as one site, not four pages.
+- `appHeader(active, { cat, h1, subtitle })` — returns the full `<header>` markup: category line,
+  `<h1>` (raw HTML), italic subtitle, the nav tabs (with `active` marking the current page), the
+  language switcher, theme toggle, user email and logout. Nav hrefs are the **pretty URLs**
+  (`/planner` `/vocab` `/verbs` `/collections`) defined once in `NAV_ITEMS`.
+- Each page calls it from its own render: planner's `renderHeader()` and collections' `header()`
+  delegate to it; vocab/verbs interpolate `${appHeader(…)}` directly. Depends on `T` /
+  `renderLangSwitcher` (i18n), `renderThemeToggle` (theme, guarded by `typeof`), `esc` (utils),
+  `currentUser` / `logout` (cloud-sync).
 
 ### `ai-config.js` — Gemini configuration (planner + collections)
 Loaded by `planner.html` and `collections.html`. Exports two model-id constants and three prompt
@@ -248,7 +281,7 @@ collection upserts **merge per id** so a create + later mastery update collapse 
 `cloud-sync.js` provides:
 - `currentUser` (global, set after auth).
 - `initApp()` — `sb.auth.getSession()`. **No session →** store `location.href` in
-  `localStorage['auth_redirect']` and redirect to `index.html`. **Session →** set `currentUser`,
+  `localStorage['auth_redirect']` and redirect to `/` (the login page). **Session →** set `currentUser`,
   `SELECT <CLOUD_FIELD>, lang` from `progress`, apply the payload (only when non-empty — the `{}`
   column default is skipped). It resolves the language (cloud value if valid, else the localStorage
   default) **before** the first render, then `await setLang(lang, true)` loads that one locale,
@@ -379,15 +412,13 @@ clearing a lesson deletes the row (`deleteLessonFromCloud`); there is no soft-de
 
 **Login (`index.html`):**
 - On load, `sb.auth.getSession()`; if already signed in → `redirect()` (to
-  `localStorage['auth_redirect']` or `planner.html`). Otherwise render the form.
+  `localStorage['auth_redirect']` or `/planner`). Otherwise render the form.
 - Email/password sign-in (`signInWithPassword`) and sign-up (`signUp`, shows "confirm your email"
   notice). Google OAuth (`signInWithOAuth`, `redirectTo` = production root).
 - Client-side validation: non-empty fields, password ≥ 6 chars. Error text via `T(...)`.
 
-**Protected pages (`planner.html`, `vocab.html`):** `initApp()` enforces the session (redirecting
-to `index.html` and remembering where to come back to).
-
-**`auth.html`:** legacy `<meta http-equiv="refresh" content="0; url=/">` — just bounces to root.
+**Protected pages (`views/planner.html`, `views/vocab.html`, …):** `initApp()` enforces the session
+(redirecting to `/` and remembering where to come back to via `auth_redirect`).
 
 ---
 
@@ -730,17 +761,21 @@ CSS custom properties on `:root`:
 --green:#4A7C3A;  --gold:#C5963B;                         /* mastered / in-progress */
 --der:#2F5C8F;  --die:#A23B2D;  --das:#3F7A3A;            /* trainer gender colors */
 --serif:'Fraunces', Georgia, serif;  --sans:'Manrope', system-ui, sans-serif;
+--page-max:920px;                                         /* single content width for all app pages */
 ```
 
 Editorial/typographic aesthetic: large light (300) serif headings (Fraunces), Manrope body,
-minimal rounding, thin borders, tabular numerals (`.num`). Container width is set per page —
-`base.css` defaults to 920px (vocab), overridden to 820px in `planner.css` and 480px in
-`auth.css`. Responsive via `@media (max-width: 600px)` (and 720px on some pages).
+minimal rounding, thin borders, tabular numerals (`.num`). **Container width is unified:** every
+app page uses one `--page-max: 920px` token — `.container { max-width: var(--page-max) }` in
+`base.css`. The old per-page overrides (planner 820px, vocab's 26px header padding) were removed so
+the four sections read as one site; only `auth.css` (the login page) narrows to 480px. Responsive
+via `@media (max-width: 600px)` across `base.css` + every page CSS + `chat.css` (and a 700/720px
+tier on some pages).
 
-CSS files: `base.css` (tokens, reset, header/footer/info-box/toast/container),
-`components.css` (user-bar, nav-tabs, lang-switcher), then page-specific `planner.css` /
-`vocab.css` / `verbs.css` / `auth.css`. `chat.css` is loaded only by `planner.html` and
-covers `.ai-messages`, `.ai-msg` (user + model variants), `.ai-input-row` (auto-growing
+CSS files: `base.css` (tokens, reset, header/footer/info-box/toast/container + `--page-max`),
+`components.css` (`.user-bar-right`, nav-tabs, lang-switcher + the mobile nav-tabs horizontal-scroll
+strip and email-ellipsis rules), then page-specific `planner.css` / `vocab.css` / `verbs.css` /
+`collections.css` / `auth.css`. `chat.css` is loaded only by `planner.html` and covers `.ai-messages`, `.ai-msg` (user + model variants), `.ai-input-row` (auto-growing
 `<textarea>`), `.ai-table`, the loading-dots animation, and the key/summary modals.
 
 ---
@@ -817,6 +852,12 @@ worth doing. Ordered roughly by impact.
 > - `<html lang="ru">` hardcoded — `i18n.js` sets `document.documentElement.lang` dynamically on init
 >   and on every `setLang()` call, so the static attribute is a no-op.
 > - `lessons` DDL not in repo — `schema.sql` added at project root (idempotent, safe to re-run).
+> - **Dark-theme flash on load/switch** — an inline `<head>` snippet now applies `data-theme` from
+>   `localStorage` before any CSS paints, so there's no light→dark flicker (§4, §14.7).
+> - **Sections looked like separate sites** (different widths + duplicated headers) — unified to a
+>   single `--page-max: 920px` token and a shared `appHeader()` in `header.js` (§4, §11, §14.8).
+> - **Pages scattered at the repo root** — the four authenticated pages now live in `views/` and are
+>   served via `vercel.json` pretty-URL rewrites; the legacy `auth.html` stub was removed (§3).
 
 ---
 
@@ -837,6 +878,12 @@ worth doing. Ordered roughly by impact.
 6. **"Create/Open file" buttons did nothing** — File System Access API isn't available everywhere
    and the error was swallowed. Resolution: the FSA auto-sync feature was removed; only Blob
    export/import remains (and any user-facing failures should toast).
+7. **Dark theme flashed light on every load / switch.** `theme.js` is external and runs after the
+   blocking Supabase CDN script, so the light default could paint first. Fix: an inline `<head>`
+   snippet sets `data-theme` from `localStorage` synchronously before any CSS paints (see §4).
+8. **Sections felt like different sites** — mismatched container widths (planner 820 vs others 920)
+   and four duplicated header blocks. Fix: one `--page-max: 920px` token + a single `appHeader()`
+   builder in `header.js` (§4, §11). Don't reintroduce per-page width/header overrides.
 
 ---
 
@@ -852,7 +899,9 @@ runs `node --test tests/`; `npm run test:regression` runs the curated subset.
   `vm` sandbox seeded with browser shims (`document`, `localStorage`, `speechSynthesis`, …), and
   returns the captured globals. Because it follows the real `<script src>` list, it keeps working as
   helpers move between modules — top-level `const`/`function` from `assets/js/*` are in scope for the
-  inline page code, exactly as in the browser.
+  inline page code, exactly as in the browser. `resolvePage(page)` lets a test pass a bare page name
+  (e.g. `'verbs.html'`) and resolves it to the repo root **or** `views/`; root-absolute `<script
+  src="/assets/…">` paths are normalised before the denylist/dir filters run.
 - **What's covered:** `leitner.test.js` (box transitions/scheduling), `helpers.test.js`
   (`esc`/`normalize`/`diffChars`/article parsing), `speech.test.js` (voice pick + per-page utterance
   text/rate), `confirm.test.js` (in-page confirm staging), `markdown.test.js` (`renderMd`),
@@ -863,7 +912,12 @@ runs `node --test tests/`; `npm run test:regression` runs the curated subset.
   `outbox.test.js` (the offline write queue — see §4 — eval'd directly with a toggleable mock
   Supabase client, since the page harness shims `cloud-sync.js`; covers progress/lessons/collections
   queueing), and `collections.test.js` (`parseDelimited`/`parseTranslations` parsers, `colAvailableModes`,
-  and list/import render-smoke — see §16).
+  and list/import render-smoke — see §16). `ui-refactor.test.js` guards the move to `views/` +
+  unified chrome: app pages live in `views/` with `index.html` alone at root, pages use
+  root-absolute `/assets`/`/data`/`/locales` paths and load `header.js`, the inline theme snippet
+  runs before the Supabase CDN (FOUC guard), no `*.html` inter-page links remain, `appHeader()`
+  renders four pretty-URL nav tabs with the active one marked, `vercel.json` rewrites map the pretty
+  URLs, and the width is unified (`--page-max: 920px`, no 820px planner override).
 - **What it can't cover:** anything requiring a live Supabase session / network against the real
   backend (auth, end-to-end cloud sync, real Gemini calls). Verify those manually in the deployed
   HTTPS app.

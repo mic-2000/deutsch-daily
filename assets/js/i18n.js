@@ -21,7 +21,7 @@ function loadLocale(code) {
   if (_localeLoads[code]) return _localeLoads[code];
   _localeLoads[code] = new Promise((resolve, reject) => {
     const s = document.createElement('script');
-    s.src = 'locales/' + code + '.js';
+    s.src = '/locales/' + code + '.js';
     s.onload = () => resolve();
     s.onerror = () => { delete _localeLoads[code]; reject(new Error('locale load failed: ' + code)); };
     document.head.appendChild(s);

@@ -4,9 +4,12 @@ Full reference: **[ARCHITECTURE.md](ARCHITECTURE.md)**. This file is **rules onl
 "how it works" detail, read the referenced section (§) there.
 
 Orientation: vanilla HTML/CSS/JS, no framework/bundler; Supabase auth + cloud progress; deployed
-on Vercel (HTTPS). `index.html` = login, `auth.html` = redirect stub, `planner.html` /
-`vocab.html` / `verbs.html` / `collections.html` = the app pages. (Details: ARCHITECTURE.md §1–§3,
-collections = §16.)
+on Vercel (HTTPS). `index.html` (repo root) = login; the authenticated pages live in `views/` and
+are served via `vercel.json` pretty-URL rewrites — `views/planner.html` (`/planner`) /
+`views/vocab.html` (`/vocab`) / `views/verbs.html` (`/verbs`) / `views/collections.html`
+(`/collections`). All four share one header via `assets/js/header.js` (`appHeader()`) and one
+`--page-max` width. In-page asset/data/locale paths are root-absolute (`/assets`, `/data`,
+`/locales`). (Details: ARCHITECTURE.md §1–§3, collections = §16.)
 
 ## Build
 - `npm run build` (`node build.js`) injects `NEXT_PUBLIC_SUPABASE_*` into

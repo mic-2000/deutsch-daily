@@ -88,6 +88,16 @@
 .ai-table th { background: var(--paper-2); font-weight: 600; white-space: nowrap; }
 [data-theme="dark"] .ai-table th { background: var(--paper-3); }
 
+/* phones: keep bubbles roomy, let wide AI tables scroll instead of overflowing the page */
+@media (max-width: 600px) {
+  .ai-msg.user { max-width: 95%; }
+  .ai-msg { padding: 10px 12px; }
+  .ai-table { font-size: 12px; }
+  .ai-table th, .ai-table td { padding: 4px 6px; white-space: normal; }
+  .ai-key-box, .ai-summary-box { padding: 20px; }
+  .ai-send { padding: 10px 14px; }
+}
+
 /* key modal */
 .ai-key-bg {
   position: fixed; inset: 0;

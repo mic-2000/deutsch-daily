@@ -1,3 +1,10 @@
 {
-  "outputDirectory": "."
+  "outputDirectory": ".",
+  "cleanUrls": true,
+  "rewrites": [
+    { "source": "/planner", "destination": "/views/planner.html" },
+    { "source": "/vocab", "destination": "/views/vocab.html" },
+    { "source": "/verbs", "destination": "/views/verbs.html" },
+    { "source": "/collections", "destination": "/views/collections.html" }
+  ]
 }
