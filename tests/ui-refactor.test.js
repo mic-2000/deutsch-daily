@@ -77,7 +77,6 @@ test('header is shared: appHeader renders the four nav tabs with pretty URLs', (
 
 test('vercel.json maps the pretty URLs to views/*.html', () => {
   const cfg = JSON.parse(read('vercel.json'));
-  assert.equal(cfg.cleanUrls, true);
   const map = Object.fromEntries((cfg.rewrites || []).map((r) => [r.source, r.destination]));
   assert.equal(map['/planner'], '/views/planner.html');
   assert.equal(map['/vocab'], '/views/vocab.html');

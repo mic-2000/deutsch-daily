@@ -48,9 +48,11 @@ language.
   markup + an inline `<script>` plus a few shared `<script src>` modules.
 - **Supabase** (`@supabase/supabase-js@2` from jsDelivr CDN) for auth + per-user progress storage.
 - **Google Fonts** (Fraunces + Manrope) via `<link>` — the only other external load.
-- **Hosting:** Vercel, static. `vercel.json` keeps `outputDirectory: "."` and adds
-  `cleanUrls: true` + `rewrites` that map the **pretty URLs** `/planner` `/vocab` `/verbs`
-  `/collections` to the physical `views/<page>.html` files. Production URL is
+- **Hosting:** Vercel, static. `vercel.json` keeps `outputDirectory: "."` and adds `rewrites` that
+  map the **pretty URLs** `/planner` `/vocab` `/verbs` `/collections` to the physical
+  `views/<page>.html` files. (`cleanUrls` is intentionally **off** — it makes Vercel redirect
+  `.html` paths to extensionless ones, which breaks a rewrite whose destination ends in `.html`.)
+  Production URL is
   `https://deutsch-daily-red.vercel.app/` (referenced as the OAuth `redirectTo`).
 - **Build:** `npm run build` → `node build.js`. `build.js` reads `NEXT_PUBLIC_SUPABASE_URL` and
   `NEXT_PUBLIC_SUPABASE_ANON_KEY` from the environment and replaces the `YOUR_PROJECT_ID` /
