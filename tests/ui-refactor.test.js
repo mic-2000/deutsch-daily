@@ -95,3 +95,13 @@ test('unified width: planner no longer overrides the shared container width', ()
   assert.match(base, /--page-max:\s*920px/, 'base.css defines the shared --page-max token');
   assert.match(base, /\.container\s*\{[^}]*max-width:\s*var\(--page-max\)/, '.container uses --page-max');
 });
+
+test('app pages paint the shell early so the header does not blank on section switch', () => {
+  for (const page of ['views/planner.html', 'views/vocab.html', 'views/verbs.html', 'views/collections.html']) {
+    assert.match(
+      read(page),
+      /loadLocale\(getLang\(\)\)\.then\(\s*\(\)\s*=>\s*\{[^}]*render\(\)/,
+      `${page} should early-render the shell before initApp()`,
+    );
+  }
+});

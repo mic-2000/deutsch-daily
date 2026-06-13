@@ -586,6 +586,9 @@ document.addEventListener('keydown', e => {
   else if (e.key === 'c' || e.key === 'C' || e.key === 'с' || e.key === 'С') copyPlan(state.viewingDay);
 });
 
+// Paint the shell right away in the saved language (locale is a fast static file) so the
+// header/nav don't blank out on every section switch; initApp() re-renders with cloud data.
+loadLocale(getLang()).then(() => { try { render(); } catch (_) {} });
 initApp().then(loadLessonsThenRender);
 </script>
 </body>

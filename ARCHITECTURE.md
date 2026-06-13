@@ -154,6 +154,16 @@ Supabase CDN
 `index.html`). Switching language fetches that one locale once. So a user downloads a single
 locale, not all three.
 
+**Early shell render (no header flash on section switch).** Nav tabs are plain `<a href>` — each
+click is a full page load, and the whole `#app` (header included) is JS-rendered. If the first
+render waited for `initApp()`'s Supabase round-trips, the header would blank out and pop back in on
+every section switch. So each app page paints the shell immediately from local state once the
+locale is ready, *before* the cloud is reached:
+`loadLocale(getLang()).then(() => { try { render(); } catch {} });` runs right before `initApp()`.
+The saved language is known synchronously from `localStorage['ui_lang']`, so this first paint is
+already in the right language; `initApp()` then re-renders once with the cloud data (progress,
+email). (Guarded by `tests/ui-refactor.test.js`.)
+
 `index.html` (the login page, at the repo root) loads only the subset it needs (it skips
 `cloud-sync.js`, `header.js`, and the data files). The legacy `auth.html` redirect stub was removed.
 
