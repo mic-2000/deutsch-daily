@@ -63,6 +63,7 @@ window.LOCALE_RU = {
     planner_daily_also: 'Ежедневно также',
     planner_vocab_habit: (week, vocab) => `Словарь: квиз по словам недели ${week} (${vocab}) — 10–15 мин в тренажёре`,
     planner_copy: '⧉ Скопировать план на сегодня',
+    planner_copy_short: '⧉ Скопировать план',
     planner_copied: '✓ Скопировано!',
     planner_done: '✓ Готово, дальше',
     planner_undo: '↺ Отменить',

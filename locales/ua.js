@@ -62,6 +62,7 @@ window.LOCALE_UA = {
     planner_daily_also: 'Щодня також',
     planner_vocab_habit: (week, vocab) => `Словник: квіз по словах тижня ${week} (${vocab}) — 10–15 хв у тренажері`,
     planner_copy: '⧉ Скопіювати план на сьогодні',
+    planner_copy_short: '⧉ Скопіювати план',
     planner_copied: '✓ Скопійовано!',
     planner_done: '✓ Готово, далі',
     planner_undo: '↺ Скасувати',

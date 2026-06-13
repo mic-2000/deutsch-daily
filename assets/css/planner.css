@@ -36,7 +36,11 @@
 .btn:hover { background: var(--ink); color: var(--paper); }
 .btn.copy { flex: 1; min-width: 240px; background: var(--accent); color: var(--paper); border-color: var(--accent); font-weight: 600; font-size: 15px; }
 .btn.copy:hover { background: var(--accent-2); border-color: var(--accent-2); }
-.btn.copy.copied { background: var(--green); border-color: var(--green); }
+.btn.ai-start { flex: 1; min-width: 240px; background: var(--accent); color: var(--paper); border-color: var(--accent); font-weight: 600; font-size: 15px; }
+.btn.ai-start:hover { background: var(--accent-2); border-color: var(--accent-2); }
+.btn.copy.small { flex: 0 0 auto; min-width: 0; background: transparent; color: var(--ink); border-color: var(--ink); font-weight: 500; font-size: 14px; }
+.btn.copy.small:hover { background: var(--ink); color: var(--paper); }
+.btn.copy.copied { background: var(--green); color: var(--paper); border-color: var(--green); }
 .btn.done { background: var(--ink); color: var(--paper); }
 .btn.done:hover { background: var(--accent); border-color: var(--accent); }
 .btn.done.is-done { background: transparent; color: var(--ink-soft); border-color: var(--line); }
@@ -59,6 +63,8 @@
   .day-body { padding: 18px; }
   .day-actions { padding: 0 18px 18px; }
   .btn.copy { min-width: 0; flex: 1 1 100%; }
+  .btn.ai-start { min-width: 0; flex: 1 1 100%; }
+  .btn.copy.small { flex: 1 1 100%; }
   .nav-row { gap: 8px; }
   .nav-btn { padding: 9px 12px; }
 }

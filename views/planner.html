@@ -414,6 +414,12 @@ ${T('planner_clip_vocab', d.week, d.vocab)}
 ${T('planner_clip_prompt')}`;
 }
 
+function focusLesson(day) {
+  if (getDayMessages(day).length === 0) { startAILesson(day); return; }
+  const el = document.getElementById('chatMessages');
+  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
 function copyPlan(day) {
   const d = getLocalizedDay(DAYS[day - 1]);
   const text = buildPlanText(d);
@@ -513,7 +519,10 @@ function renderDayCard(d, isDone) {
     </div>
 
     <div class="day-actions">
-      <button class="btn copy" id="copyBtn" onclick="copyPlan(${d.day})">${T('planner_copy')}</button>
+      ${getGeminiKey()
+        ? `<button class="btn ai-start" onclick="focusLesson(${d.day})">${T('ai_start_lesson')}</button>
+      <button class="btn copy small" id="copyBtn" onclick="copyPlan(${d.day})">${T('planner_copy_short')}</button>`
+        : `<button class="btn copy" id="copyBtn" onclick="copyPlan(${d.day})">${T('planner_copy')}</button>`}
       <button class="btn done ${isDone ? 'is-done' : ''}" onclick="toggleDone(${d.day})">${isDone ? T('planner_undo') : T('planner_done')}</button>
     </div>
   </div>`;
