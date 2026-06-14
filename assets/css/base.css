@@ -36,7 +36,8 @@
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: var(--sans); background: var(--paper); color: var(--ink); min-height: 100vh; line-height: 1.5; transition: background 0.2s, color 0.2s; }
 button { font-family: inherit; cursor: pointer; border: none; background: none; color: inherit; }
-input { font-family: inherit; }
+input, textarea, select { font-family: inherit; color: var(--ink); }
+input::placeholder, textarea::placeholder { color: var(--ink-soft); opacity: 1; }
 .serif { font-family: var(--serif); }
 .container { max-width: var(--page-max); margin: 0 auto; padding: 0 24px; }
 .uppercase-mini { font-size: 10px; text-transform: uppercase; letter-spacing: 0.3em; color: var(--ink-soft); }
