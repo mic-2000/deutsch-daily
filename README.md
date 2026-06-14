@@ -3,6 +3,7 @@
 [![Tests](https://github.com/mic-2000/deutsch-daily/actions/workflows/tests.yml/badge.svg)](https://github.com/mic-2000/deutsch-daily/actions/workflows/tests.yml)
 [![Live Demo](https://img.shields.io/badge/demo-live-brightgreen)](https://deutsch-daily-red.vercel.app/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+![Made with Vanilla JS](https://img.shields.io/badge/made%20with-vanilla%20JS-f7df1e)
 
 Personal German learning app (A1 → B1) with a daily task planner, vocabulary trainer and verb conjugation trainer.
 
@@ -66,14 +67,17 @@ Architecture and conventions are documented in [ARCHITECTURE.md](ARCHITECTURE.md
 ## Development
 
 ```bash
-# Inject Supabase credentials (NEXT_PUBLIC_SUPABASE_URL + NEXT_PUBLIC_SUPABASE_ANON_KEY)
+# 1. Copy the env template and fill in your Supabase project credentials
+cp .env.example .env.local
+
+# 2. Inject credentials into assets/js/supabase.js
 npm run build
 
-# Serve locally (file:// won't work due to Supabase auth)
+# 3. Serve locally (file:// won't work due to Supabase auth)
 npx serve .
 ```
 
-Set `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` as environment variables in Vercel and locally before running the build.
+Set `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` as environment variables in Vercel and locally before running the build. The database schema (with row-level security policies) lives in [schema.sql](schema.sql).
 
 ## Tests
 
@@ -90,6 +94,21 @@ model, speech, confirm modals, markdown rendering, i18n key parity and render sm
 
 Every push and pull request to `main` runs the full suite via
 [GitHub Actions](.github/workflows/tests.yml).
+
+## Security
+
+- Credentials are never committed — `build.js` injects the Supabase URL and anon key from
+  environment variables at build time, and `.env.local` is git-ignored.
+- Every Supabase table has **row-level security** enabled, scoped to the owner with
+  `auth.uid() = user_id` policies (see [schema.sql](schema.sql)), so a user can only read and write
+  their own progress.
+- All dynamic values are escaped before they enter the DOM.
+
+## Contributing
+
+This is a personal project, but issues and ideas are welcome — open an
+[issue](https://github.com/mic-2000/deutsch-daily/issues) if something looks off or you have a
+suggestion.
 
 ## License
 

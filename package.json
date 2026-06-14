@@ -1,4 +1,26 @@
 {
+  "name": "deutsch-daily",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Personal German learning app (A1 → B1): daily planner, spaced-repetition vocabulary & verb trainers, AI lessons. Vanilla JS, Supabase, Vercel.",
+  "homepage": "https://deutsch-daily-red.vercel.app/",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mic-2000/deutsch-daily.git"
+  },
+  "license": "MIT",
+  "keywords": [
+    "german",
+    "language-learning",
+    "spaced-repetition",
+    "leitner",
+    "flashcards",
+    "vanilla-javascript",
+    "supabase",
+    "vercel",
+    "i18n",
+    "text-to-speech"
+  ],
   "scripts": {
     "build": "node build.js",
     "test": "node --test tests/",
