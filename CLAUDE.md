@@ -34,9 +34,11 @@ are served via `vercel.json` pretty-URL rewrites — `views/planner.html` (`/pla
   own CRUD after `initApp` (like the planner's lessons). Never use `localStorage` as a progress
   *store* — only `ui_lang` / `ui_theme` / `auth_redirect` / `gemini_key` / `gemini_key_sync` are
   persistent app state (`gemini_key_sync` = the "remember key on my account" opt-in flag).
-  The one exception is `cloud_outbox`: a **transient** retry buffer that `cloud-sync.js` writes only
-  when a cloud write fails (offline) and clears the moment the queued writes replay. Don't read it
-  as state or repurpose it. (§4–§5, §13)
+  The only exceptions are two **transient** buffers `cloud-sync.js` owns: `cloud_outbox` (offline
+  write queue — written when a cloud write fails, cleared when it replays) and `cloud_cache` (offline
+  read mirror — a copy of the last successful read, used only as a cold-start fallback, overwritten
+  by the cloud, wiped on logout). Neither is a source of truth; don't read them as state or
+  repurpose them. (§4–§5, §13)
 - **Reuse the design tokens** in `assets/css/base.css`; don't introduce a new color/type system.
   (§11)
 - **Bump the vocab `version`/`KEY` only on an incompatible format change — and write a migration.**
@@ -44,6 +46,10 @@ are served via `vercel.json` pretty-URL rewrites — `views/planner.html` (`/pla
 - **Preserve the defensive patterns:** clipboard fallback, `onvoiceschanged` listener, in-page
   confirm modal (never native `confirm()`), and never swallow handler errors (surface via
   `showToast`). (§12)
+- **PWA shell:** the app is installable — `manifest.webmanifest` + `sw.js` (root) + `assets/js/pwa.js`
+  in every `<head>`. When you **add/rename/remove a shell asset** (CSS/JS/data/locale/icon or a page),
+  update `SHELL_ASSETS` in `sw.js` **and bump its `VERSION`** so caches refresh. Keep `*.supabase.co`
+  uncached (JS owns offline data); icon PNGs are rendered from the `assets/icon*.svg` sources. (§17)
 - **Don't reintroduce the already-fixed bugs in ARCHITECTURE.md §14.**
 
 ## Before finishing

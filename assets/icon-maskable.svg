@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Full-bleed background: the OS applies its own mask (circle/squircle), so no rounded corners here. -->
+  <rect width="512" height="512" fill="#FFF8E7"/>
+  <!-- Content scaled to ~72% around the centre so it stays inside the maskable safe zone. -->
+  <g transform="translate(256 256) scale(0.72) translate(-256 -256)">
+    <text x="256" y="248" text-anchor="middle" dominant-baseline="middle"
+          font-family="Georgia, serif" font-size="200" font-weight="700"
+          fill="#111111">DE</text>
+    <rect x="112" y="368" width="96" height="32" rx="16" fill="#000000"/>
+    <rect x="208" y="368" width="96" height="32" rx="16" fill="#DD0000"/>
+    <rect x="304" y="368" width="96" height="32" rx="16" fill="#FFCE00"/>
+  </g>
+</svg>

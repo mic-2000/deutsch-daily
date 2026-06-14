@@ -10,6 +10,10 @@ applyTheme();
 
 function applyTheme() {
   document.documentElement.setAttribute('data-theme', _theme);
+  // Keep the PWA / browser chrome (status bar, task switcher) matching the active theme.
+  // Colours mirror --paper in base.css (light / dark). The static <meta> default is the light value.
+  const m = typeof document !== 'undefined' && document.querySelector('meta[name="theme-color"]');
+  if (m) m.setAttribute('content', _theme === 'dark' ? '#1A1815' : '#F2EDE3');
 }
 
 function setTheme(code, skipSave) {

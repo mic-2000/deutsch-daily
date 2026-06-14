@@ -41,6 +41,9 @@ Personal German learning app (A1 → B1) with a daily task planner, vocabulary t
 - **Verb Trainer** — conjugation practice on a shared Leitner schedule, with German text-to-speech.
 - **3 UI languages** — English, Ukrainian, Russian (including all week content).
 - **Cloud sync** — progress saved to Supabase; works across devices.
+- **Installable (PWA)** — "Install app" / "Add to Home Screen" launches it full-screen with its own
+  icon, no browser. Works offline: the UI, curriculum and your last-synced progress are cached, and
+  progress you make offline is queued and synced on reconnect (live AI lessons still need a connection).
 - **Auth** — email/password and Google OAuth.
 
 ## Stack

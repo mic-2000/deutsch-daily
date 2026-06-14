@@ -78,10 +78,13 @@ deutsch-daily/
 │   └── collections.html # User word-set trainer (import/edit/drill/AI translate). ( /collections ) §16
 ├── assets/
 │   ├── css/  base.css · components.css · planner.css · chat.css · vocab.css · verbs.css · auth.css · collections.css
-│   └── js/   i18n.js · theme.js · utils.js · supabase.js · cloud-sync.js · ai-config.js
-│             gemini.js · leitner.js · speech.js · header.js
+│   ├── js/   i18n.js · theme.js · utils.js · supabase.js · cloud-sync.js · ai-config.js
+│   │         gemini.js · leitner.js · speech.js · header.js · pwa.js
+│   ├── favicon.svg · icon.svg · icon-maskable.svg     # icon sources (PNGs rendered into icons/)
+│   └── icons/  icon-192.png · icon-512.png · maskable-512.png · apple-touch-icon.png
 ├── data/   weeks.js (WEEKS) · vocab.js (VOCAB) · verbs.js (VERBS — master verb dictionary)
 ├── locales/  ru.js · ua.js · en.js   (window.LOCALE_RU / _UA / _EN = { ui, vocab, verbs, weeks })
+├── manifest.webmanifest · sw.js     # installable PWA: web manifest + offline service worker (§17)
 ├── build.js · package.json · vercel.json
 ├── ARCHITECTURE.md · CLAUDE.md · README.md · LICENSE
 ```
@@ -115,6 +118,10 @@ Supabase CDN
 > `/locales/…`) so the pages work from `/views/*` and from the pretty-URL rewrites alike (§2). The
 > first thing in every `<head>` is a tiny inline `<script>` that sets `data-theme` from
 > `localStorage` synchronously — see the theme-FOUC note in §4.
+>
+> Every page (login included) also loads **`assets/js/pwa.js`** right after `utils.js` — one line
+> that registers the service worker — and its `<head>` carries the PWA tags (`<link rel="manifest">`,
+> `theme-color`, apple-touch-icon). See §17.
 
 **vocab.html:**
 ```
@@ -321,6 +328,17 @@ retry buffer, not a progress store** (§12/§13):
   to a delete).
 - *Safety* — the queue is tagged with `uid`; a queue belonging to a different signed-in user is
   discarded on flush (it would fail RLS anyway), so it can never write one user's data to another.
+
+**Offline read mirror (cold-start resilience).** The outbox protects *writes*; the **read mirror**
+(`localStorage['cloud_cache']`) protects *reads*. Every successful cloud read — and every successful
+progress write — is mirrored here, so opening the installed app (§17) with **no connection at all**
+still shows the user's data instead of an empty default. On a read failure the loaders fall back to
+the mirror: `initApp`'s progress + `verbs_data` reads via `_ownCache().progress`,
+`loadLessonsFromCloud` / `loadCollectionsFromCloud` via the cached arrays. Like the outbox it is a
+**transient mirror, not a source of truth** (§12): it is scoped to the signed-in user (`uid`-tagged,
+a foreign mirror is dropped on `initApp` and on `logout` via `clearCloudCache`), and the cloud
+overwrites it on the next successful read. *Limitation:* changes made online in one session are
+mirrored, but a brand-new account that has never loaded online has nothing to fall back to.
 
 **Lessons (AI chat history) — separate table `lessons`:**
 - `loadLessonsFromCloud()` — `SELECT day, messages` for the current user; returns `[]` on error.
@@ -811,10 +829,11 @@ explicitly changes.
 `localStorage` holds five persistent preference keys — `ui_lang` (language), `ui_theme`
 (`light`|`dark`, written by `theme.js`), `auth_redirect` (post-login return URL), `gemini_key`
 (user's Gemini API key) and `gemini_key_sync` (`'1'` if the user opted to mirror the key to their
-account — §8) — plus one **transient** key, `cloud_outbox`: the
-offline write queue (§4). It exists only while a cloud write is pending after a failure and is
-cleared the moment those writes replay; it is a retry buffer, not a progress store. All learning
-progress and chat history lives in Supabase.
+account — §8) — plus two **transient** keys: `cloud_outbox` (the offline write queue — exists only
+while a failed write is pending and is cleared the moment it replays, §4) and `cloud_cache` (the
+offline read mirror — a copy of the last successful cloud read used as a cold-start fallback, §5).
+Both are convenience buffers, **not progress stores**, and both are scoped to the signed-in user;
+all learning progress and chat history lives in Supabase, which always overwrites them.
 
 ---
 
@@ -980,3 +999,46 @@ let state = { collections, view:'list'|'import'|'edit', draft, session, confirm,
   the parsed JSON reply (`parseTranslations` tolerates ``` fences / line lists) into the inputs.
 - **Session** — the ported flashcard/article/spelling trainer; spelling is offered only when a word
   has a translation, article only when the German carries der/die/das (`colAvailableModes`).
+
+---
+
+## 17. PWA — installable app + offline shell
+
+The site is an installable **Progressive Web App**: on Android/Chrome it offers *"Install app"* and
+launches standalone (no address bar, own icon); on iOS *"Add to Home Screen"* does the same. No
+build step or store — it works off the existing Vercel HTTPS deploy.
+
+**Pieces:**
+- **`manifest.webmanifest`** (root) — `name`/`short_name`, `display: standalone`, `start_url:
+  /planner`, `scope: /`, `orientation: portrait`, `theme_color`/`background_color` `#F2EDE3` (light
+  `--paper`), and the icon set. Linked from every page's `<head>`.
+- **Icons** — `assets/icon.svg` (rounded, transparent corners → `any`) and `assets/icon-maskable.svg`
+  (full-bleed, content inside the maskable safe zone) are the **sources**; `assets/icons/*.png`
+  (192/512 `any`, `maskable-512`, `apple-touch-icon` 180) are rendered from them with `rsvg-convert`.
+  Regenerate the PNGs if you edit a source SVG.
+- **`<head>` tags** (all 5 pages) — `<link rel="manifest">`, `theme-color` (kept in sync with the
+  active light/dark theme by `theme.js`'s `applyTheme()`), `mobile-web-app-capable` /
+  `apple-mobile-web-app-*`, and `apple-touch-icon`.
+- **`assets/js/pwa.js`** — one line: registers `sw.js` on `window.load` (best-effort; no-op on
+  unsupported browsers / insecure origins). Loaded by every page so the shell is cached even before
+  sign-in.
+- **`sw.js`** (root, scope `/`) — the service worker.
+
+**Service-worker caching strategy** (one cache per `VERSION`; bump it to ship changed shell assets —
+old caches are pruned on `activate`):
+- **navigations** (HTML pages) → **network-first**, cached page as the offline fallback.
+- **same-origin static** (`/assets`, `/data`, `/locales`) → **stale-while-revalidate**.
+- **CDN libs + fonts** (Supabase UMD on jsDelivr, Google Fonts) → **cache-first** — the app can't
+  boot without the Supabase library, so it must be available offline.
+- **Supabase REST/Auth** (`*.supabase.co`) → **never cached**; passes straight to the network.
+  Offline *data* is owned by JS, not the SW: failed writes ride `cloud_outbox`, cold-start reads fall
+  back to `cloud_cache` (§4–§5). Caching auth/rest here would serve stale or wrong data.
+
+**What works offline:** opening the installed app, the full UI shell, the curriculum/vocab/verb data
+and locales, studying, and *writing* progress (queued, synced on reconnect). On a cold start with no
+network the read mirror (§5) restores the last-seen progress. **Live Gemini AI lessons and
+first-ever sign-in still need a connection.**
+
+> **TWA / Play Store (not done, easy follow-up).** This PWA is the prerequisite for a `.aab` via
+> PWABuilder/Bubblewrap (a Trusted Web Activity wrapping the same URL). That additionally needs a
+> Play Developer account and a `/.well-known/assetlinks.json` for Digital Asset Links.

@@ -13,6 +13,11 @@
    and replayed when connectivity returns (the `online` event, tab refocus, or next init). The
    outbox is a transient retry buffer — NOT a progress store — and is emptied as soon as its
    queued writes succeed. See the OUTBOX section below.
+
+   Symmetrically, the last successful cloud READ is mirrored into localStorage['cloud_cache'] so a
+   COLD start with no network can still show the user's data (the outbox only protects writes). It
+   is likewise a transient mirror — NOT a source of truth: every successful read/write overwrites
+   it, and it is wiped on logout or when a different user signs in. See the READ MIRROR section.
 */
 let currentUser = null;
 
@@ -131,6 +136,26 @@ async function flushOutbox() {
   }
 }
 
+/* ==========================================================================
+   OFFLINE READ MIRROR — replay the last successful cloud READ on a cold offline start.
+   The outbox protects writes; this protects reads. Shape: { uid, progress:{<columns>},
+   lessons:[…], collections:[…] }. NOT a source of truth — overwritten by every successful
+   read/write, scoped to the signed-in user, and cleared on logout / foreign user (clearCloudCache).
+   ========================================================================== */
+const CACHE_KEY = 'cloud_cache';
+function _readCache() { try { return JSON.parse(localStorage.getItem(CACHE_KEY)) || {}; } catch (e) { return {}; } }
+function _ownCache() { // the cache for the current user, or {} if empty / belongs to someone else
+  const c = _readCache();
+  return (currentUser && c.uid === currentUser.id) ? c : {};
+}
+function _cacheWrite(patch) {
+  if (!currentUser) return;
+  const c = Object.assign(_ownCache(), patch, { uid: currentUser.id });
+  try { localStorage.setItem(CACHE_KEY, JSON.stringify(c)); } catch (e) { /* quota — the mirror is best-effort */ }
+}
+function _cacheProgress(fields) { _cacheWrite({ progress: Object.assign({}, _ownCache().progress, fields) }); }
+function clearCloudCache() { localStorage.removeItem(CACHE_KEY); }
+
 /* Try a live progress upsert; on failure, queue the field(s) for replay. */
 async function _pushProgress(fields) {
   if (!currentUser) return;
@@ -138,6 +163,7 @@ async function _pushProgress(fields) {
     const row = Object.assign({ user_id: currentUser.id }, fields, { updated_at: new Date().toISOString() });
     const { error } = await sb.from('progress').upsert(row, { onConflict: 'user_id' });
     if (error) throw error;
+    _cacheProgress(fields); // keep the offline read mirror current with this write
     if (_offlineNotified) flushOutbox(); // back online mid-session — drain anything queued earlier
   } catch (e) {
     _queueProgress(fields);
@@ -153,22 +179,31 @@ async function initApp() {
   }
   currentUser = session.user;
   flushOutbox(); // replay anything stranded from a previous offline session (or clear a foreign queue)
+  { const _c = _readCache(); if (_c.uid && _c.uid !== currentUser.id) clearCloudCache(); } // drop a foreign read mirror
 
   // Resolve language + progress from the cloud BEFORE the first render, so the page renders once
   // in the correct language (no flash) and only that one locale is fetched.
   let lang = getLang();
   const hasField = (typeof CLOUD_FIELD !== 'undefined' && CLOUD_FIELD); // a table-only page (collections) has none
   try {
-    const { data } = await sb.from('progress')
+    const { data, error } = await sb.from('progress')
       .select((hasField ? CLOUD_FIELD + ', ' : '') + 'lang')
       .eq('user_id', session.user.id)
       .single();
+    if (error) throw error;
     if (hasField && typeof applyCloudData === 'function') {
       const payload = data && data[CLOUD_FIELD];
       if (payload && Object.keys(payload).length) applyCloudData(payload); // skip empty default ({}::jsonb)
     }
     if (data && data.lang && LANG_NAMES[data.lang]) lang = data.lang;
-  } catch(e) { /* offline or no record yet */ }
+    if (data) _cacheProgress(hasField ? { [CLOUD_FIELD]: data[CLOUD_FIELD], lang: data.lang } : { lang: data.lang });
+  } catch(e) { // offline (or no record yet) — fall back to the last cached read
+    const p = _ownCache().progress;
+    if (p) {
+      if (hasField && typeof applyCloudData === 'function' && p[CLOUD_FIELD] && Object.keys(p[CLOUD_FIELD]).length) applyCloudData(p[CLOUD_FIELD]);
+      if (p.lang && LANG_NAMES[p.lang]) lang = p.lang;
+    }
+  }
 
   // Load theme (separate query so a missing column can't break the main load)
   try {
@@ -183,9 +218,13 @@ async function initApp() {
   // via applyVerbProgress(d). The verbs page loads it through its own CLOUD_FIELD instead.
   if (typeof applyVerbProgress === 'function') {
     try {
-      const { data } = await sb.from('progress').select('verbs_data').eq('user_id', session.user.id).single();
-      if (data && data.verbs_data) applyVerbProgress(data.verbs_data);
-    } catch(e) { /* verbs_data column may not exist yet */ }
+      const { data, error } = await sb.from('progress').select('verbs_data').eq('user_id', session.user.id).single();
+      if (error) throw error;
+      if (data && data.verbs_data) { applyVerbProgress(data.verbs_data); _cacheProgress({ verbs_data: data.verbs_data }); }
+    } catch(e) { // offline (or column missing) — restore the mirrored verb mastery
+      const p = _ownCache().progress;
+      if (p && p.verbs_data) applyVerbProgress(p.verbs_data);
+    }
   }
 
   // Account-saved Gemini key (opt-in, planner only). Adopt it into localStorage so this device
@@ -213,6 +252,7 @@ async function saveGeminiKeyToCloud(key) { return _pushProgress({ gemini_key: ke
 
 async function logout() {
   await sb.auth.signOut();
+  clearCloudCache(); // the mirror is per-user — don't leave it for the next sign-in
   location.href = '/';
 }
 
@@ -223,11 +263,13 @@ async function logout() {
 async function loadLessonsFromCloud() {
   if (!currentUser) return [];
   try {
-    const { data } = await sb.from('lessons')
+    const { data, error } = await sb.from('lessons')
       .select('day, messages')
       .eq('user_id', currentUser.id);
+    if (error) throw error;
+    _cacheWrite({ lessons: data || [] });
     return data || [];
-  } catch(e) { return []; }
+  } catch(e) { return _ownCache().lessons || []; } // offline — last cached lessons
 }
 
 async function saveLessonToCloud(day, messages) {
@@ -258,12 +300,14 @@ async function deleteLessonFromCloud(day) {
 async function loadCollectionsFromCloud() {
   if (!currentUser) return [];
   try {
-    const { data } = await sb.from('collections')
+    const { data, error } = await sb.from('collections')
       .select('id, name, words, mastery, created_at, updated_at')
       .eq('user_id', currentUser.id)
       .order('created_at', { ascending: true });
+    if (error) throw error;
+    _cacheWrite({ collections: data || [] });
     return data || [];
-  } catch(e) { return []; }
+  } catch(e) { return _ownCache().collections || []; } // offline — last cached collections
 }
 
 async function saveCollectionToCloud(c) {
