@@ -25,6 +25,21 @@ test('inlineMd: bold / italic / code, with content escaped first', () => {
   assert.equal(p.inlineMd('<script>'), '&lt;script&gt;');
 });
 
+test('inlineMd: markdown links become clickable anchors (new tab, noopener)', () => {
+  const h = p.inlineMd('see [the docs](https://example.com/a)');
+  assert.match(h, /<a href="https:\/\/example\.com\/a" target="_blank" rel="noopener noreferrer">the docs<\/a>/);
+});
+
+test('inlineMd: bare URLs are auto-linked, trailing punctuation kept outside', () => {
+  const h = p.inlineMd('visit https://example.com.');
+  assert.match(h, /<a href="https:\/\/example\.com" target="_blank" rel="noopener noreferrer">https:\/\/example\.com<\/a>\./);
+});
+
+test('inlineMd: unsafe link protocols are not turned into anchors', () => {
+  const h = p.inlineMd('[x](javascript:alert(1))');
+  assert.ok(!/<a /.test(h), 'javascript: link must not produce an anchor');
+});
+
 test('renderMd: headings map #..#### to <h3>..<h6>', () => {
   assert.match(p.renderMd('# Title'), /<h3 class="ai-h">Title<\/h3>/);
   assert.match(p.renderMd('#### Deep'), /<h6 class="ai-h">Deep<\/h6>/);

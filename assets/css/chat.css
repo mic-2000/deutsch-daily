@@ -83,6 +83,8 @@
 .ai-msg .ai-hr  { border: none; border-top: 1px solid var(--line); margin: 10px 0; }
 .ai-msg .ai-ul, .ai-msg .ai-ol { margin: 3px 0 8px 18px; padding: 0; }
 .ai-msg .ai-ul li, .ai-msg .ai-ol li { margin-bottom: 3px; }
+.ai-msg a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; overflow-wrap: anywhere; }
+.ai-msg a:hover { color: var(--accent-2); }
 .ai-table { border-collapse: collapse; width: 100%; margin: 8px 0 12px; font-size: 13px; }
 .ai-table th, .ai-table td { border: 1px solid var(--line); padding: 5px 10px; text-align: left; vertical-align: top; }
 .ai-table th { background: var(--paper-2); font-weight: 600; white-space: nowrap; }

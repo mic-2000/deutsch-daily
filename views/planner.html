@@ -225,9 +225,24 @@ function escHtml(s) {
 }
 function inlineMd(s) {
   let h = escHtml(s);
+  // Links — only http(s)/mailto are allowed (blocks javascript:/data: injection). Markdown links
+  // are parsed first and parked as placeholders so the bare-URL autolinker can't double-wrap them.
+  const safeUrl = (u) => /^(https?:\/\/|mailto:)/i.test(u.replace(/&amp;/g, '&')) ? u : null;
+  const links = [];
+  const park = (anchor) => { links.push(anchor); return '\u0000' + (links.length - 1) + '\u0000'; };
+  h = h.replace(/\[([^\]]+)\]\(((?:https?:\/\/|mailto:)[^\s)]+)\)/gi, (m, text, url) => {
+    const safe = safeUrl(url);
+    return safe ? park(`<a href="${safe}" target="_blank" rel="noopener noreferrer">${text}</a>`) : m;
+  });
+  h = h.replace(/(^|[\s(])(https?:\/\/[^\s<]+)/gi, (m, pre, url) => {
+    const trail = (url.match(/[.,;:!?)\]]+$/) || [''])[0];
+    const clean = url.slice(0, url.length - trail.length);
+    return pre + park(`<a href="${clean}" target="_blank" rel="noopener noreferrer">${clean}</a>`) + trail;
+  });
   h = h.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
   h = h.replace(/\*([^*\n]+)\*/g,  '<em>$1</em>');
   h = h.replace(/`([^`\n]+)`/g,     '<code>$1</code>');
+  h = h.replace(/\u0000(\d+)\u0000/g, (m, idx) => links[+idx]);
   return h;
 }
 function renderMdTable(lines) {
