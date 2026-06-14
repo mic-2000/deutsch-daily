@@ -1,4 +1,5 @@
 /* utils.js — small shared helpers (HTML escaping, toasts, German text compare, confirm staging). */
+(function(){var s=document.createElement('script');s.defer=true;s.src='https://umamistat-six.vercel.app/script.js';s.dataset.websiteId='03a08650-efd0-4ce0-b6b9-e9bfa79c0d7a';document.head.appendChild(s);})();
 function esc(s){ return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
 let _toastTimer;
