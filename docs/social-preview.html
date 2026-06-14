@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Manrope:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper: #1A1815;
+    --paper-2: #232019;
+    --ink: #ECE6DA;
+    --ink-soft: #A89F8E;
+    --line: #3D372D;
+    --accent: #D9763F;
+    --accent-2: #C0673A;
+    --green: #6FA45A;
+    --gold: #D4A954;
+    --der: #5B8FC2;
+    --serif: 'Fraunces', Georgia, serif;
+    --sans: 'Manrope', system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 1280px; height: 640px; }
+  body {
+    font-family: var(--sans);
+    color: var(--ink);
+    background:
+      radial-gradient(1100px 700px at 88% -10%, rgba(217,118,63,0.20), transparent 60%),
+      radial-gradient(900px 600px at 0% 120%, rgba(111,164,90,0.10), transparent 55%),
+      linear-gradient(135deg, #15130F 0%, #1A1815 55%, #201C16 100%);
+    display: flex;
+    align-items: center;
+    overflow: hidden;
+  }
+  .card {
+    display: flex;
+    width: 100%;
+    height: 100%;
+    align-items: center;
+    padding: 76px 80px;
+    gap: 64px;
+  }
+  .left { flex: 1 1 56%; min-width: 0; }
+  .kicker {
+    font-size: 15px;
+    text-transform: uppercase;
+    letter-spacing: 0.34em;
+    color: var(--accent);
+    font-weight: 700;
+    margin-bottom: 26px;
+  }
+  h1 {
+    font-family: var(--serif);
+    font-weight: 600;
+    font-size: 92px;
+    line-height: 0.98;
+    letter-spacing: -0.015em;
+    margin-bottom: 24px;
+  }
+  h1 .de { color: var(--ink); }
+  h1 .daily { color: var(--accent); }
+  .tag {
+    font-size: 25px;
+    line-height: 1.4;
+    color: var(--ink-soft);
+    font-weight: 500;
+    max-width: 560px;
+    margin-bottom: 38px;
+  }
+  .tag b { color: var(--ink); font-weight: 700; }
+  .pills { display: flex; flex-wrap: wrap; gap: 12px; }
+  .pill {
+    font-size: 17px;
+    font-weight: 600;
+    padding: 10px 18px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    color: var(--ink);
+    background: rgba(255,255,255,0.02);
+  }
+  .pill.a { border-color: rgba(217,118,63,0.55); color: #F0A977; }
+  .pill.g { border-color: rgba(111,164,90,0.5); color: #9BC987; }
+  .pill.b { border-color: rgba(91,143,194,0.5); color: #8FB6DD; }
+
+  .right { flex: 0 0 360px; display: flex; justify-content: center; }
+  .mock {
+    width: 340px;
+    background: var(--paper-2);
+    border: 1px solid var(--line);
+    border-radius: 26px;
+    padding: 26px 24px 28px;
+    box-shadow: 0 40px 90px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.02);
+    transform: rotate(2.2deg);
+  }
+  .mock .top { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; }
+  .mock .dot { width: 11px; height: 11px; border-radius: 50%; background: var(--line); }
+  .mock .dot.live { background: var(--accent); }
+  .mock .day {
+    font-family: var(--serif);
+    font-size: 21px;
+    font-weight: 600;
+    margin-left: auto;
+    color: var(--ink-soft);
+  }
+  .word {
+    font-family: var(--serif);
+    font-size: 46px;
+    font-weight: 600;
+    text-align: center;
+    margin: 14px 0 4px;
+  }
+  .word .art { color: var(--der); }
+  .gloss { text-align: center; color: var(--ink-soft); font-size: 19px; margin-bottom: 22px; }
+  .row { display: flex; gap: 12px; margin-bottom: 12px; }
+  .btn {
+    flex: 1;
+    text-align: center;
+    padding: 14px 0;
+    border-radius: 14px;
+    font-weight: 700;
+    font-size: 18px;
+    border: 1px solid var(--line);
+  }
+  .btn.der { color: #8FB6DD; border-color: rgba(91,143,194,0.5); }
+  .btn.die { color: #E08A7A; border-color: rgba(208,96,78,0.5); }
+  .btn.das { color: #9BC987; border-color: rgba(111,164,90,0.5); background: rgba(111,164,90,0.12); }
+  .meter { height: 8px; border-radius: 999px; background: var(--line); overflow: hidden; margin-top: 18px; }
+  .meter > i { display: block; height: 100%; width: 62%; background: linear-gradient(90deg, var(--accent-2), var(--accent)); }
+  .url {
+    position: absolute;
+    bottom: 40px;
+    left: 80px;
+    font-size: 19px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    color: var(--ink-soft);
+  }
+  .url b { color: var(--accent); }
+</style>
+</head>
+<body>
+  <div class="card">
+    <div class="left">
+      <div class="kicker">German · A1 → B1</div>
+      <h1><span class="de">Deutsch</span> <span class="daily">Daily</span></h1>
+      <p class="tag">Daily planner, <b>spaced-repetition</b> vocab &amp; verb trainers, and one-click <b>AI lessons</b>.</p>
+      <div class="pills">
+        <span class="pill a">Vanilla JS</span>
+        <span class="pill">No framework</span>
+        <span class="pill g">~100 tests</span>
+        <span class="pill b">Supabase</span>
+        <span class="pill">Cloud sync</span>
+      </div>
+    </div>
+    <div class="right">
+      <div class="mock">
+        <div class="top">
+          <span class="dot live"></span><span class="dot"></span><span class="dot"></span>
+          <span class="day">Week 7</span>
+        </div>
+        <div class="word"><span class="art">das</span> Jahr</div>
+        <div class="gloss">year</div>
+        <div class="row">
+          <div class="btn der">der</div>
+          <div class="btn die">die</div>
+          <div class="btn das">das</div>
+        </div>
+        <div class="meter"><i></i></div>
+      </div>
+    </div>
+  </div>
+  <div class="url"><b>deutsch-daily</b>-red.vercel.app</div>
+</body>
+</html>
