@@ -10,17 +10,28 @@ Personal German learning app (A1 → B1) with a daily task planner, vocabulary t
 
 ## Screenshots
 
-**Daily Planner** — a 24-week curriculum with today's task, grammar focus and a one-click AI lesson.
-
-![Daily Planner](docs/screenshots/Screenshot_2.png)
-
-**Vocabulary Trainer** — spaced repetition (Leitner) with flashcard, article (der/die/das) and spelling modes, plus German text-to-speech.
-
-![Vocabulary Trainer](docs/screenshots/Screenshot_4.png)
-
-**Verb Trainer** — recall all three forms on a shared Leitner schedule.
-
-![Verb Trainer](docs/screenshots/Screenshot_5.png)
+<table>
+  <tr>
+    <td width="50%">
+      <img src="docs/screenshots/Screenshot_2.png" alt="Daily Planner" /><br/>
+      <sub><b>Daily Planner</b> — 24-week curriculum with today's task, grammar focus and a one-click AI lesson.</sub>
+    </td>
+    <td width="50%">
+      <img src="docs/screenshots/Screenshot_4.png" alt="Vocabulary Trainer" /><br/>
+      <sub><b>Vocabulary Trainer</b> — Leitner spaced repetition with flashcard, article and spelling modes + German TTS.</sub>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%">
+      <img src="docs/screenshots/Screenshot_5.png" alt="Verb Trainer" /><br/>
+      <sub><b>Verb Trainer</b> — recall all three forms on a shared Leitner schedule.</sub>
+    </td>
+    <td width="50%">
+      <img src="docs/screenshots/Screenshot_6.png" alt="Week word list" /><br/>
+      <sub><b>Week overview</b> — every word with its Leitner box progress and one-tap German audio.</sub>
+    </td>
+  </tr>
+</table>
 
 ## Features
 
