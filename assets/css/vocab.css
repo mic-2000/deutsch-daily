@@ -109,6 +109,18 @@ main { padding: 24px 0 60px; }
 .art-btn.reveal-correct { border-color: var(--green) !important; color: var(--green) !important; box-shadow: inset 0 0 0 2px var(--green); }
 .art-btn:disabled { cursor: default; }
 
+/* plural trainer */
+.session-mode-badge.plural { background: var(--green); }
+[data-theme="dark"] .session-mode-badge.plural { background: var(--green); }
+.pl-opts { display: grid; gap: 10px; margin-top: 22px; }
+.pl-btn { padding: 15px 16px; border: 2px solid var(--die); color: var(--die); background: var(--paper-3); font-family: var(--serif); font-size: 22px; transition: all 0.12s; }
+.pl-btn:hover { background: var(--die); color: #fff; }
+.pl-btn .art { font-weight: 600; }
+.pl-btn.chosen-correct { background: var(--green) !important; border-color: var(--green) !important; color: #fff !important; }
+.pl-btn.chosen-wrong { background: var(--die) !important; border-color: var(--die) !important; color: #fff !important; opacity: 0.85; }
+.pl-btn.reveal-correct { border-color: var(--green) !important; color: var(--green) !important; box-shadow: inset 0 0 0 2px var(--green); }
+.pl-btn:disabled { cursor: default; }
+
 /* spelling */
 .spell-input { width: 100%; max-width: 420px; padding: 16px 18px; border: 2px solid var(--ink); background: var(--paper-3); font-family: var(--serif); font-size: 26px; text-align: center; margin-top: 20px; }
 .spell-input:focus { outline: none; border-color: var(--accent); }

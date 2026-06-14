@@ -73,6 +73,20 @@ function deColored(de){
   return `<span class="art ${art.article}">${art.article}</span> ${esc(art.core)}`;
 }
 
+/* Show all THREE principal parts — Infinitiv — Präteritum — Partizip II (+ "(sein)" auxiliary) —
+   for any word that is a known verb, pulled live from the VERBS dictionary so irregular verbs
+   display their full set of forms and stay in sync. Works in EVERY week: week-5 entries are
+   stored as "Infinitiv — Partizip II" (the dash part is dropped before lookup); plain infinitives
+   elsewhere are matched directly. Non-verbs (nouns, adverbs, phrases) and unknown verbs are
+   returned unchanged. The stored VOCAB string is NOT mutated, so verbKeyForWord()/speakWord()
+   keep reading the infinitive from it. */
+function verbForms(de){
+  const inf = de.split('—')[0].trim();
+  const v = (typeof VERBS !== 'undefined') ? VERBS[inf] : null;
+  if (!v || !v.praet || !v.pp) return de;                        // not a known verb → leave as-is
+  return `${inf} — ${v.praet} — ${v.pp}${v.aux === 'sein' ? ' (sein)' : ''}`;
+}
+
 /* speech: shared core (GERMAN_VOICE/pickVoice/speak) lives in assets/js/speech.js */
 function speakWord(week, idx, btnEl){
   const de = VOCAB[week].words[idx].split('—')[0].trim(); // strip Perfekt extra
@@ -111,6 +125,88 @@ function updateCard(week, idx, correct){
   else { state.mastery[key(week,idx)] = c; save(); }
 }
 
+/* ==========================================================================
+   PLURAL TRAINER — a SECOND, independent Leitner track for the same nouns.
+   Its progress lives in state.pluralMastery (keyed by the same week-idx) so learning a word's
+   plural is tracked separately from learning its meaning/article/spelling. Plural data is the
+   German-only PLURALS map (data/vocab.js); a noun only gets a plural card when it has an entry.
+   ========================================================================== */
+function plHasPlural(week, idx){ return !!PLURALS[VOCAB[week].words[idx]]; }
+function plRec(week, idx){ return state.pluralMastery[key(week, idx)]; }
+function plCard(week, idx){ return plRec(week, idx) || leitnerBlank(); }
+function plIsDue(week, idx, now){ return leitnerIsDue(plRec(week, idx), now); }
+function plIsSeen(week, idx){ return leitnerIsSeen(plRec(week, idx)); }
+function plBox(week, idx){ return leitnerBoxOf(plRec(week, idx)); }
+function plIsMastered(week, idx){ return leitnerIsMastered(plRec(week, idx)); }
+function updatePlural(week, idx, correct){
+  const c = plCard(week, idx);
+  leitnerApply(c, correct);
+  state.pluralMastery[key(week, idx)] = c;
+  save();
+}
+function speakPlural(week, idx, btnEl){ const pl = PLURALS[VOCAB[week].words[idx]]; if (pl) speak(pl, btnEl, 0.88); }
+
+/* Build a few plausible WRONG plural forms by applying alternate endings to the singular stem, so
+   the multiple-choice round is about the right ending rather than an obvious odd-one-out. */
+function umlautify(str){
+  const i = str.lastIndexOf('au');
+  if (i >= 0) return str.slice(0, i) + 'äu' + str.slice(i + 2);
+  const map = { a:'ä', o:'ö', u:'ü' };
+  for (let j = str.length - 1; j >= 0; j--){
+    const lo = str[j].toLowerCase();
+    if (map[lo]) return str.slice(0, j) + (str[j] === str[j].toUpperCase() ? map[lo].toUpperCase() : map[lo]) + str.slice(j + 1);
+  }
+  return str;
+}
+function pluralDistractors(sgCore, plCore){
+  const cands = new Set([
+    sgCore + 'e', sgCore + 'en', sgCore + 'er', sgCore + 'n', sgCore + 's',
+    umlautify(sgCore) + 'e', umlautify(sgCore) + 'er', sgCore,
+  ]);
+  const arr = [...cands].filter(x => x && x !== plCore);
+  arr.sort(() => Math.random() - 0.5);
+  return arr.slice(0, 2);
+}
+function makePluralOptions(de, pl){
+  const sgCore = (parseArticle(de) || { core: de }).core;
+  const plCore = (parseArticle(pl) || { core: pl }).core;
+  const opts = [pl, ...pluralDistractors(sgCore, plCore).map(c => 'die ' + c)];
+  return opts.sort(() => Math.random() - 0.5);
+}
+function pickPluralMode(week, idx){
+  const box = plBox(week, idx);
+  if (box >= 3 && Math.random() < 0.6) return 'pl_input';            // higher box → production
+  if (box <= 1) return Math.random() < 0.5 ? 'pl_flash' : 'pl_choose'; // new → recognition
+  const pool = ['pl_flash', 'pl_choose', 'pl_input'];
+  return pool[Math.floor(Math.random() * pool.length)];
+}
+function makePluralCard(week, idx){
+  const de = VOCAB[week].words[idx];
+  const ru = getTranslation(week, idx);
+  const pl = PLURALS[de];
+  return { week, idx, kind: 'plural', de, ru, pl, mode: pickPluralMode(week, idx),
+           options: makePluralOptions(de, pl), requeued: false, firstTry: null };
+}
+function collectPluralCards(weeks, now, newCap){
+  const due = [], neu = [];
+  for (const w of weeks){
+    const words = VOCAB[w].words;
+    for (let i = 0; i < words.length; i++){
+      if (!plHasPlural(+w, i)) continue;
+      if (plIsMastered(+w, i) && !plIsDue(+w, i, now)) continue;
+      if (plIsSeen(+w, i)){ if (plIsDue(+w, i, now)) due.push([+w, i]); }
+      else neu.push([+w, i]);
+    }
+  }
+  return due.map(([w, i]) => makePluralCard(w, i))
+            .concat(neu.slice(0, newCap).map(([w, i]) => makePluralCard(w, i)));
+}
+function allPluralCards(weeks){
+  const out = [];
+  for (const w of weeks){ VOCAB[w].words.forEach((_, i) => { if (plHasPlural(+w, i)) out.push(makePluralCard(+w, i)); }); }
+  return out;
+}
+
 function resetAll(){ askConfirm(T('confirm_reset_all'), 'all'); }
 function resetWord(week, idx){ askConfirm(T('confirm_reset_word'), { week, idx }); }
 function askConfirm(message, action){ stageConfirm(state, message, action); render(); }
@@ -118,11 +214,13 @@ function confirmNo(){ clearConfirm(state); render(); }
 function confirmYes(){
   const a = state.confirm && state.confirm.action;
   clearConfirm(state);
-  if (a === 'all'){ state.mastery = {}; save(); render(); showToast(T('toast_progress_reset')); }
+  if (a === 'all'){ state.mastery = {}; state.pluralMastery = {}; save(); render(); showToast(T('toast_progress_reset')); }
   else if (a && typeof a === 'object'){
     const vk = vkOf(a.week, a.idx);
     if (vk){ delete verbStore.mastery[vk]; saveVerbStore(); }      // reset shared verb record
     else { delete state.mastery[key(a.week, a.idx)]; save(); }
+    delete state.pluralMastery[key(a.week, a.idx)];               // reset this word's plural track too
+    save();
     render(); showToast(T('toast_word_reset'));
   }
   else render();
@@ -134,7 +232,8 @@ function confirmYes(){
 let state = {
   selectedWeek: 1,
   mastery: {},
-  modes: { flashcard: true, article: true, spelling: true },
+  pluralMastery: {},
+  modes: { flashcard: true, article: true, spelling: true, plural: false },
   levels: { A1: false, A2: false, B1: false },
   session: null,
   confirm: null,
@@ -154,14 +253,16 @@ function applyCloudData(d){ applyData(d); }
 
 function serialize(){
   return { app:'deutsch-vokabeltrainer', version:2, savedAt:new Date().toISOString(),
-           selectedWeek: state.selectedWeek, modes: state.modes, levels: state.levels, mastery: state.mastery };
+           selectedWeek: state.selectedWeek, modes: state.modes, levels: state.levels,
+           mastery: state.mastery, pluralMastery: state.pluralMastery };
 }
 function applyData(d){
   if (!d || typeof d !== 'object' || !d.mastery || typeof d.mastery !== 'object'){
     showToast(T('toast_file_bad')); return false;
   }
   state.mastery = d.mastery;
-  if (d.modes) state.modes = d.modes;
+  state.pluralMastery = (d.pluralMastery && typeof d.pluralMastery === 'object') ? d.pluralMastery : {};
+  if (d.modes) state.modes = Object.assign({ flashcard:true, article:true, spelling:true, plural:false }, d.modes);
   if (d.levels) state.levels = Object.assign({ A1:false, A2:false, B1:false }, d.levels);
   if (d.selectedWeek) state.selectedWeek = d.selectedWeek;
   save(); render();
@@ -211,6 +312,7 @@ function weekStats(week){
 function globalStats(){
   const now = Date.now();
   let total=0, mastered=0, learning=0, due=0;
+  const plural = !!state.modes.plural;
   for (const w in VOCAB){
     const words = VOCAB[w].words;
     for (let i=0;i<words.length;i++){
@@ -218,6 +320,7 @@ function globalStats(){
       if (isMastered(w,i)) mastered++;
       else if (isSeen(w,i)) learning++;
       if (isSeen(w,i) && !isMastered(w,i) && isDue(w,i,now)) due++;
+      if (plural && plHasPlural(+w,i) && plIsSeen(+w,i) && !plIsMastered(+w,i) && plIsDue(+w,i,now)) due++;
     }
   }
   return { total, mastered, learning, due };
@@ -240,11 +343,12 @@ function pickMode(week, idx){
 function makeCard(week, idx){
   const de = VOCAB[week].words[idx];
   const ru = getTranslation(week, idx);
-  return { week, idx, de, ru, mode: pickMode(week, idx), requeued: false, firstTry: null };
+  return { week, idx, kind: 'word', de, ru, mode: pickMode(week, idx), requeued: false, firstTry: null };
 }
 
 function startSession(scope){
   const now = Date.now();
+  const usePlural = !!state.modes.plural;
   let list = [];
   if (scope.type === 'week'){
     const words = VOCAB[scope.week].words;
@@ -256,8 +360,10 @@ function startSession(scope){
     }
     // due review first, then up to 12 new
     list = due.map(i=>makeCard(scope.week,i)).concat(neu.slice(0,12).map(i=>makeCard(scope.week,i)));
+    if (usePlural) list = list.concat(collectPluralCards([scope.week], now, 8));
     if (list.length === 0){ // nothing due & nothing new → review whole week
       list = words.map((_,i)=>makeCard(scope.week,i));
+      if (usePlural) list = list.concat(allPluralCards([scope.week]));
     }
   } else if (scope.type === 'levels'){
     const weeks = weeksForLevels(scope.levels);
@@ -271,8 +377,10 @@ function startSession(scope){
       }
     }
     list = due.map(([w,i])=>makeCard(w,i)).concat(neu.slice(0,20).map(([w,i])=>makeCard(w,i)));
+    if (usePlural) list = list.concat(collectPluralCards(weeks, now, 12));
     if (list.length === 0){ // nothing due & nothing new → review some of the level
       for (const w of weeks){ VOCAB[w].words.forEach((_,i)=>list.push(makeCard(+w,i))); }
+      if (usePlural) list = list.concat(allPluralCards(weeks));
     }
   } else { // review-all due
     for (const w in VOCAB){
@@ -281,6 +389,7 @@ function startSession(scope){
         if (isSeen(w,i) && !isMastered(w,i) && isDue(w,i,now)) list.push(makeCard(+w,i));
       }
     }
+    if (usePlural) list = list.concat(collectPluralCards(Object.keys(VOCAB), now, 0)); // due plurals only
   }
   // shuffle, cap 25
   list = list.sort(()=>Math.random()-0.5).slice(0,25);
@@ -294,22 +403,24 @@ function answer(correct){
   const s = state.session; if (!s) return;
   const card = s.queue[s.pos];
   if (card.firstTry === null){ card.firstTry = correct; if (correct) s.uniqueRight++; }
-  updateCard(card.week, card.idx, correct);
-  // re-queue wrong cards once (as easier flashcard)
+  if (card.kind === 'plural') updatePlural(card.week, card.idx, correct);
+  else updateCard(card.week, card.idx, correct);
+  // re-queue wrong cards once (as the easier reveal card of the same track)
   if (!correct && !card.requeued){
-    s.queue.push({ ...card, mode: 'flashcard', requeued: true });
+    s.queue.push({ ...card, mode: card.kind === 'plural' ? 'pl_flash' : 'flashcard', requeued: true });
   }
 
-  // Flashcard: translation is already shown, so advance straight away
-  if (card.mode === 'flashcard'){ nextCard(); return; }
+  // Reveal cards: the answer is already shown, so advance straight away
+  if (card.mode === 'flashcard' || card.mode === 'pl_flash'){ nextCard(); return; }
 
-  // Article / Spelling: show feedback, wait for "Дальше"
+  // Article / Spelling / plural choose+input: show feedback, wait for "Next"
   s.lastCorrect = correct;
   s.answered = true;
   s.revealed = true;
   render();
   // auto-speak after answering (reinforce pronunciation)
-  setTimeout(()=>{ const b = document.getElementById('cardAudio'); speakWord(card.week, card.idx, b); }, 150);
+  setTimeout(()=>{ const b = document.getElementById('cardAudio');
+    if (card.kind === 'plural') speakPlural(card.week, card.idx, b); else speakWord(card.week, card.idx, b); }, 150);
 }
 
 function nextCard(){
@@ -393,6 +504,7 @@ ${appHeader('vocab', { cat: 'vocab_title_cat', h1: 'Vokabel<em>trainer</em>', su
     ${modeChip('flashcard', T('mode_flashcard'))}
     ${modeChip('article', T('mode_article'))}
     ${modeChip('spelling', T('mode_spelling'))}
+    ${modeChip('plural', T('mode_plural'))}
   </div>
 
   <div class="settings-bar">
@@ -441,7 +553,7 @@ ${appHeader('vocab', { cat: 'vocab_title_cat', h1: 'Vokabel<em>trainer</em>', su
       const mastered = box >= MAX_BOX;
       const segs = [1,2,3,4,5].map(b=>`<div class="box-seg ${b<=box?'fill':''} ${b<=box&&mastered?'full':''}"></div>`).join('');
       return `<div class="vocab-row ${mastered?'mastered':''}">
-        <div class="vocab-de">${deColored(w)}</div>
+        <div class="vocab-de">${deColored(verbForms(w))}</div>
         <div class="vocab-ru">${esc(getTranslation(week,i))}</div>
         <button class="box-bar" onclick="resetWord(${week},${i})" title="${T('box_title', box)}">${segs}</button>
         <button class="mini-audio" onclick="speakWord(${week},${i},this)" title="Произношение">🔊</button>
@@ -484,9 +596,11 @@ function modeChip(mode,label){
   return `<button class="chip ${on?'on':''}" onclick="toggleMode('${mode}')"><span class="chip-check">${on?'✓':''}</span>${label}</button>`;
 }
 function toggleMode(mode){
-  // keep at least one mode on
-  const others = Object.keys(state.modes).filter(m=>m!==mode).some(m=>state.modes[m]);
-  if (state.modes[mode] && !others){ showToast(T('toast_at_least_one_mode')); return; }
+  // keep at least one SINGULAR mode on; the plural track is independent and toggles freely
+  if (mode !== 'plural'){
+    const others = ['flashcard','article','spelling'].filter(m=>m!==mode).some(m=>state.modes[m]);
+    if (state.modes[mode] && !others){ showToast(T('toast_at_least_one_mode')); return; }
+  }
   state.modes[mode] = !state.modes[mode]; save(); render();
 }
 function levelChip(lvl){
@@ -513,17 +627,22 @@ function renderSession(){
   if (s.pos >= s.queue.length){ renderEnd(); return; }
   const card = s.queue[s.pos];
   const progress = (s.pos / s.queue.length) * 100;
-  const modeLabel = { flashcard: T('mode_flashcard'), article: T('mode_article').split(' ')[0], spelling: T('mode_spelling').split(' ')[0] }[card.mode];
+  const modeLabel = { flashcard: T('mode_flashcard'), article: T('mode_article').split(' ')[0], spelling: T('mode_spelling').split(' ')[0],
+                      pl_flash: T('mode_plural'), pl_choose: T('mode_plural'), pl_input: T('mode_plural') }[card.mode];
+  const badgeClass = card.kind === 'plural' ? 'plural' : card.mode;
 
   let bodyHtml = '';
   if (card.mode === 'flashcard') bodyHtml = renderFlashcard(card, s);
   else if (card.mode === 'article') bodyHtml = renderArticle(card, s);
-  else bodyHtml = renderSpelling(card, s);
+  else if (card.mode === 'spelling') bodyHtml = renderSpelling(card, s);
+  else if (card.mode === 'pl_flash') bodyHtml = renderPluralFlash(card, s);
+  else if (card.mode === 'pl_choose') bodyHtml = renderPluralChoose(card, s);
+  else bodyHtml = renderPluralInput(card, s);
 
   document.getElementById('app').innerHTML = `
 <div class="session-bg">
   <div class="session-top"><div class="container session-top-row">
-    <span class="session-mode-badge ${card.mode}">${modeLabel}</span>
+    <span class="session-mode-badge ${badgeClass}">${modeLabel}</span>
     <span class="session-counter">${s.pos+1} / ${s.queue.length}${s.scope.type==='review-all'? T('session_review') : T('session_week', s.scope.week)}</span>
     <button class="session-close" onclick="closeSession()">×</button>
   </div>
@@ -532,7 +651,7 @@ function renderSession(){
   <div class="session-body"><div class="card">${bodyHtml}</div></div>
 </div>`;
 
-  if (card.mode === 'spelling' && !s.answered){
+  if ((card.mode === 'spelling' || card.mode === 'pl_input') && !s.answered){
     setTimeout(()=>{ const inp = document.getElementById('spellInput'); if (inp){ inp.focus(); inp.value = s.spellValue||''; } }, 30);
   }
 }
@@ -541,7 +660,7 @@ function renderFlashcard(card, s){
   return `
     <div class="card-prompt-label">${T('flashcard_prompt')}</div>
     <button class="audio-btn" id="cardAudio" onclick="speakWord(${card.week},${card.idx},this)">🔊</button>
-    <div class="card-word">${deColored(card.de)}</div>
+    <div class="card-word">${deColored(verbForms(card.de))}</div>
     <div class="card-sub">${s.revealed ? esc(card.ru) : '&nbsp;'}</div>
     <div class="card-actions">
       ${!s.revealed
@@ -624,6 +743,123 @@ function renderSpelling(card, s){
     `}`;
 }
 
+/* ==========================================================================
+   PLURAL TRAINER RENDER (3 rotating modes: reveal / choose / type)
+   ========================================================================== */
+function renderPluralFlash(card, s){
+  return `
+    <div class="card-prompt-label">${T('plural_flash_prompt')}</div>
+    <div class="card-word">${deColored(card.de)}</div>
+    <div class="card-sub">${esc(card.ru)}</div>
+    <div class="card-word" style="font-size:40px;margin-top:6px">${s.revealed ? deColored(card.pl) : '&nbsp;'}</div>
+    ${s.revealed ? `<button class="audio-btn" id="cardAudio" onclick="speakPlural(${card.week},${card.idx},this)" style="margin-top:6px">🔊</button>` : ''}
+    <div class="card-actions">
+      ${!s.revealed
+        ? `<button class="reveal-btn" onclick="revealPlural()">${T('plural_show')}</button>`
+        : `<button class="mark wrong" onclick="answer(false)">${T('flashcard_wrong')}</button>
+           <button class="mark right" onclick="answer(true)">${T('flashcard_right')}</button>`}
+    </div>
+    <div class="kbd-hint">${T('flashcard_hint')}</div>`;
+}
+function revealPlural(){
+  state.session.revealed = true;
+  render();
+  const card = state.session.queue[state.session.pos];
+  setTimeout(()=>{ const b = document.getElementById('cardAudio'); speakPlural(card.week, card.idx, b); }, 120);
+}
+
+function renderPluralChoose(card, s){
+  const correct = card.pl;
+  const btns = card.options.map((opt,i)=>{
+    let cls = 'pl-btn';
+    if (s.answered){
+      if (i === s.chosenPlIdx){ cls += (opt === correct) ? ' chosen-correct' : ' chosen-wrong'; }
+      else if (opt === correct){ cls += ' reveal-correct'; }
+    }
+    return `<button class="${cls}" ${s.answered?'disabled':''} onclick="choosePlural(${i})">${deColored(opt)}</button>`;
+  }).join('');
+  return `
+    <div class="card-prompt-label">${T('plural_choose_prompt')}</div>
+    <div class="card-word">${deColored(card.de)}</div>
+    <div class="card-sub">${esc(card.ru)}</div>
+    <div class="pl-opts">${btns}</div>
+    ${s.answered ? `
+      <div class="feedback ${s.lastCorrect?'ok':'bad'}">
+        ${s.lastCorrect ? T('article_correct') : T('article_wrong')} <span class="correct-answer">${deColored(correct)}</span>
+      </div>
+      <button class="audio-btn" id="cardAudio" onclick="speakPlural(${card.week},${card.idx},this)" style="margin-top:8px">🔊</button>
+      <div class="card-actions"><button class="next-btn" onclick="nextCard()">${T('article_next')}</button></div>
+      <div class="kbd-hint">${T('article_hint_next')}</div>
+    ` : `<div class="kbd-hint">1 · 2 · 3</div>`}`;
+}
+function choosePlural(i){
+  const s = state.session; if (s.answered) return;
+  const card = s.queue[s.pos];
+  if (i < 0 || i >= card.options.length) return;
+  s.chosenPlIdx = i;
+  answer(card.options[i] === card.pl);
+}
+
+function renderPluralInput(card, s){
+  let answeredBlock = '';
+  if (s.answered){
+    const userRaw = (s.spellValue || '').trim();
+    if (s.spellCorrect){
+      answeredBlock = `
+        <div class="feedback ok">${T('spelling_correct')} <span class="correct-answer">${deColored(card.pl)}</span>
+          ${s.spellNote ? '<br><span class="spell-note">'+s.spellNote+'</span>' : ''}
+        </div>`;
+    } else {
+      const d = diffChars(userRaw, card.pl);
+      const userShow = userRaw ? `<span class="cmp-val">${d.aHtml}</span>` : `<span class="spell-empty">${T('spelling_empty')}</span>`;
+      answeredBlock = `
+        <div class="spell-compare">
+          <div class="cmp-row"><span class="cmp-label">${T('spelling_your')}</span>${userShow}</div>
+          <div class="cmp-row"><span class="cmp-label">${T('spelling_right_ans')}</span><span class="cmp-val">${d.bHtml}</span></div>
+          <div class="cmp-ru">${esc(card.ru)}</div>
+        </div>`;
+    }
+  }
+  return `
+    <div class="card-prompt-label">${T('plural_input_prompt')}</div>
+    <div class="card-word">${deColored(card.de)}</div>
+    <div class="card-sub">${esc(card.ru)}</div>
+    <div><input class="spell-input ${s.answered ? (s.spellCorrect?'correct':'wrong') : ''}" id="spellInput"
+      autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
+      ${s.answered ? `disabled value="${esc(s.spellValue||'')}"` : ''} placeholder="die …"
+      onkeydown="if(event.key==='Enter'){event.preventDefault(); ${s.answered?'nextCard()':'submitPluralInput()'}}"></div>
+    ${s.answered ? `
+      ${answeredBlock}
+      <button class="audio-btn" id="cardAudio" onclick="speakPlural(${card.week},${card.idx},this)" style="margin-top:8px">🔊</button>
+      <div class="card-actions"><button class="next-btn" onclick="nextCard()">${T('spelling_next')}</button></div>
+    ` : `
+      <div class="card-actions"><button class="reveal-btn" onclick="submitPluralInput()">${T('spelling_check')}</button></div>
+      <div class="kbd-hint">${T('spelling_accept_hint')}</div>
+    `}`;
+}
+function submitPluralInput(){
+  const s = state.session; if (!s || s.answered) return;
+  const card = s.queue[s.pos];
+  const inp = document.getElementById('spellInput');
+  const val = inp ? inp.value : '';
+  s.spellValue = val;
+  const u = normalize(val);
+  const full = normalize(card.pl);
+  const art = parseArticle(card.pl); // plural article is always "die"
+  let correct = false, note = '';
+  if (u === full){ correct = true; }
+  else if (art){
+    const core = normalize(art.core);
+    const noArt = u.replace(/^(der|die|das)\s+/,'');
+    if (noArt === core){
+      if (u === core){ correct = true; note = T('note_almost', `<span class="correct-answer">${art.article}</span>`); } // forgot article
+      else { correct = false; note = T('note_core_correct'); }                                                       // wrong article
+    }
+  }
+  s.spellCorrect = correct; s.spellNote = note;
+  answer(correct);
+}
+
 function renderEnd(){
   const s = state.session;
   const pct = s.uniqueTotal ? Math.round(s.uniqueRight / s.uniqueTotal * 100) : 0;
@@ -663,6 +899,14 @@ document.addEventListener('keydown', e=>{
     if (s.answered){ if (e.key==='Enter') nextCard(); }
     else { if (e.key==='1') chooseArticle('der'); else if (e.key==='2') chooseArticle('die'); else if (e.key==='3') chooseArticle('das'); }
   } else if (card.mode === 'spelling'){
+    if (s.answered && e.key==='Enter') nextCard();
+  } else if (card.mode === 'pl_flash'){
+    if (e.key === ' '){ e.preventDefault(); if(!s.revealed) revealPlural(); }
+    else if (s.revealed){ if (e.key==='1'||e.key==='ArrowLeft') answer(false); else if (e.key==='2'||e.key==='ArrowRight') answer(true); }
+  } else if (card.mode === 'pl_choose'){
+    if (s.answered){ if (e.key==='Enter') nextCard(); }
+    else { const n = parseInt(e.key,10); if (!isNaN(n) && n>=1 && n<=card.options.length) choosePlural(n-1); }
+  } else if (card.mode === 'pl_input'){
     if (s.answered && e.key==='Enter') nextCard();
   }
 });

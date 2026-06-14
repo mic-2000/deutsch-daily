@@ -15,8 +15,9 @@ and a built-in AI tutor:
 
 1. **Planner** (`/planner`) — one study day = one main task (118 days total).
    Contains a **built-in AI tutor chat** (Gemini) and a clipboard-copy button for the day plan.
-2. **Vocabulary trainer** (`/vocab`) — 504 words across 24 weekly sets, three exercise modes
-   mixed together, Leitner spaced repetition, and text-to-speech.
+2. **Vocabulary trainer** (`/vocab`) — 504 words across 24 weekly sets, four exercise modes
+   mixed together (the fourth, **plural**, is an opt-in second Leitner track for nouns), Leitner
+   spaced repetition, and text-to-speech.
 3. **Verb trainer** (`/verbs`) — drills 306 irregular verbs (three Stammformen) in cloze,
    triad-flashcard, and table modes; mastery is shared with the vocabulary page.
 4. **AI Lehrer chat** — the planner has a built-in Gemini chat per study day. The user clicks
@@ -360,7 +361,7 @@ single table, `public.progress`, one row per user (confirmed schema):
 | --- | --- | --- | --- | --- | --- |
 | `user_id` | `uuid` | NO | — | upserts (conflict key) | `session.user.id` — PK, FK → `auth.users(id)` |
 | `planner_data` | `jsonb` | yes | `'{}'::jsonb` | planner `getCloudPayload()` | `{ currentDay, viewingDay, completed }` |
-| `vocab_data` | `jsonb` | yes | `'{}'::jsonb` | vocab `getCloudPayload()` → `serialize()` | `{ app, version:2, savedAt, selectedWeek, modes, levels, mastery }` |
+| `vocab_data` | `jsonb` | yes | `'{}'::jsonb` | vocab `getCloudPayload()` → `serialize()` | `{ app, version:2, savedAt, selectedWeek, modes, levels, mastery, pluralMastery }` |
 | `verbs_data` | `jsonb` | yes | `'{}'::jsonb` | verbs `getCloudPayload()` **and** vocab `saveVerbStore()` | `{ app, version, savedAt, modes, sel, mastery }` — `mastery` keyed by **verb key**; `sel` = saved training selection |
 | `lang` | `text` | yes | `'en'::text` | `saveLangToCloud` | `'ru' \| 'ua' \| 'en'` |
 | `theme` | `text` | yes | — | `saveThemeToCloud` | `'light' \| 'dark'` |
@@ -519,7 +520,11 @@ const VOCAB = {
   from the project's earlier `[de, ru]`-pair format.
 - Nouns are stored **with their article**: `"der Vater"`.
 - Some week-5 verbs carry the Perfekt form after an em dash: `"gehen — gegangen (sein)"`. Speech
-  uses only the part before `—` (see `speakWord`).
+  uses only the part before `—` (see `speakWord`). Any vocab word that is a known `VERBS` key is
+  rendered with all three principal parts via `verbForms` (see §9), in every week.
+- `PLURALS` (same file) — a German-only `{ "der Vater": "die Väter" }`-style map (keyed by the
+  exact singular string, incl. its article) feeding the opt-in **plural** trainer mode. Not
+  index-aligned to locales; nouns without an entry simply get no plural card. (See §9.)
 
 ### `data/verbs.js` — global `VERBS` (master verb dictionary)
 
@@ -644,15 +649,17 @@ headings (`#`–`####`), horizontal rules (`---`), unordered/ordered lists, GFM 
 let state = {
   selectedWeek: 1,
   mastery: {},          // { "week-idx": {box,due,right,wrong,seen} } — non-verb words
-  modes: { flashcard:true, article:true, spelling:true },
+  pluralMastery: {},    // { "week-idx": {...} } — SEPARATE Leitner track for noun plurals
+  modes: { flashcard:true, article:true, spelling:true, plural:false },
   levels: { A1:false, A2:false, B1:false },  // CEFR level filter (A1=wks1-8, A2=9-16, B1=17-24)
   session: null,
   confirm: null
 };
 let verbStore = { mastery: {} };  // shared verb mastery, separate from state.mastery
 ```
-- `serialize()` → `{ app, version:2, savedAt, selectedWeek, modes, levels, mastery }`. `applyData(d)`
-  validates and applies; `verbStore` is handled separately via `applyVerbProgress`.
+- `serialize()` → `{ app, version:2, savedAt, selectedWeek, modes, levels, mastery, pluralMastery }`.
+  `applyData(d)` validates and applies (tolerates an old payload with no `pluralMastery`);
+  `verbStore` is handled separately via `applyVerbProgress`.
 - `save()` → `saveToCloud()`. `verbStore` is written via `saveVerbsToCloud(verbStore)` whenever
   a verb card is answered.
 
@@ -686,6 +693,25 @@ across the vocabulary and verb trainer pages.
   from `utils.js`. A missing article is accepted correct with a note. On error, `diffChars` LCS
   highlights wrong chars (`diff-bad`) and missing chars (`diff-miss`), case-insensitively.
 
+### Three-form verb display (`verbForms`)
+Any word that is a known **`VERBS`** key is shown with all THREE principal parts —
+`Infinitiv — Präteritum — Partizip II` (+ `(sein)` for sein-auxiliary verbs) — in the word list
+and the flashcard, in **every** week. Forms are pulled live from `VERBS` (the dash suffix of a
+week-5 `"Infinitiv — Partizip II"` entry is dropped before lookup). The stored `VOCAB` string is
+NOT mutated, so `verbKeyForWord()` / `speakWord()` still read the infinitive. Non-verbs and unknown
+verbs are returned unchanged.
+
+### Plural trainer (4th mode — opt-in)
+The **plural** chip turns on an INDEPENDENT second Leitner track (`state.pluralMastery`, keyed by
+the same `"week-idx"`) so learning a noun's plural is tracked separately from its meaning. Plural
+forms live in the German-only **`PLURALS`** map (`data/vocab.js`), keyed by the exact singular
+string; a noun only gets a plural card when it has an entry. When on, due/new plural cards are mixed
+into the session (`collectPluralCards`) and counted in the "due" stat. Three sub-modes rotate by
+box via `pickPluralMode`: **pl_flash** (reveal → self-grade), **pl_choose** (pick the right plural
+from morphologically-generated distractors — `makePluralOptions` / `pluralDistractors` / `umlautify`),
+**pl_input** (type `die …`). The plural chip toggles freely (the "keep ≥1 mode" rule only governs
+the three singular modes).
+
 ### Session (a training run)
 `startSession(scope)`:
 
@@ -695,9 +721,10 @@ across the vocabulary and verb trainer pages.
 | `'levels'` | Due/new words across the selected CEFR levels; up to 20 new per multi-level run |
 | `'review-all'` | All weeks: `seen>0 && !mastered && due<=now` |
 
-Queue is shuffled and capped at **25 cards**. `answer(correct)` → `updateCard`. A wrong card is
-re-queued **once** at the end as an easier flashcard. Flashcards advance immediately;
-article/spelling wait for "Next". `uniqueRight / uniqueTotal` → first-try score on end screen.
+Queue is shuffled and capped at **25 cards**. `answer(correct)` → `updateCard` (or `updatePlural`
+for plural cards). A wrong card is re-queued **once** at the end as an easier reveal card of the
+same track. Flashcards advance immediately; article/spelling/plural-choose/plural-input wait for
+"Next". `uniqueRight / uniqueTotal` → first-try score on end screen.
 
 ### Progress portability
 - **Cloud** (Supabase) is the live store.

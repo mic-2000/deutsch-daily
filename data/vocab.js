@@ -161,3 +161,96 @@ const VOCAB = {
     "Da bin ich anderer Meinung","Das sehe ich genauso","Das stimmt zwar, aber…","Es kommt darauf an"
   ]},
 };
+
+/* PLURALS — plural form for the countable nouns above, keyed by the EXACT singular string used in
+   VOCAB (incl. its article). German-only (no locale alignment needed). Uncountable, plural-only and
+   ambiguous nouns are intentionally omitted — the plural trainer only offers a card when a key
+   exists here. Edit this table if a base word changes. */
+const PLURALS = {
+  // 1 — Begrüßung, Familie
+  "die Familie": "die Familien", "der Vater": "die Väter", "die Mutter": "die Mütter",
+  "der Sohn": "die Söhne", "die Tochter": "die Töchter", "der Bruder": "die Brüder",
+  "die Schwester": "die Schwestern", "der Großvater": "die Großväter", "die Großmutter": "die Großmütter",
+  "der Onkel": "die Onkel", "die Tante": "die Tanten", "das Kind": "die Kinder",
+  "der Mann": "die Männer", "die Frau": "die Frauen", "der Junge": "die Jungen",
+  "das Mädchen": "die Mädchen", "das Jahr": "die Jahre",
+  // 2 — Lebensmittel
+  "das Brot": "die Brote", "das Ei": "die Eier", "der Fisch": "die Fische",
+  "der Apfel": "die Äpfel", "die Banane": "die Bananen", "die Tomate": "die Tomaten",
+  "die Kartoffel": "die Kartoffeln", "die Zwiebel": "die Zwiebeln", "der Saft": "die Säfte",
+  "das Bier": "die Biere", "der Wein": "die Weine", "der Kuchen": "die Kuchen",
+  "der Supermarkt": "die Supermärkte", "die Bäckerei": "die Bäckereien", "der Markt": "die Märkte",
+  "der Preis": "die Preise", "das Kilo": "die Kilo", "die Flasche": "die Flaschen",
+  // 3 — Hobbys, Freizeit
+  "das Hobby": "die Hobbys", "das Buch": "die Bücher", "der Film": "die Filme",
+  "das Konzert": "die Konzerte", "das Museum": "die Museen", "das Restaurant": "die Restaurants",
+  "das Café": "die Cafés", "der Park": "die Parks",
+  // 4 — Wohnen, Möbel
+  "das Haus": "die Häuser", "die Wohnung": "die Wohnungen", "das Zimmer": "die Zimmer",
+  "das Schlafzimmer": "die Schlafzimmer", "das Wohnzimmer": "die Wohnzimmer", "die Küche": "die Küchen",
+  "das Bad": "die Bäder", "der Balkon": "die Balkone", "der Flur": "die Flure",
+  "der Garten": "die Gärten", "die Tür": "die Türen", "das Fenster": "die Fenster",
+  "die Wand": "die Wände", "der Tisch": "die Tische", "der Stuhl": "die Stühle",
+  "das Sofa": "die Sofas", "der Sessel": "die Sessel", "das Bett": "die Betten",
+  "der Schrank": "die Schränke", "das Regal": "die Regale", "der Teppich": "die Teppiche",
+  "die Lampe": "die Lampen", "das Bild": "die Bilder", "der Kühlschrank": "die Kühlschränke",
+  "der Herd": "die Herde", "der Fernseher": "die Fernseher", "die Miete": "die Mieten",
+  // 5 — Tagesablauf (nouns)
+  "der Morgen": "die Morgen", "der Abend": "die Abende",
+  // 6 — Verkehr, Reise
+  "das Auto": "die Autos", "der Bus": "die Busse", "die U-Bahn": "die U-Bahnen",
+  "die S-Bahn": "die S-Bahnen", "die Straßenbahn": "die Straßenbahnen", "das Fahrrad": "die Fahrräder",
+  "der Zug": "die Züge", "das Flugzeug": "die Flugzeuge", "das Taxi": "die Taxis",
+  "die Haltestelle": "die Haltestellen", "der Bahnhof": "die Bahnhöfe", "der Flughafen": "die Flughäfen",
+  "die Fahrkarte": "die Fahrkarten", "die Reise": "die Reisen", "das Hotel": "die Hotels",
+  "der Koffer": "die Koffer", "der Rucksack": "die Rucksäcke",
+  // 7 — Stadt
+  "die Stadt": "die Städte", "das Dorf": "die Dörfer", "die Straße": "die Straßen",
+  "der Platz": "die Plätze", "die Kreuzung": "die Kreuzungen", "die Ampel": "die Ampeln",
+  "die Brücke": "die Brücken", "das Krankenhaus": "die Krankenhäuser", "die Apotheke": "die Apotheken",
+  "die Bank": "die Banken", "die Kirche": "die Kirchen", "das Rathaus": "die Rathäuser",
+  // 9 — Biografie (nouns)
+  "die Biografie": "die Biografien", "das Leben": "die Leben", "der Beruf": "die Berufe",
+  // 10 — Schule, Arbeit
+  "die Schule": "die Schulen", "der Schüler": "die Schüler", "der Lehrer": "die Lehrer",
+  "die Universität": "die Universitäten", "der Student": "die Studenten", "das Studium": "die Studien",
+  "das Fach": "die Fächer", "die Note": "die Noten", "die Prüfung": "die Prüfungen",
+  "der Job": "die Jobs", "die Stelle": "die Stellen", "der Chef": "die Chefs",
+  "der Kollege": "die Kollegen", "das Gehalt": "die Gehälter", "die Karriere": "die Karrieren",
+  "der Erfolg": "die Erfolge", "der Lebenslauf": "die Lebensläufe", "das Praktikum": "die Praktika",
+  // 11 — Charakter (nouns)
+  "der Charakter": "die Charaktere",
+  // 12 — Meinung (nouns)
+  "der Grund": "die Gründe", "der Vorteil": "die Vorteile", "der Nachteil": "die Nachteile",
+  "das Beispiel": "die Beispiele",
+  // 13 — Emotionen (nouns)
+  "die Erinnerung": "die Erinnerungen",
+  // 14 — Familie erweitert
+  "der Schwager": "die Schwäger", "die Schwägerin": "die Schwägerinnen", "der Schwiegervater": "die Schwiegerväter",
+  "die Schwiegermutter": "die Schwiegermütter", "der Enkel": "die Enkel", "die Enkelin": "die Enkelinnen",
+  "der Neffe": "die Neffen", "die Nichte": "die Nichten", "der Nachbar": "die Nachbarn",
+  // 16 — Kleidung
+  "das Hemd": "die Hemden", "die Hose": "die Hosen", "der Rock": "die Röcke",
+  "das Kleid": "die Kleider", "die Jacke": "die Jacken", "der Mantel": "die Mäntel",
+  "der Schuh": "die Schuhe", "die Socke": "die Socken", "der Hut": "die Hüte",
+  "die Mütze": "die Mützen", "der Schal": "die Schals", "der Stoff": "die Stoffe",
+  "die Farbe": "die Farben",
+  // 18 — Prozesse (nouns)
+  "der Prozess": "die Prozesse", "die Anweisung": "die Anweisungen", "die Anleitung": "die Anleitungen",
+  // 19 — Konjunktiv II (nouns)
+  "der Wunsch": "die Wünsche", "der Vorschlag": "die Vorschläge",
+  // 20 — Berufe
+  "der Arzt": "die Ärzte", "die Krankenschwester": "die Krankenschwestern", "der Ingenieur": "die Ingenieure",
+  "der Anwalt": "die Anwälte", "der Richter": "die Richter", "der Architekt": "die Architekten",
+  "der Journalist": "die Journalisten", "der Übersetzer": "die Übersetzer", "der Verkäufer": "die Verkäufer",
+  "der Kunde": "die Kunden", "der Mitarbeiter": "die Mitarbeiter", "der Vorgesetzte": "die Vorgesetzten",
+  // 21 — Medien, Politik
+  "die Zeitung": "die Zeitungen", "die Zeitschrift": "die Zeitschriften", "der Artikel": "die Artikel",
+  "die Sendung": "die Sendungen", "die Regierung": "die Regierungen", "die Wahl": "die Wahlen",
+  "die Partei": "die Parteien", "der Politiker": "die Politiker", "das Gesetz": "die Gesetze",
+  "die Demokratie": "die Demokratien", "die Gesellschaft": "die Gesellschaften", "die Krise": "die Krisen",
+  // 23 — B1 Wortschatz (nouns)
+  "die Gelegenheit": "die Gelegenheiten", "die Bedeutung": "die Bedeutungen", "der Unterschied": "die Unterschiede",
+  "die Auswirkung": "die Auswirkungen", "der Zusammenhang": "die Zusammenhänge", "der Eindruck": "die Eindrücke",
+  "die Notwendigkeit": "die Notwendigkeiten",
+};
