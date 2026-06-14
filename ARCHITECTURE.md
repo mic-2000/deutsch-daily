@@ -854,7 +854,7 @@ worth doing. Ordered roughly by impact.
 >   `lang_label`) — removed from all three locales; `auth_loading` was repurposed into `auth_subtitle`.
 > - **`index.html` hardcoded Russian** (page subtitle + "Загрузка…") — the subtitle now reads from
 >   `T('auth_subtitle')` in `render()` (so it follows the language switcher) and the loading text is
->   a neutral `…`; the page title is the language-neutral "Deutsch · Meinkurs".
+>   a neutral `…`; the page title is the language-neutral "Deutsch Daily".
 > - **Planner keyboard hijack** — `←/→`/`c` no longer fire while typing in the chat textarea or
 >   API-key input (the handler now bails on form fields and open modals).
 > - **Chat auto-scroll on navigation** — `render()` only follows the chat to the bottom while a turn
