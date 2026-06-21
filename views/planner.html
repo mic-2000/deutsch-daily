@@ -281,9 +281,10 @@ function renderAiSection(d) {
   // hidden; everything else is the follow-up chat. Old lessons (no flags) all fall through to chat.
   const pinned = msgs.filter(m => m.role === 'model' && m.pinned);
   const chat = msgs.filter(m => !m.seed && !(m.role === 'model' && m.pinned));
-  const pinnedHtml = pinned.length
-    ? `<div class="ai-rule-wrap"><div class="ai-rule-label">${T('ai_pinned_label')}</div>${pinned.map(m => `<div class="ai-rule">${renderMd(m.text)}</div>`).join('')}</div>`
-    : '';
+  const pinnedHtml = pinned.map(m => {
+    const label = m.kind === 'summary' ? T('today_summary_label') : T('ai_pinned_label');
+    return `<div class="ai-rule-wrap"><div class="ai-rule-label">${label}</div><div class="ai-rule">${renderMd(m.text)}</div></div>`;
+  }).join('');
   const msgsHtml = chat.map(m =>
     `<div class="ai-msg ${m.role === 'model' ? 'model' : 'user'}">${m.role === 'model' ? renderMd(m.text) : esc(m.text)}</div>`
   ).join('');

@@ -299,7 +299,9 @@ on `/today` without colliding on global names. The host wires them via `init(opt
 - `onSaveVocab` / `onSaveVerbs` (vocab) / `onSave` (verbs) — persistence callbacks. Default to the
   globals (`saveToCloud` / `saveVerbsToCloud`), so the standalone pages need no overrides; `/today`
   routes each to a single-column writer (`saveVocabToCloud` / `saveVerbsToCloud`).
-- `onSessionEnd` — embedded only; the flow's `nextStep`.
+- `onSessionEnd(summary)` — embedded only; called when a session finishes/closes, with
+  `summary = { right, total }` (the session's first-try score) so the host can record the result —
+  `/today` stores it in `flow.vocabResult` / `flow.verbResult` for the day summary, then advances.
 Cloud-contract helpers live on the engine (`serialize`, `applyData`, `applyVerbProgress`/`setVerbStore`
 on vocab; `serialize`, `applyData`, `setMasteryStore` on verbs); the thin host's
 `getCloudPayload`/`applyCloudData` delegate to them. `setVerbStore`/`setMasteryStore` let `/today`
@@ -1289,18 +1291,25 @@ model (`planner-data.js` — `getLocalizedDay(DAYS[currentDay-1])`).
 3. **verbs** — `VerbsTrainer.startSession({ type:'due' })` (repetition first); falls back to
    `{ type:'filter', filter:'all' }` (due + some new) when nothing is due.
 4. **ai** — an in-flow chat (reuses `gemini.js` / `ai-config.js` / `markdown.js` / `chat.css`),
-   **persisted** to the same `lessons` row the planner uses (one per user×day). If no Gemini key, it
-   nudges to `/settings` and offers **Skip**. Same `ai` state + `renderAiPanel()` as the grammar
-   panel, so it shows the breakdown done earlier plus any follow-ups.
+   **persisted** to the same `lessons` row the planner uses (one per user×day). On entry it
+   **auto-generates a "day summary"** (`maybeSummarize` → `askSummary`): a short recap pinned on top —
+   grammar takeaways + the word/verb session results (`flow.vocabResult` / `flow.verbResult`, captured
+   from each engine's `onSessionEnd(summary)`), via `today_summary_req` + `today_summary_data`. It's
+   generated once and persisted, so revisiting the day (or no key) doesn't regenerate. Below the
+   pinned blocks, the same `ai` thread (`renderAiPanel()`) lets the student ask follow-ups. If no key,
+   it nudges to `/settings` and offers **Skip**.
 5. **done** — marks `planner_data.completed[day] = true`, advances `currentDay` (when finishing the
-   current day), persists via `saveToCloud`, and shows the completion screen → "Open the planner".
+   current day), persists via `saveToCloud`, and shows the completion screen with a small
+   no-AI **day stats** block (words / verbs first-try score from `flow.vocabResult`/`flow.verbResult`)
+   → "Open the planner".
 
-**Pinned explanation + follow-up chat (shared with the planner).** A lesson's `messages` carry two
-optional flags: `seed:true` (the hidden prompt that elicits the explanation — the breakdown request
-on `/today`, the day-plan on `/planner`) and `pinned:true` (the **first** model reply = the day's
-explanation). Both `renderAiPanel()` (today) and the planner's `renderAiSection` render `pinned`
-messages as a highlighted **"topic breakdown"** block (`.ai-rule-wrap`, label `ai_pinned_label`) on
-top, hide `seed`, and show the rest as the follow-up chat below. Because both write the **same**
+**Pinned blocks + follow-up chat (shared with the planner).** A lesson's `messages` carry optional
+flags: `seed:true` (the hidden prompt that elicits a pinned reply — the breakdown request / day-plan /
+summary request), `pinned:true` (render on top, highlighted), and `kind` (`'explanation'` → label
+`ai_pinned_label` "Topic breakdown"; `'summary'` → label `today_summary_label` "Day summary"). Both
+`renderAiPanel()` (today) and the planner's `renderAiSection` render each `pinned` message as its own
+`.ai-rule-wrap` block (labelled by `kind`) on top, hide `seed`, and show the rest as the follow-up
+chat below. Because both write the **same**
 `lessons` row, the user can study a day on `/today` and later revisit/refresh it from `/planner` (any
 day) — and vice-versa. Old lessons (no flags) fall through to plain chat, so the change is backward
 compatible. `/today` loads the day's row via `loadDayLesson` (reusing `loadLessonsFromCloud`) when the

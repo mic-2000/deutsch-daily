@@ -87,8 +87,8 @@ function applyVerbProgress(d){ VerbsTrainer.applyData(d && typeof d === 'object'
 /* ---- engine persistence hooks (three independent columns) ---- */
 function saveVerbsNow(){ if (typeof saveVerbsToCloud === 'function') saveVerbsToCloud(VerbsTrainer.serialize()); }
 function saveVocabNow(){ if (typeof saveVocabToCloud === 'function') saveVocabToCloud(VocabTrainer.serialize()); }
-VocabTrainer.init({ embedded: true, onSessionEnd: nextStep, onSaveVocab: saveVocabNow, onSaveVerbs: saveVerbsNow });
-VerbsTrainer.init({ embedded: true, onSessionEnd: nextStep, onSave: saveVerbsNow });
+VocabTrainer.init({ embedded: true, onSessionEnd: (r) => { flow.vocabResult = r; nextStep(); }, onSaveVocab: saveVocabNow, onSaveVerbs: saveVerbsNow });
+VerbsTrainer.init({ embedded: true, onSessionEnd: (r) => { flow.verbResult = r; nextStep(); }, onSave: saveVerbsNow });
 
 /* ==========================================================================
    FLOW
@@ -104,7 +104,7 @@ function startFlow(){
   if (dayOf() > TOTAL_DAYS) return;
   ai = { messages: [], loading: false };
   grammarExplain = false;
-  flow = { running: true, step: 0, day: dayOf() };
+  flow = { running: true, step: 0, day: dayOf(), vocabResult: null, verbResult: null };
   renderStep();
   loadDayLesson(flow.day);   // pull any saved explanation/chat for this day (shared with the planner)
 }
@@ -127,7 +127,7 @@ function renderStep(){
   if (step === 'grammar') renderGrammar();
   else if (step === 'vocab') startVocabStep();
   else if (step === 'verbs') startVerbsStep();
-  else if (step === 'ai') renderAi();
+  else if (step === 'ai') { renderAi(); maybeSummarize(); }
   else renderDone();
 }
 function startVocabStep(){
@@ -202,9 +202,10 @@ function renderAiPanel(){
   }
   const pinned = ai.messages.filter(m => m.role === 'model' && m.pinned);
   const chat = ai.messages.filter(m => !m.seed && !(m.role === 'model' && m.pinned));
-  const pinnedHtml = pinned.length
-    ? `<div class="ai-rule-wrap"><div class="ai-rule-label">${T('ai_pinned_label')}</div>${pinned.map(m => `<div class="ai-rule">${renderMd(m.text)}</div>`).join('')}</div>`
-    : '';
+  const pinnedHtml = pinned.map(m => {
+    const label = m.kind === 'summary' ? T('today_summary_label') : T('ai_pinned_label');
+    return `<div class="ai-rule-wrap"><div class="ai-rule-label">${label}</div><div class="ai-rule">${renderMd(m.text)}</div></div>`;
+  }).join('');
   const chatHtml = chat.map(m => m.role === 'model'
     ? `<div class="ai-msg model">${renderMd(m.text)}</div>`
     : `<div class="ai-msg user">${esc(m.text)}</div>`).join('');
@@ -238,14 +239,30 @@ function renderAi(){
   scrollAi();
 }
 /* Starter = the point-by-point breakdown (seed prompt is hidden); follow-ups are normal chat. */
-function askTopic(){ if (ai.loading) return; ai.messages.push({ role: 'user', text: dayBreakdownText(), seed: true }); runTodayTurn(); }
+function askTopic(){ if (ai.loading) return; ai.messages.push({ role: 'user', text: dayBreakdownText(), seed: true }); runTodayTurn({ pin: 'explanation' }); }
 function sendAi(){ const inp = document.getElementById('aiInput'); const t = inp ? inp.value.trim() : ''; if (!t || ai.loading) return; ai.messages.push({ role: 'user', text: t }); runTodayTurn(); }
-async function runTodayTurn(){
+
+/* On the AI step: auto-generate a once-per-day summary (grammar takeaways + word/verb results),
+   pinned at the top. Skipped if one already exists (loaded from the saved lesson) or no key. */
+function maybeSummarize(){
+  if ((typeof getGeminiKey === 'function') && getGeminiKey() && !ai.loading && !ai.messages.some(m => m.kind === 'summary')) askSummary();
+}
+function daySummaryRequest(){
+  const d = localizedToday();
+  const fmt = (r) => (r && r.total) ? `${r.right}/${r.total}` : '—';
+  return `${d.weekTheme}\n${d.grammar}\n\n${T('today_summary_data', fmt(flow.vocabResult), fmt(flow.verbResult))}\n\n${T('today_summary_req')}`;
+}
+function askSummary(){ if (ai.loading) return; ai.messages.push({ role: 'user', text: daySummaryRequest(), seed: true }); runTodayTurn({ pin: 'summary' }); }
+
+async function runTodayTurn(opts){
+  opts = opts || {};
   ai.loading = true; render();
   try {
     const reply = await geminiRequest(AI_MODEL_ID, getAiSystemPrompt(), ai.messages.map(m => ({ role: m.role, text: m.text })));
-    const pin = !ai.messages.some(m => m.role === 'model' && m.pinned);   // first reply = the explanation
-    ai.messages.push(pin ? { role: 'model', text: reply, pinned: true } : { role: 'model', text: reply });
+    const msg = { role: 'model', text: reply };
+    if (opts.pin) { msg.pinned = true; msg.kind = opts.pin; }                                 // explanation or summary
+    else if (!ai.messages.some(m => m.role === 'model' && m.pinned)) { msg.pinned = true; msg.kind = 'explanation'; }
+    ai.messages.push(msg);
     if (typeof saveLessonToCloud === 'function') saveLessonToCloud(flow.day, ai.messages);   // shared with the planner
   } catch (e) { showToast((e && e.message) || 'AI error'); }
   ai.loading = false; render();
@@ -259,11 +276,19 @@ function renderDone(){
     if (day === planner.currentDay && planner.currentDay < TOTAL_DAYS) planner.currentDay = day + 1;
     saveToCloud();
   }
+  const fmt = (r) => (r && r.total) ? `${r.right}<span class="done-stat-of">/${r.total}</span>` : '—';
+  const stats = (flow.vocabResult || flow.verbResult) ? `
+  <div class="done-stats">
+    <div class="done-stat"><div class="done-stat-label">${T('today_done_words')}</div><div class="done-stat-val num">${fmt(flow.vocabResult)}</div></div>
+    <div class="done-stat"><div class="done-stat-label">${T('today_done_verbs')}</div><div class="done-stat-val num">${fmt(flow.verbResult)}</div></div>
+    <div class="done-stat-note">${T('today_done_score')}</div>
+  </div>` : '';
   document.getElementById('app').innerHTML = flowHeader() + `
 <main class="container flow-body"><div class="flow-done">
   <div class="done-mark">✓</div>
   <h2>${T('today_done_title')}</h2>
   <p>${T('today_done_msg')}</p>
+  ${stats}
   <div class="flow-actions"><a class="btn accent big" href="/planner">${T('today_done_to_planner')}</a></div>
   <button class="restart" onclick="startFlow()">↻ ${T('today_restart_day')}</button>
 </div></main>`;

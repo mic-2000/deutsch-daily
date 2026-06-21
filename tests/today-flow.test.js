@@ -102,6 +102,33 @@ test('a saved lesson loads with the explanation pinned on top and the seed hidde
   assert.ok(!html.includes('HIDDEN_SEED_PROMPT'), 'seed prompt is NOT displayed');
 });
 
+test('the AI step shows the day summary pinned (own label) alongside the topic breakdown', async () => {
+  const rows = [{ day: 1, messages: [
+    { role: 'user', text: 'seedA', seed: true },
+    { role: 'model', text: 'GRAMMAR EXPLANATION', pinned: true, kind: 'explanation' },
+    { role: 'user', text: 'seedB', seed: true },
+    { role: 'model', text: 'DAY SUMMARY TEXT', pinned: true, kind: 'summary' },
+  ] }];
+  const t = loadPage({
+    page: 'today.html', extraFiles: ['locales/en.js'],
+    exports: ['startFlow', 'nextStep', 'VocabTrainer', 'VerbsTrainer'],
+    shims: { localStorage: keyStore(), loadLessonsFromCloud: async () => rows, saveLessonToCloud: async () => {} },
+  });
+  t.startFlow();
+  await new Promise((r) => setImmediate(r));   // loadDayLesson settles
+  t.nextStep();                                // grammar → vocab session
+  t.VocabTrainer.closeSession();               // → verb session (onSessionEnd advances)
+  t.VerbsTrainer.closeSession();               // → AI step (renderAi + maybeSummarize)
+  await new Promise((r) => setImmediate(r));
+  const html = t.app.innerHTML;
+  assert.match(html, /Day summary/, 'summary block uses its own label');
+  assert.match(html, /DAY SUMMARY TEXT/);
+  assert.match(html, /Topic breakdown/, 'the topic breakdown is still pinned too');
+  assert.match(html, /GRAMMAR EXPLANATION/);
+  // a saved summary must NOT be regenerated (no thinking indicator left hanging)
+  assert.ok(!html.includes('seedA') && !html.includes('seedB'), 'seed prompts hidden');
+});
+
 test('planner: a pinned reply renders highlighted and the seed prompt is hidden', () => {
   const p = loadPage({
     page: 'planner.html', extraFiles: ['locales/en.js'], exports: ['render', 'state', 'lessonsCache'],

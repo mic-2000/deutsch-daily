@@ -152,9 +152,11 @@ window.VerbsTrainer = (function () {
     setTimeout(() => { const inp = document.getElementById('vInput'); if (inp) inp.focus(); }, 50);
   }
   function closeSession() {
+    const s = state.session;
+    const summary = s ? { right: s.uniqueRight || 0, total: s.uniqueTotal || 0 } : null;
     if (window.speechSynthesis) window.speechSynthesis.cancel();
     state.session = null;
-    if (cfg.embedded && typeof cfg.onSessionEnd === 'function') cfg.onSessionEnd();
+    if (cfg.embedded && typeof cfg.onSessionEnd === 'function') cfg.onSessionEnd(summary);
     else render();
   }
 
