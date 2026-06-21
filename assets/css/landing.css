@@ -4,7 +4,9 @@
    layout, the editorial hero, and the decorative animations live here. */
 
 .lp { background: var(--paper); color: var(--ink); min-height: 100vh; }
-.lp a { color: inherit; }
+/* NB: no blanket `.lp a { color: inherit }` — it would out-specify the single-class
+   button rules (.lp-btn-solid etc.) and repaint their labels with the inherited --ink,
+   giving dark-on-dark text. Every anchor below sets its own colour instead. */
 
 /* ---------- animations (lp- prefixed to avoid collisions) ---------- */
 @keyframes lpFloat { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-9px); } }
@@ -30,7 +32,7 @@
   max-width: var(--page-max); margin: 0 auto; padding: 12px 24px;
   display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;
 }
-.lp-brand { font-family: var(--serif); font-weight: 400; font-size: 20px; letter-spacing: -0.01em; text-decoration: none; }
+.lp-brand { font-family: var(--serif); font-weight: 400; font-size: 20px; letter-spacing: -0.01em; text-decoration: none; color: var(--ink); }
 .lp-brand em { font-style: italic; color: var(--accent); }
 .lp-header-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .lp-header-actions .lang-switcher,

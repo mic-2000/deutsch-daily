@@ -8,8 +8,25 @@
 const LANG_NAMES = { en: 'EN', ua: 'UA', ru: 'RU' };
 const DEFAULT_LANG = 'en';
 
-let _lang = localStorage.getItem('ui_lang') || DEFAULT_LANG;
-if (!LANG_NAMES[_lang]) _lang = DEFAULT_LANG;
+/* First-run language: a previously saved choice always wins; otherwise fall back to the
+   browser's preferred language (Ukrainian's ISO code 'uk' maps to the app's 'ua'), and
+   finally to DEFAULT_LANG (en). The choice is only persisted once the user explicitly
+   switches (setLang) or it is synced from the cloud — detection never writes localStorage. */
+function detectLang() {
+  const saved = localStorage.getItem('ui_lang');
+  if (saved && LANG_NAMES[saved]) return saved;
+  const navs = (typeof navigator !== 'undefined')
+    ? (navigator.languages && navigator.languages.length ? navigator.languages : [navigator.language])
+    : [];
+  for (const raw of navs) {
+    const code = String(raw || '').toLowerCase().slice(0, 2);
+    if (code === 'uk') return 'ua';     // Ukrainian ISO 639-1 is 'uk'; the app uses 'ua'
+    if (LANG_NAMES[code]) return code;  // 'en' / 'ru' map directly
+  }
+  return DEFAULT_LANG;
+}
+
+let _lang = detectLang();
 if (typeof document !== 'undefined' && document.documentElement) document.documentElement.lang = _lang;
 
 const _localeLoads = {}; // code -> Promise (dedupes repeat/concurrent loads)

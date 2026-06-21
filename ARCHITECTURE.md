@@ -193,8 +193,12 @@ app pages. The legacy `auth.html` redirect stub was removed.
 ## 4. Shared modules (`assets/js/`)
 
 ### `i18n.js` — translation core (lazy locale loading)
-- `_lang` initialised from `localStorage['ui_lang']`, default `'en'` (`DEFAULT_LANG`). Valid:
-  `en`, `ua`, `ru`.
+- `_lang` initialised by `detectLang()` (valid: `en`, `ua`, `ru`): a saved `localStorage['ui_lang']`
+  always wins; otherwise the browser's preferred language is used (`navigator.languages` /
+  `navigator.language`, with Ukrainian's ISO code `uk` mapped to the app's `ua`); anything else
+  falls back to `'en'` (`DEFAULT_LANG`). Detection is read-only — it never writes `localStorage`; the
+  choice is persisted only when the user explicitly switches (`setLang`) or it is synced from the
+  cloud. (Guarded by `tests/i18n-detect.test.js`.)
 - `loadLocale(code)` — injects `/locales/<code>.js` once (root-absolute, so it resolves from
   `/views/*` too) and returns a cached Promise that resolves when `window.LOCALE_<CODE>` is set.
   This is how only the active language is fetched; nothing preloads all three. Pages **must
@@ -839,7 +843,10 @@ CSS custom properties on `:root`:
 ```
 
 Editorial/typographic aesthetic: large light (300) serif headings (Fraunces), Manrope body,
-minimal rounding, thin borders, tabular numerals (`.num`). **Container width is unified:** every
+minimal rounding, thin borders, tabular numerals (`.num`). The Google-Fonts `<link>` (identical on
+all pages) loads **both the upright and italic Fraunces axes** (`ital,opsz,wght@0,…;1,…`) so the
+italic serif (subtitles, `<em>` accents, the landing's headings) renders as true Fraunces italic
+rather than a browser-synthesised slant. **Container width is unified:** every
 app page uses one `--page-max: 920px` token — `.container { max-width: var(--page-max) }` in
 `base.css`. The old per-page overrides (planner 820px, vocab's 26px header padding) were removed so
 the four sections read as one site; `auth.css` (the login page) narrows to 480px and `landing.css`
