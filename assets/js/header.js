@@ -13,8 +13,9 @@
      showEmail — append the signed-in email after the note (planner)
      right     — raw HTML for the right-hand slot (e.g. a "reset all" button or a tagline)
 
-   Depends on globals from the shared modules: T / renderLangSwitcher (i18n.js),
-   renderThemeToggle (theme.js), esc (utils.js), currentUser / logout (cloud-sync.js).
+   Depends on globals from the shared modules: T (i18n.js), esc (utils.js),
+   currentUser / logout (cloud-sync.js). Language + theme switching now live on
+   the Settings page (/settings), not in the header.
 */
 const NAV_ITEMS = [
   { key: 'planner',     href: '/planner',     label: 'nav_planner' },
@@ -36,8 +37,6 @@ function appHeader(active, opts) {
   <div class="user-bar">
     <div class="nav-tabs">${tabs}</div>
     <div class="user-bar-right">
-      <div class="lang-switcher">${renderLangSwitcher()}</div>
-      ${typeof renderThemeToggle === 'function' ? renderThemeToggle() : ''}
       <a class="settings-link${active === 'settings' ? ' active' : ''}" href="/settings" title="${T('settings_title')}" aria-label="${T('settings_title')}">⚙</a>
       <span class="user-email">${esc(currentUser ? currentUser.email : '')}</span>
       <button class="btn-logout" onclick="logout()">${T('logout')}</button>
