@@ -402,6 +402,7 @@ function startSession(scope){
 function answer(correct){
   const s = state.session; if (!s) return;
   const card = s.queue[s.pos];
+  track('word_review', { mode: card.mode, correct });
   if (card.firstTry === null){ card.firstTry = correct; if (correct) s.uniqueRight++; }
   if (card.kind === 'plural') updatePlural(card.week, card.idx, correct);
   else updateCard(card.week, card.idx, correct);

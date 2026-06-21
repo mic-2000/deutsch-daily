@@ -149,6 +149,8 @@ async function loadLessonsThenRender() {
 /* geminiRequest(model, systemPrompt, messages) lives in assets/js/gemini.js (shared). */
 
 async function startAILesson(day) {
+  track('ai_lesson_open', { day });
+  if (day === 1) track('day1_start');
   const d = getLocalizedDay(DAYS[day - 1]);
   lessonsCache[day] = [{ role: 'user', text: buildPlanText(d) }];
   chatState.loading = true;

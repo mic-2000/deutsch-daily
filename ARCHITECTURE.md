@@ -1088,9 +1088,13 @@ build step or store — it works off the existing Vercel HTTPS deploy.
 - **`<head>` tags** (all 6 pages — landing, login + the 4 app pages) — `<link rel="manifest">`, `theme-color` (kept in sync with the
   active light/dark theme by `theme.js`'s `applyTheme()`), `mobile-web-app-capable` /
   `apple-mobile-web-app-*`, and `apple-touch-icon`.
-- **`assets/js/pwa.js`** — one line: registers `sw.js` on `window.load` (best-effort; no-op on
-  unsupported browsers / insecure origins). Loaded by every page so the shell is cached even before
-  sign-in.
+- **`assets/js/pwa.js`** — registers `sw.js` on `window.load` (best-effort; no-op on unsupported
+  browsers / insecure origins). Loaded by every page so the shell is cached even before sign-in. It
+  also **auto-applies SW updates**: if the page is already controlled by a SW, a `controllerchange`
+  (fired when a new `VERSION` activates via `skipWaiting` + `clients.claim`) reloads the page once —
+  so a returning visitor on a stale cached build sees the new assets without a manual refresh. The
+  reload is guarded against loops and is not attached for first-time visitors (whose initial claim
+  must not trigger a reload).
 - **`sw.js`** (root, scope `/`) — the service worker.
 
 **Service-worker caching strategy** (one cache per `VERSION`; `build.js` re-stamps `VERSION` on every
