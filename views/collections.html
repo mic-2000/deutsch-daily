@@ -405,7 +405,8 @@ function renderList(){
   ${state.collections.length
     ? `<div class="col-list">${cards}</div>`
     : `<div class="col-empty"><div class="col-empty-title">${T('collections_empty')}</div><div class="col-empty-hint">${T('collections_empty_hint')}</div></div>`}
-</main>`;
+</main>
+${appFooter()}`;
 
   document.getElementById('app').innerHTML = html + confirmHtml();
 }

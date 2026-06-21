@@ -280,10 +280,7 @@ ${appHeader('verbs', { cat: 'vocab_title_cat', h1: 'Unregelm\u00e4\u00dfige <em>
   <div class="info-box">${T('verbs_info')}</div>
 </main>
 
-<footer><div class="container f-row">
-  <span>${T('vocab_footer')} · <a class="gh-link" href="https://github.com/mic-2000/deutsch-daily" target="_blank" rel="noopener">GitHub</a></span>
-  <button onclick="resetAll()" style="font-size:12px;color:var(--ink-soft);text-decoration:underline;text-underline-offset:3px;background:none;border:none;cursor:pointer">${T('reset_all')}</button>
-</div></footer>`;
+${appFooter({ right: `<button onclick="resetAll()" style="font-size:12px;color:var(--ink-soft);text-decoration:underline;text-underline-offset:3px;background:none;border:none;cursor:pointer">${T('reset_all')}</button>` })}`;
 
   if(state.confirm){
     html += `

@@ -241,6 +241,18 @@ The single source of truth for the header + nav, so all four sections render an 
   delegate to it; vocab/verbs interpolate `${appHeader(…)}` directly. Depends on `T` /
   `renderLangSwitcher` (i18n), `renderThemeToggle` (theme, guarded by `typeof`), `esc` (utils),
   `currentUser` / `logout` (cloud-sync).
+- `appFooter({ text, showEmail, right })` — the matching shared **footer** for the four app pages
+  (note text via `T()`, GitHub + Privacy + Terms links, and an optional `right` slot for a tagline or
+  a "reset all" button). planner passes `planner_footer` + `showEmail`; vocab/verbs pass the reset
+  button; collections calls it bare. Privacy/Terms point to the `/privacy` `/terms` pages.
+
+### `legal.js` — shared renderer for the static legal pages (`/privacy` · `/terms`)
+`renderLegal(active, doc)` builds the landing-style chrome (header + footer) around a per-language
+content object (`{ title, intro, sections:[{h, items:[]}] }`) defined inline in each page (precedent:
+`ai-config.js` prompt objects). The pages (`views/privacy.html` / `views/terms.html`, served via the
+`/privacy` `/terms` rewrites) load only `i18n.js` / `theme.js` / `utils.js` / `pwa.js` / `legal.js` —
+no Supabase/cloud-sync. The footer's GitHub/Privacy/Terms links are shared with the landing and the
+app `appFooter`.
 
 ### `ai-config.js` — Gemini configuration (planner + collections)
 Loaded by `planner.html` and `collections.html`. Exports two model-id constants and three prompt

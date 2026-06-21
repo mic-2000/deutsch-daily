@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="light dark">
+<script>try{document.documentElement.setAttribute('data-theme',localStorage.getItem('ui_theme')==='dark'?'dark':'light');}catch(e){}</script>
+<title>Deutsch Daily — Privacy Policy</title>
+<meta name="robots" content="noindex">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#F2EDE3">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Deutsch Daily">
+<link rel="apple-touch-icon" href="/assets/icons/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,300;1,9..144,400;1,9..144,500&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/css/base.css">
+<link rel="stylesheet" href="/assets/css/components.css">
+<link rel="stylesheet" href="/assets/css/landing.css">
+</head>
+<body>
+
+<div id="app" class="lp"><div class="loading-msg">…</div></div>
+<div id="toast" class="toast"></div>
+
+<script src="/assets/js/i18n.js"></script>
+<script src="/assets/js/theme.js"></script>
+<script src="/assets/js/utils.js"></script>
+<script src="/assets/js/pwa.js"></script>
+<script src="/assets/js/legal.js"></script>
+<script>
+/* Privacy policy — static legal page. Reuses the landing chrome (header/footer) and the shared
+   renderLegal() from legal.js. Body copy is per-language below (precedent: ai-config.js prompts).
+   No Supabase/cloud-sync here — only i18n/theme/utils/pwa. Render = full re-render of #app. */
+
+const LEGAL_UPDATED = '2026-06-21';
+
+const PRIVACY = {
+  en: {
+    title: 'Privacy Policy',
+    intro: 'Deutsch Daily is a personal German-learning app. This page explains what data it stores, where, and why. It is written in plain language — there are no hidden trackers and your data is never sold.',
+    sections: [
+      { h: 'What we store', items: [
+        'Account: your email address, handled by our authentication provider (Supabase) when you register or sign in.',
+        'Learning progress: lesson completion, vocabulary and verb mastery, and your custom collections — saved to your account in the cloud so it syncs across devices.',
+        'Preferences: interface language and light/dark theme.',
+        'Optional AI key: if you use the AI tutor, your Google Gemini API key is stored in your browser. You may opt in to also store it on your account ("remember key") — otherwise it never leaves your device.',
+      ]},
+      { h: 'Analytics', items: [
+        'We use Umami, a privacy-friendly analytics tool, to count page visits and a few product events (e.g. registration, starting a lesson, reviewing a word).',
+        'Umami does not use cookies and does not collect personal data or build advertising profiles. Events are anonymous and aggregated.',
+      ]},
+      { h: 'Third-party services', items: [
+        'Supabase — authentication and cloud database (stores your account and progress).',
+        'Google Gemini — processes your lesson prompts only when you use the AI tutor, using your own API key.',
+        'Vercel — hosting and delivery of the app.',
+        'Umami — anonymous usage analytics.',
+      ]},
+      { h: 'Your control', items: [
+        'Signing out clears local data on the device (cached progress, AI key).',
+        'You can reset progress at any time from within the app.',
+        'To delete your account and associated data, contact us and we will remove it.',
+      ]},
+      { h: 'Contact', items: [
+        'Questions about privacy? Reach out via the project repository on GitHub.',
+      ]},
+    ],
+  },
+  ru: {
+    title: 'Политика конфиденциальности',
+    intro: 'Deutsch Daily — личное приложение для изучения немецкого. Здесь описано, какие данные оно хранит, где и зачем. Простыми словами: скрытых трекеров нет, ваши данные не продаются.',
+    sections: [
+      { h: 'Что мы храним', items: [
+        'Аккаунт: ваш email, обрабатываемый сервисом аутентификации (Supabase) при регистрации и входе.',
+        'Прогресс обучения: пройденные уроки, освоение слов и глаголов, ваши собственные коллекции — сохраняются в облаке в вашем аккаунте и синхронизируются между устройствами.',
+        'Настройки: язык интерфейса и светлая/тёмная тема.',
+        'Опциональный ключ ИИ: если вы используете ИИ-репетитора, ваш ключ Google Gemini API хранится в браузере. Можно по желанию сохранить его и в аккаунте («запомнить ключ») — иначе он не покидает ваше устройство.',
+      ]},
+      { h: 'Аналитика', items: [
+        'Мы используем Umami — аналитику, бережную к приватности, чтобы считать заходы и несколько продуктовых событий (например, регистрация, старт урока, повтор слова).',
+        'Umami не использует cookie и не собирает персональные данные и рекламные профили. События анонимны и агрегированы.',
+      ]},
+      { h: 'Сторонние сервисы', items: [
+        'Supabase — аутентификация и облачная база данных (хранит аккаунт и прогресс).',
+        'Google Gemini — обрабатывает запросы уроков только когда вы пользуетесь ИИ-репетитором, через ваш собственный ключ API.',
+        'Vercel — хостинг и доставка приложения.',
+        'Umami — анонимная аналитика использования.',
+      ]},
+      { h: 'Ваш контроль', items: [
+        'Выход из аккаунта очищает локальные данные на устройстве (кэш прогресса, ключ ИИ).',
+        'Вы можете сбросить прогресс в любой момент внутри приложения.',
+        'Чтобы удалить аккаунт и связанные данные, свяжитесь с нами — мы их удалим.',
+      ]},
+      { h: 'Контакты', items: [
+        'Вопросы о приватности? Напишите через репозиторий проекта на GitHub.',
+      ]},
+    ],
+  },
+  ua: {
+    title: 'Політика конфіденційності',
+    intro: 'Deutsch Daily — особистий застосунок для вивчення німецької. Тут описано, які дані він зберігає, де і навіщо. Простими словами: прихованих трекерів немає, ваші дані не продаються.',
+    sections: [
+      { h: 'Що ми зберігаємо', items: [
+        'Акаунт: вашу email-адресу, яку обробляє сервіс автентифікації (Supabase) під час реєстрації та входу.',
+        'Прогрес навчання: пройдені уроки, засвоєння слів і дієслів, ваші власні колекції — зберігаються у хмарі у вашому акаунті й синхронізуються між пристроями.',
+        'Налаштування: мову інтерфейсу та світлу/темну тему.',
+        'Опціональний ключ ШІ: якщо ви користуєтеся ШІ-репетитором, ваш ключ Google Gemini API зберігається у браузері. За бажанням його можна зберегти і в акаунті («запам’ятати ключ») — інакше він не залишає ваш пристрій.',
+      ]},
+      { h: 'Аналітика', items: [
+        'Ми використовуємо Umami — аналітику, дбайливу до приватності, щоб рахувати відвідування та кілька продуктових подій (наприклад, реєстрація, старт уроку, повтор слова).',
+        'Umami не використовує cookie й не збирає персональні дані та рекламні профілі. Події анонімні та агреговані.',
+      ]},
+      { h: 'Сторонні сервіси', items: [
+        'Supabase — автентифікація та хмарна база даних (зберігає акаунт і прогрес).',
+        'Google Gemini — обробляє запити уроків лише коли ви користуєтеся ШІ-репетитором, через ваш власний ключ API.',
+        'Vercel — хостинг і доставка застосунку.',
+        'Umami — анонімна аналітика використання.',
+      ]},
+      { h: 'Ваш контроль', items: [
+        'Вихід з акаунта очищує локальні дані на пристрої (кеш прогресу, ключ ШІ).',
+        'Ви можете скинути прогрес будь-якої миті всередині застосунку.',
+        'Щоб видалити акаунт і пов’язані дані, зв’яжіться з нами — ми їх видалимо.',
+      ]},
+      { h: 'Контакти', items: [
+        'Питання щодо приватності? Напишіть через репозиторій проєкту на GitHub.',
+      ]},
+    ],
+  },
+};
+
+function render() { renderLegal('privacy', PRIVACY[getLang()] || PRIVACY.en); }
+
+loadLocale(getLang()).then(render).catch(render);
+</script>
+</body>
+</html>

@@ -206,6 +206,16 @@
 .lp-footer-links a { text-decoration: none; color: var(--ink-soft); }
 .lp-footer-links a:hover { color: var(--ink); }
 
+/* ---------- legal pages (privacy / terms) ---------- */
+.legal { max-width: 70ch; }
+.legal h1 { font-size: clamp(26px, 4vw, 38px); line-height: 1.12; margin: 0 0 6px; }
+.legal-updated { font-size: 12px; color: var(--ink-soft); margin-bottom: 22px; }
+.legal-intro { font-size: 16px; color: var(--ink-soft); margin: 0 0 28px; }
+.legal h2 { font-size: 19px; margin: 28px 0 10px; }
+.legal ul { margin: 0; padding-left: 20px; }
+.legal li { font-size: 15px; line-height: 1.6; margin-bottom: 8px; color: var(--ink); }
+.lp-footer-links a[aria-current="page"] { color: var(--ink); font-weight: 600; }
+
 /* ---------- responsive ---------- */
 @media (max-width: 720px) {
   .lp-hero { grid-template-columns: 1fr; gap: 36px; padding: 48px 0 48px; }

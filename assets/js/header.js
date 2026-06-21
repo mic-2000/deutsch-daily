@@ -1,4 +1,4 @@
-/* header.js — single source of truth for the app chrome (header + nav tabs).
+/* header.js — single source of truth for the app chrome (header + nav tabs + footer).
    Loaded by planner/vocab/verbs/collections so every section renders an IDENTICAL header
    (same markup, same width, same nav) — the app reads as one site, not four pages.
 
@@ -7,6 +7,11 @@
      cat      — T() key for the small uppercase category line
      h1       — raw HTML for the page title (may contain <em>…</em>)
      subtitle — T() key for the italic subtitle
+
+   appFooter({ text, showEmail, right })
+     text      — T() key for the footer note (defaults to 'vocab_footer')
+     showEmail — append the signed-in email after the note (planner)
+     right     — raw HTML for the right-hand slot (e.g. a "reset all" button or a tagline)
 
    Depends on globals from the shared modules: T / renderLangSwitcher (i18n.js),
    renderThemeToggle (theme.js), esc (utils.js), currentUser / logout (cloud-sync.js).
@@ -38,4 +43,15 @@ function appHeader(active, opts) {
     </div>
   </div>
 </div></header>`;
+}
+
+function appFooter(opts) {
+  const o = opts || {};
+  const note = T(o.text || 'vocab_footer') +
+    (o.showEmail && currentUser ? ' · ' + esc(currentUser.email) : '');
+  return `
+<footer><div class="container f-row">
+  <span>${note} · <a class="gh-link" href="https://github.com/mic-2000/deutsch-daily" target="_blank" rel="noopener">GitHub</a> · <a class="gh-link" href="/privacy">${T('lp_foot_privacy')}</a> · <a class="gh-link" href="/terms">${T('lp_foot_terms')}</a></span>
+  ${o.right || ''}
+</div></footer>`;
 }

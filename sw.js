@@ -13,13 +13,13 @@
                                                 here would serve stale/incorrect data.
 
    Bump VERSION when shipping changed shell assets; stale caches are pruned on activate. */
-const VERSION = 'v5';
+const VERSION = 'v7';
 const SHELL = 'dd-shell-' + VERSION;
 const RUNTIME = 'dd-runtime-' + VERSION;
 
 /* Precached on install. Pretty URLs ('/planner' …) resolve through the vercel.json rewrites. */
 const SHELL_ASSETS = [
-  '/', '/login', '/planner', '/vocab', '/verbs', '/collections',
+  '/', '/login', '/planner', '/vocab', '/verbs', '/collections', '/privacy', '/terms',
   '/manifest.webmanifest',
   '/assets/favicon.svg',
   '/assets/icons/icon-192.png',
@@ -32,6 +32,7 @@ const SHELL_ASSETS = [
   '/assets/css/verbs.css', '/assets/css/vocab.css',
   '/assets/js/ai-config.js', '/assets/js/cloud-sync.js', '/assets/js/gemini.js',
   '/assets/js/header.js', '/assets/js/i18n.js', '/assets/js/leitner.js',
+  '/assets/js/legal.js',
   '/assets/js/pwa.js', '/assets/js/speech.js', '/assets/js/supabase.js',
   '/assets/js/theme.js', '/assets/js/utils.js',
   '/data/vocab.js', '/data/verbs.js', '/data/weeks.js',

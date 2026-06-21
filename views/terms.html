@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="light dark">
+<script>try{document.documentElement.setAttribute('data-theme',localStorage.getItem('ui_theme')==='dark'?'dark':'light');}catch(e){}</script>
+<title>Deutsch Daily — Terms of Use</title>
+<meta name="robots" content="noindex">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#F2EDE3">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Deutsch Daily">
+<link rel="apple-touch-icon" href="/assets/icons/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,300;1,9..144,400;1,9..144,500&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/css/base.css">
+<link rel="stylesheet" href="/assets/css/components.css">
+<link rel="stylesheet" href="/assets/css/landing.css">
+</head>
+<body>
+
+<div id="app" class="lp"><div class="loading-msg">…</div></div>
+<div id="toast" class="toast"></div>
+
+<script src="/assets/js/i18n.js"></script>
+<script src="/assets/js/theme.js"></script>
+<script src="/assets/js/utils.js"></script>
+<script src="/assets/js/pwa.js"></script>
+<script src="/assets/js/legal.js"></script>
+<script>
+/* Terms of use — static legal page. Reuses the landing chrome (header/footer) and the shared
+   renderLegal() from legal.js. Body copy is per-language below (precedent: ai-config.js prompts).
+   No Supabase/cloud-sync here — only i18n/theme/utils/pwa. Render = full re-render of #app. */
+
+const LEGAL_UPDATED = '2026-06-21';
+
+const TERMS = {
+  en: {
+    title: 'Terms of Use',
+    intro: 'Deutsch Daily is a free, personal tool for learning German. By using it you agree to the terms below.',
+    sections: [
+      { h: 'The service', items: [
+        'Deutsch Daily provides a structured study plan, vocabulary and verb trainers, and an optional AI tutor. It is an educational aid, not a certified course or a guarantee of any exam result.',
+        'The app is provided free of charge and "as is", without warranties of any kind.',
+      ]},
+      { h: 'Your account', items: [
+        'You are responsible for keeping your sign-in credentials secure.',
+        'Use the app lawfully and do not attempt to disrupt, abuse, or reverse the service for others.',
+      ]},
+      { h: 'AI tutor', items: [
+        'The AI tutor runs on Google Gemini using an API key you provide. You are responsible for your key and any usage costs or limits from Google.',
+        'AI-generated explanations can be incomplete or wrong. Always verify important language facts before relying on them.',
+      ]},
+      { h: 'Your content', items: [
+        'Custom collections and notes you create belong to you. You are responsible for the content you import.',
+      ]},
+      { h: 'Liability', items: [
+        'To the extent permitted by law, the authors are not liable for any damages arising from the use of the app or from reliance on its content.',
+      ]},
+      { h: 'Changes', items: [
+        'These terms may be updated as the app evolves. Continued use after changes means you accept the updated terms.',
+      ]},
+    ],
+  },
+  ru: {
+    title: 'Условия использования',
+    intro: 'Deutsch Daily — бесплатный личный инструмент для изучения немецкого. Используя его, вы соглашаетесь с условиями ниже.',
+    sections: [
+      { h: 'Сервис', items: [
+        'Deutsch Daily предоставляет структурированный план обучения, тренажёры слов и глаголов и опционального ИИ-репетитора. Это учебное вспомогательное средство, а не сертифицированный курс и не гарантия результата экзамена.',
+        'Приложение предоставляется бесплатно и «как есть», без каких-либо гарантий.',
+      ]},
+      { h: 'Ваш аккаунт', items: [
+        'Вы отвечаете за сохранность своих учётных данных для входа.',
+        'Используйте приложение законно и не пытайтесь нарушать, злоупотреблять или мешать работе сервиса для других.',
+      ]},
+      { h: 'ИИ-репетитор', items: [
+        'ИИ-репетитор работает на Google Gemini с использованием ключа API, который предоставляете вы. Вы отвечаете за свой ключ и любые расходы или лимиты со стороны Google.',
+        'Ответы ИИ могут быть неполными или ошибочными. Всегда проверяйте важные языковые факты, прежде чем на них полагаться.',
+      ]},
+      { h: 'Ваш контент', items: [
+        'Созданные вами коллекции и заметки принадлежат вам. Вы отвечаете за импортируемый контент.',
+      ]},
+      { h: 'Ответственность', items: [
+        'В пределах, допустимых законом, авторы не несут ответственности за любой ущерб от использования приложения или от опоры на его содержимое.',
+      ]},
+      { h: 'Изменения', items: [
+        'Эти условия могут обновляться по мере развития приложения. Продолжение использования после изменений означает согласие с обновлёнными условиями.',
+      ]},
+    ],
+  },
+  ua: {
+    title: 'Умови використання',
+    intro: 'Deutsch Daily — безкоштовний особистий інструмент для вивчення німецької. Користуючись ним, ви погоджуєтеся з умовами нижче.',
+    sections: [
+      { h: 'Сервіс', items: [
+        'Deutsch Daily надає структурований план навчання, тренажери слів і дієслів та опціонального ШІ-репетитора. Це навчальний допоміжний засіб, а не сертифікований курс і не гарантія результату іспиту.',
+        'Застосунок надається безкоштовно та «як є», без жодних гарантій.',
+      ]},
+      { h: 'Ваш акаунт', items: [
+        'Ви відповідаєте за збереження своїх облікових даних для входу.',
+        'Використовуйте застосунок законно й не намагайтеся порушувати, зловживати чи заважати роботі сервісу для інших.',
+      ]},
+      { h: 'ШІ-репетитор', items: [
+        'ШІ-репетитор працює на Google Gemini з використанням ключа API, який надаєте ви. Ви відповідаєте за свій ключ і будь-які витрати чи ліміти з боку Google.',
+        'Відповіді ШІ можуть бути неповними або хибними. Завжди перевіряйте важливі мовні факти, перш ніж на них покладатися.',
+      ]},
+      { h: 'Ваш контент', items: [
+        'Створені вами колекції та нотатки належать вам. Ви відповідаєте за імпортований контент.',
+      ]},
+      { h: 'Відповідальність', items: [
+        'У межах, дозволених законом, автори не несуть відповідальності за будь-яку шкоду від використання застосунку або від опори на його зміст.',
+      ]},
+      { h: 'Зміни', items: [
+        'Ці умови можуть оновлюватися в міру розвитку застосунку. Продовження використання після змін означає згоду з оновленими умовами.',
+      ]},
+    ],
+  },
+};
+
+function render() { renderLegal('terms', TERMS[getLang()] || TERMS.en); }
+
+loadLocale(getLang()).then(render).catch(render);
+</script>
+</body>
+</html>

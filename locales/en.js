@@ -172,6 +172,7 @@ window.LOCALE_EN = {
     lp_foot_btn: 'Create account',
     lp_foot_privacy: 'Privacy policy',
     lp_foot_terms: 'Terms',
+    legal_updated: (d) => `Last updated: ${d}`,
     lp_google_cta: 'Continue with Google',
     // planner
     planner_title_cat: 'Deutsch · A1 → B1',
