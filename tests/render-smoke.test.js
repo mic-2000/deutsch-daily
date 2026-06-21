@@ -47,6 +47,77 @@ test('settings: render() shows the account screen with translations resolved', (
   // and leaves raw i18n keys in the markup instead of translated text.
   assert.doesNotMatch(html, /settings_[a-z_]+/, 'no raw settings_* keys leaked into markup');
   assert.doesNotMatch(html, /\bauth_[a-z_]+/, 'no raw auth_* keys leaked into markup');
+  // The change-password form must expose a current-password input.
+  assert.match(html, /id="curPw"/, 'current-password field is rendered');
+});
+
+test('settings: changePassword re-authenticates with the current password before updating', async () => {
+  // A document whose inputs carry real values, so the handler runs past its guards.
+  const fields = {
+    curPw: { value: 'oldpass' },
+    newPw: { value: 'newpass1' },
+    confPw: { value: 'newpass1' },
+    pwBtn: { disabled: false },
+  };
+
+  function run(signInError) {
+    const calls = { signIn: 0, update: 0 };
+    const s = loadPage({
+      page: 'settings.html',
+      extraFiles: ['locales/en.js'],
+      exports: ['changePassword'],
+      shims: {
+        currentUser: { email: 'a@b.c' },
+        sb: {
+          auth: {
+            getSession: async () => ({ data: { session: null } }),
+            signInWithPassword: async () => { calls.signIn++; return { error: signInError }; },
+            updateUser: async () => { calls.update++; return { error: null }; },
+          },
+        },
+      },
+    });
+    const origGet = s.sandbox.document.getElementById;
+    s.sandbox.document.getElementById = (id) => fields[id] || origGet(id);
+    return { s, calls };
+  }
+
+  // Wrong current password → re-auth attempted, but the update is blocked.
+  const bad = run({ message: 'invalid' });
+  await bad.s.changePassword();
+  assert.equal(bad.calls.signIn, 1, 're-auth is attempted');
+  assert.equal(bad.calls.update, 0, 'password is NOT updated when current password is wrong');
+
+  // Correct current password → re-auth succeeds, then the update runs.
+  const ok = run(null);
+  await ok.s.changePassword();
+  assert.equal(ok.calls.signIn, 1, 're-auth is attempted');
+  assert.equal(ok.calls.update, 1, 'password is updated after successful re-auth');
+});
+
+test('settings: changePassword blocks the update when the current password is empty', async () => {
+  const calls = { signIn: 0, update: 0 };
+  const s = loadPage({
+    page: 'settings.html',
+    extraFiles: ['locales/en.js'],
+    exports: ['changePassword'],
+    shims: {
+      currentUser: { email: 'a@b.c' },
+      sb: {
+        auth: {
+          getSession: async () => ({ data: { session: null } }),
+          signInWithPassword: async () => { calls.signIn++; return { error: null }; },
+          updateUser: async () => { calls.update++; return { error: null }; },
+        },
+      },
+    },
+  });
+  const empty = { curPw: { value: '' }, newPw: { value: 'newpass1' }, confPw: { value: 'newpass1' } };
+  const origGet = s.sandbox.document.getElementById;
+  s.sandbox.document.getElementById = (id) => empty[id] || origGet(id);
+  await s.changePassword();
+  assert.equal(calls.signIn, 0, 're-auth not attempted without current password');
+  assert.equal(calls.update, 0, 'password not updated without current password');
 });
 
 test('vocab: confirm modal markup is appended when state.confirm is set', () => {

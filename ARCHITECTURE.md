@@ -29,7 +29,8 @@ and a built-in AI tutor:
    Excel/Sheets, drilled with the **same** flashcard/article/spelling trainers and Leitner model.
    Unlimited collections; optional one-click AI translation of missing entries. (See §16.)
 6. **Settings** (`settings.html`, `/settings`) — authenticated account page: change password
-   (`sb.auth.updateUser`), add/remove the Gemini AI key (reuses the planner's `gemini_key` /
+   (re-authenticates with the current password via `sb.auth.signInWithPassword`, then
+   `sb.auth.updateUser`), add/remove the Gemini AI key (reuses the planner's `gemini_key` /
    `gemini_key_sync` logic), switch theme + UI language, and request **account deletion** with a
    30-day recovery window. Deletion stamps `progress.deletion_requested_at`; a `SECURITY DEFINER`
    `purge_deleted_accounts()` SQL function (scheduled via pg_cron, see `schema.sql`) hard-deletes
@@ -1027,7 +1028,9 @@ runs `node --test tests/`; `npm run test:regression` runs the curated subset.
 - **What's covered:** `leitner.test.js` (box transitions/scheduling), `helpers.test.js`
   (`esc`/`normalize`/`diffChars`/article parsing), `speech.test.js` (voice pick + per-page utterance
   text/rate), `confirm.test.js` (in-page confirm staging), `markdown.test.js` (`renderMd`),
-  `render-smoke.test.js` (each page's `render()` runs and fills `#app`), `i18n.test.js` (identical
+  `render-smoke.test.js` (each page's `render()` runs and fills `#app`; also guards the Settings
+  account screen against raw-i18n-key leaks and asserts `changePassword()` re-authenticates with
+  the current password — `signInWithPassword` — before calling `updateUser`), `i18n.test.js` (identical
   `ui` key sets across locales + function-valued keys), `data-align.test.js` (base-data ↔ locale
   index/key alignment — see §13), `refactor-guards.test.js` (source-level guards: no hardcoded
   Russian in the trainer session UI, no orphaned/dead locale keys, no hardcoded `<html lang="ru">`),
