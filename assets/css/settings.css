@@ -1,11 +1,11 @@
 /* settings.css — layout for the authenticated Settings page (/settings).
    Tokens + .btn variants come from base.css / components.css / vocab.css. */
 
-/* Extra breathing room below the header, and a centred column so the cards sit
-   balanced under the full-width header chrome (no left-skew against the title). */
-main { padding-top: 64px; }
+/* Extra breathing room below the header, and cards that span the same width as
+   the header chrome so the column sits balanced (no left-skew against the title). */
+main { padding-top: 80px; }
 
-.set-list { display: flex; flex-direction: column; gap: 22px; max-width: 640px; margin: 0 auto; }
+.set-list { display: flex; flex-direction: column; gap: 22px; max-width: var(--page-max); margin: 0 auto; }
 
 .set-card { background: var(--paper-3); border: 1px solid var(--line); padding: 22px 24px; }
 .set-card h2 { font-family: var(--serif); font-weight: 400; font-size: 22px; letter-spacing: -0.01em; margin-bottom: 4px; }
