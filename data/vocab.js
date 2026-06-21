@@ -9,7 +9,9 @@ const VOCAB = {
     "der Mann","die Frau","der Junge","das Mädchen","eins",
     "zwei","drei","zehn","zwanzig","hundert",
     "das Jahr","Wie heißt du?","Ich heiße…","Woher kommst du?","Ich komme aus…",
-    "Wie alt bist du?","Ich verstehe nicht"
+    "Wie alt bist du?","Ich verstehe nicht",
+    "Gute Nacht","ja","nein","gut","schlecht","wer","was","wo","wann","wie",
+    "der Montag","der Dienstag","der Mittwoch","der Donnerstag","der Freitag","der Samstag","der Sonntag"
   ]},
   2: { theme: "Lebensmittel, Einkaufen", words: [
     "das Brot","die Butter","der Käse","die Milch","das Ei",
@@ -20,7 +22,8 @@ const VOCAB = {
     "der Supermarkt","die Bäckerei","der Markt","der Preis","billig",
     "teuer","kaufen","bezahlen","kosten","brauchen",
     "nehmen","möchten","das Geld","das Kilo","die Flasche",
-    "frisch","lecker"
+    "frisch","lecker",
+    "das Essen","das Frühstück","das Mittagessen","das Abendessen","die Suppe","süß","scharf","hungrig","trinken","kochen","schmecken"
   ]},
   3: { theme: "Hobbys, Sport, Freizeit", words: [
     "das Hobby","die Freizeit","der Sport","spielen","lesen",
@@ -30,7 +33,8 @@ const VOCAB = {
     "der Film","das Konzert","das Museum","das Restaurant","das Café",
     "der Park","wandern","gerne","lieber","interessant",
     "langweilig","spannend","lustig","oft","nie",
-    "selten"
+    "selten",
+    "rot","blau","gelb","grün","schwarz","weiß","grau","braun","orange","rosa","bunt"
   ]},
   4: { theme: "Wohnen, Möbel, Räume", words: [
     "das Haus","die Wohnung","das Zimmer","das Schlafzimmer","das Wohnzimmer",
@@ -40,7 +44,7 @@ const VOCAB = {
     "der Teppich","die Lampe","das Bild","der Kühlschrank","der Herd",
     "der Fernseher","groß","klein","hell","dunkel",
     "modern","alt","gemütlich","sauber","wohnen",
-    "mieten","die Miete","umziehen"
+    "mieten","die Miete","umziehen","der Boden"
   ]},
   5: { theme: "Tagesablauf, Perfekt-Verben", words: [
     "aufstehen — aufgestanden","frühstücken — gefrühstückt","arbeiten — gearbeitet","essen — gegessen","trinken — getrunken",
@@ -63,13 +67,17 @@ const VOCAB = {
     "die Stadt","das Dorf","die Straße","der Platz","die Kreuzung",
     "die Ampel","die Brücke","das Krankenhaus","die Apotheke","die Post",
     "die Bank","die Polizei","die Kirche","das Rathaus","geradeaus",
-    "links","rechts","weit","abbiegen"
+    "links","rechts","weit","abbiegen",
+    "das Kino","das Theater","die Bibliothek","das Zentrum","dort"
   ]},
   8: { theme: "Повторение фазы 1", words: [
     "wichtig","möglich","nötig","sicher","fertig",
     "kostenlos","zusammen","allein","ungefähr","genau",
     "vielleicht","natürlich","leider","plötzlich","fast",
-    "sofort","später","früher","normalerweise","wahrscheinlich"
+    "sofort","später","früher","normalerweise","wahrscheinlich",
+    "der Körper","der Kopf","das Auge","das Ohr","die Nase","der Mund","der Zahn","das Haar",
+    "die Hand","der Arm","das Bein","der Fuß","der Bauch","der Rücken","das Herz",
+    "krank","gesund","die Schmerzen","das Fieber","wehtun"
   ]},
   9: { theme: "Biografie, Präteritum", words: [
     "die Biografie","das Leben","geboren sein","aufwachsen","die Kindheit",
@@ -181,6 +189,7 @@ const PLURALS = {
   "das Bier": "die Biere", "der Wein": "die Weine", "der Kuchen": "die Kuchen",
   "der Supermarkt": "die Supermärkte", "die Bäckerei": "die Bäckereien", "der Markt": "die Märkte",
   "der Preis": "die Preise", "das Kilo": "die Kilo", "die Flasche": "die Flaschen",
+  "die Suppe": "die Suppen",
   // 3 — Hobbys, Freizeit
   "das Hobby": "die Hobbys", "das Buch": "die Bücher", "der Film": "die Filme",
   "das Konzert": "die Konzerte", "das Museum": "die Museen", "das Restaurant": "die Restaurants",
@@ -195,6 +204,7 @@ const PLURALS = {
   "der Schrank": "die Schränke", "das Regal": "die Regale", "der Teppich": "die Teppiche",
   "die Lampe": "die Lampen", "das Bild": "die Bilder", "der Kühlschrank": "die Kühlschränke",
   "der Herd": "die Herde", "der Fernseher": "die Fernseher", "die Miete": "die Mieten",
+  "der Boden": "die Böden",
   // 5 — Tagesablauf (nouns)
   "der Morgen": "die Morgen", "der Abend": "die Abende",
   // 6 — Verkehr, Reise
@@ -209,6 +219,12 @@ const PLURALS = {
   "der Platz": "die Plätze", "die Kreuzung": "die Kreuzungen", "die Ampel": "die Ampeln",
   "die Brücke": "die Brücken", "das Krankenhaus": "die Krankenhäuser", "die Apotheke": "die Apotheken",
   "die Bank": "die Banken", "die Kirche": "die Kirchen", "das Rathaus": "die Rathäuser",
+  "das Kino": "die Kinos", "das Theater": "die Theater", "die Bibliothek": "die Bibliotheken", "das Zentrum": "die Zentren",
+  // 8 — Körper & Gesundheit
+  "der Kopf": "die Köpfe", "das Auge": "die Augen", "das Ohr": "die Ohren",
+  "der Mund": "die Münder", "der Zahn": "die Zähne", "die Hand": "die Hände",
+  "der Arm": "die Arme", "das Bein": "die Beine", "der Fuß": "die Füße",
+  "das Herz": "die Herzen",
   // 9 — Biografie (nouns)
   "die Biografie": "die Biografien", "das Leben": "die Leben", "der Beruf": "die Berufe",
   // 10 — Schule, Arbeit
