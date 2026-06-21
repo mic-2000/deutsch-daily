@@ -217,8 +217,10 @@ function renderAiPanel(){
     ${starter}
     ${chatBlock}
     <div class="ai-input-row">
-      <textarea id="aiInput" rows="1" placeholder="${esc(T('today_ai_placeholder'))}" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendAi();}"></textarea>
-      <button class="btn accent" onclick="sendAi()" ${ai.loading ? 'disabled' : ''}>${T('today_ai_send')}</button>
+      <textarea class="ai-input" id="aiInput" rows="1" placeholder="${esc(T('today_ai_placeholder'))}" ${ai.loading ? 'disabled' : ''}
+        oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'"
+        onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendAi();}"></textarea>
+      <button class="ai-send" onclick="sendAi()" ${ai.loading ? 'disabled' : ''}>${T('today_ai_send')}</button>
     </div>`;
 }
 
