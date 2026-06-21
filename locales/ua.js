@@ -321,6 +321,8 @@ window.LOCALE_UA = {
     settings_email_label: 'Ел. пошта',
     settings_change_pw: 'Змінити пароль',
     settings_confirm_pw: 'Повторіть новий пароль',
+    settings_current_pw: 'Поточний пароль',
+    settings_err_old_pw: 'Поточний пароль невірний',
     settings_pw_mismatch: 'Паролі не збігаються',
     settings_sec_ai: 'ШІ-репетитор',
     settings_ai_desc: 'Особистий ключ Gemini вмикає ШІ-уроки. Він зберігається в цьому браузері; увімкніть синхронізацію, щоб зберегти його в акаунті.',

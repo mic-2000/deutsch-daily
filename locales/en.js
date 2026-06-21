@@ -326,6 +326,8 @@ window.LOCALE_EN = {
     settings_email_label: 'Email',
     settings_change_pw: 'Change password',
     settings_confirm_pw: 'Confirm new password',
+    settings_current_pw: 'Current password',
+    settings_err_old_pw: 'Current password is incorrect',
     settings_pw_mismatch: 'Passwords do not match',
     settings_sec_ai: 'AI tutor',
     settings_ai_desc: 'Your personal Gemini key powers the AI lessons. It is stored in this browser; turn on sync to keep it on your account.',

@@ -322,6 +322,8 @@ window.LOCALE_RU = {
     settings_email_label: 'Эл. почта',
     settings_change_pw: 'Сменить пароль',
     settings_confirm_pw: 'Повторите новый пароль',
+    settings_current_pw: 'Текущий пароль',
+    settings_err_old_pw: 'Текущий пароль неверен',
     settings_pw_mismatch: 'Пароли не совпадают',
     settings_sec_ai: 'ИИ-репетитор',
     settings_ai_desc: 'Личный ключ Gemini включает ИИ-уроки. Он хранится в этом браузере; включите синхронизацию, чтобы сохранить его в аккаунте.',

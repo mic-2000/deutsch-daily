@@ -56,16 +56,22 @@ function applyDeletionStatus(){ try { render(); } catch(_){} }
 
 /* ---------- change password (active session) ---------- */
 async function changePassword(){
+  const p0 = document.getElementById('curPw');
   const p1 = document.getElementById('newPw'); const p2 = document.getElementById('confPw');
+  const cur = p0 ? p0.value : '';
   const a = p1 ? p1.value : ''; const b = p2 ? p2.value : '';
+  if(!cur){ showToast(T('settings_current_pw')); return; }
   if(a.length < 6){ showToast(T('auth_err_password')); return; }
   if(a !== b){ showToast(T('settings_pw_mismatch')); return; }
   const btn = document.getElementById('pwBtn'); if(btn) btn.disabled = true;
   try {
+    const email = currentUser ? currentUser.email : '';
+    const { error: signInErr } = await sb.auth.signInWithPassword({ email, password: cur });
+    if(signInErr){ showToast(T('settings_err_old_pw')); return; }
     const { error } = await sb.auth.updateUser({ password: a });
     if(error){ showToast(error.message); return; }
     showToast(T('auth_pw_updated'));
-    if(p1) p1.value = ''; if(p2) p2.value = '';
+    if(p0) p0.value = ''; if(p1) p1.value = ''; if(p2) p2.value = '';
   } catch(e){ showToast(T('auth_err_connection')); }
   finally { const b2 = document.getElementById('pwBtn'); if(b2) b2.disabled = false; }
 }
@@ -130,6 +136,10 @@ function render(){
         <span class="set-row-value">${esc(currentUser ? currentUser.email : '')}</span>
       </div>
       <div style="margin-top:14px">
+        <div class="set-field">
+          <label for="curPw">${T('settings_current_pw')}</label>
+          <input class="set-input" id="curPw" type="password" autocomplete="current-password">
+        </div>
         <div class="set-field">
           <label for="newPw">${T('auth_new_password')}</label>
           <input class="set-input" id="newPw" type="password" autocomplete="new-password" placeholder="${T('auth_password_hint')}">
