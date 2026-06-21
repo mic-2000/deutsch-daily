@@ -38,6 +38,17 @@ test('verbs: render() shows the home screen without an active session', () => {
   assert.ok(vb.app.innerHTML.length > 500);
 });
 
+test('settings: render() shows the account screen with translations resolved', () => {
+  const s = loadPage({ page: 'settings.html', extraFiles: ['locales/en.js'], exports: ['render', 'state'] });
+  s.render();
+  const html = s.app.innerHTML;
+  assert.ok(html.length > 500, 'app markup is substantial');
+  // Regression guard: a global-name clash (e.g. redefining i18n's _locale) breaks T()
+  // and leaves raw i18n keys in the markup instead of translated text.
+  assert.doesNotMatch(html, /settings_[a-z_]+/, 'no raw settings_* keys leaked into markup');
+  assert.doesNotMatch(html, /\bauth_[a-z_]+/, 'no raw auth_* keys leaked into markup');
+});
+
 test('vocab: confirm modal markup is appended when state.confirm is set', () => {
   const v = loadPage({ page: 'vocab.html', extraFiles: ['locales/en.js'], exports: ['render', 'askConfirm', 'state'] });
   v.askConfirm('Reset all?', 'all'); // also calls render()
