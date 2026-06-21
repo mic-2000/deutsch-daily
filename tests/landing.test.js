@@ -36,6 +36,14 @@ test('landing routes guests to /login (login + register CTAs, no *.html links)',
   assert.ok(!src.includes("'index.html'"), 'landing should not navigate to index.html');
 });
 
+test('landing footer offers Google OAuth directly (Supabase client is loaded on the landing)', () => {
+  const src = read('index.html');
+  assert.match(src, /onclick="landingGoogle\(\)"/, 'Google button wired to a handler');
+  assert.match(src, /signInWithOAuth\(/, 'handler calls Supabase OAuth');
+  assert.match(src, /provider:\s*'google'/, 'with the google provider');
+  assert.match(src, /T\('lp_google_cta'\)/, 'localized button label');
+});
+
 test('[FOUC] landing sets data-theme before the Supabase CDN script', () => {
   const src = read('index.html');
   const themeIdx = src.indexOf("setAttribute('data-theme'");
@@ -73,7 +81,7 @@ test('landing copy keys exist in every locale', () => {
     extraFiles: ['locales/en.js', 'locales/ru.js', 'locales/ua.js'],
     exports: ['LOCALE_EN', 'LOCALE_RU', 'LOCALE_UA'],
   });
-  const sample = ['lp_login', 'lp_register', 'lp_hero_title', 'lp_faq_8_a', 'lp_foot_btn', 'auth_back_home'];
+  const sample = ['lp_login', 'lp_register', 'lp_hero_title', 'lp_faq_8_a', 'lp_foot_btn', 'lp_google_cta', 'auth_back_home'];
   for (const [lang, loc] of [['en', r.LOCALE_EN], ['ru', r.LOCALE_RU], ['ua', r.LOCALE_UA]]) {
     for (const k of sample) assert.ok(k in loc.ui, `${lang}.ui.${k} is missing`);
   }

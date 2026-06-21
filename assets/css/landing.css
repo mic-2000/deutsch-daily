@@ -32,8 +32,9 @@
   max-width: var(--page-max); margin: 0 auto; padding: 12px 24px;
   display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;
 }
-.lp-brand { font-family: var(--serif); font-weight: 400; font-size: 20px; letter-spacing: -0.01em; text-decoration: none; color: var(--ink); }
+.lp-brand { font-family: var(--serif); font-weight: 400; font-size: 20px; letter-spacing: -0.01em; text-decoration: none; color: var(--ink); transition: color .18s ease; }
 .lp-brand em { font-style: italic; color: var(--accent); }
+.lp-brand:hover { color: var(--accent); }   /* whole brand → one colour on hover (matches the login header) */
 .lp-header-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .lp-header-actions .lang-switcher,
 .lp-header-actions .theme-toggle { flex: 0 0 auto; }
@@ -196,6 +197,10 @@
 .lp-foot-form { display: flex; flex-wrap: wrap; gap: 12px; max-width: 520px; }
 .lp-foot-input { flex: 1; min-width: 200px; border: 1px solid var(--line); background: var(--paper); color: var(--ink); padding: 13px 14px; font-size: 14px; font-family: var(--sans); outline: none; }
 .lp-foot-input:focus { border-color: var(--ink); }
+.lp-foot-or { display: flex; align-items: center; gap: 12px; max-width: 520px; margin: 16px 0 12px; color: var(--ink-soft); font-size: 12px; }
+.lp-foot-or::before, .lp-foot-or::after { content: ''; flex: 1; height: 1px; background: var(--line); }
+.lp-google { display: inline-flex; align-items: center; justify-content: center; gap: 10px; width: 100%; max-width: 520px; padding: 13px 14px; border: 1px solid var(--line); background: var(--paper); color: var(--ink); font-family: var(--sans); font-size: 14px; font-weight: 600; cursor: pointer; transition: border-color .18s ease, background .18s ease; }
+.lp-google:hover { border-color: var(--ink); background: var(--paper-3); }
 .lp-footer { padding: 28px 0 40px; display: flex; flex-wrap: wrap; gap: 8px 18px; align-items: center; justify-content: space-between; font-size: 12px; color: var(--ink-soft); }
 .lp-footer-links { display: flex; gap: 18px; flex-wrap: wrap; }
 .lp-footer-links a { text-decoration: none; color: var(--ink-soft); }

@@ -171,6 +171,7 @@ window.LOCALE_RU = {
     lp_foot_btn: 'Создать аккаунт',
     lp_foot_privacy: 'Политика конфиденциальности',
     lp_foot_terms: 'Условия',
+    lp_google_cta: 'Продолжить с Google',
     planner_title_cat: 'Deutsch · A1 → B1',
     planner_subtitle: 'План на каждый день · копируй и вставляй в чат',
     planner_progress: (done, total) => `Пройдено ${done} из ${total} дней`,

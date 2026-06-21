@@ -170,6 +170,7 @@ window.LOCALE_UA = {
     lp_foot_btn: 'Створити акаунт',
     lp_foot_privacy: 'Політика конфіденційності',
     lp_foot_terms: 'Умови',
+    lp_google_cta: 'Продовжити з Google',
     planner_title_cat: 'Deutsch · A1 → B1',
     planner_subtitle: 'План на кожен день · копіюй і вставляй у чат',
     planner_progress: (done, total) => `Пройдено ${done} із ${total} днів`,
