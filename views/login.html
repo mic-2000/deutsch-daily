@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="light dark">
+<script>try{document.documentElement.setAttribute('data-theme',localStorage.getItem('ui_theme')==='dark'?'dark':'light');}catch(e){}</script>
+<title>Deutsch Daily</title>
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#F2EDE3">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Deutsch Daily">
+<link rel="apple-touch-icon" href="/assets/icons/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500;9..144,600&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/css/base.css">
+<link rel="stylesheet" href="/assets/css/components.css">
+<link rel="stylesheet" href="/assets/css/auth.css">
+</head>
+<body>
+
+<header>
+  <div class="container">
+    <div class="title-cat">Deutsch · A1 → B1</div>
+    <h1>Mein<em>kurs</em></h1>
+    <div class="subtitle" id="auth-subtitle"></div>
+  </div>
+</header>
+
+<main>
+  <div class="container">
+    <div id="auth-form"><div class="loading-msg">…</div></div>
+  </div>
+</main>
+
+<div id="toast" class="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="/assets/js/i18n.js"></script>
+<script src="/assets/js/theme.js"></script>
+<script src="/assets/js/utils.js"></script>
+<script src="/assets/js/pwa.js"></script>
+<script src="/assets/js/supabase.js"></script>
+<script>
+let mode = 'login'; // 'login' | 'register'
+let loading = false;
+let prefillEmail = '';
+
+// Deep links from the landing page: /login?mode=register&email=...
+(function readParams() {
+  try {
+    const p = new URLSearchParams(location.search);
+    if (p.get('mode') === 'register') mode = 'register';
+    prefillEmail = (p.get('email') || '').trim();
+  } catch (e) {}
+})();
+
+function render() {
+  const isReg = mode === 'register';
+  // Header subtitle lives outside #auth-form, so localize it here too (covers language switching).
+  const sub = document.getElementById('auth-subtitle');
+  if (sub) sub.textContent = T('auth_subtitle');
+  document.getElementById('auth-form').innerHTML = `
+    <div class="auth-box">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:16px">
+        <a href="/" class="btn-logout" style="text-decoration:none">${T('auth_back_home')}</a>
+        <div style="display:flex;align-items:center;gap:8px">${renderLangSwitcher()}${renderThemeToggle()}</div>
+      </div>
+      <div class="auth-title">${isReg ? T('auth_title_register') : T('auth_title_login')}</div>
+      <div class="field">
+        <label>${T('auth_email')}</label>
+        <input type="email" id="f-email" placeholder="you@example.com" autocomplete="email" />
+      </div>
+      <div class="field">
+        <label>${T('auth_password')}</label>
+        <input type="password" id="f-password" placeholder="${T('auth_password_hint')}"
+               autocomplete="${isReg ? 'new-password' : 'current-password'}" />
+      </div>
+      <button class="btn-submit" id="submitBtn" onclick="submit()">
+        ${isReg ? T('auth_submit_register') : T('auth_submit_login')}
+      </button>
+      ${isReg ? `<div class="notice">${T('auth_notice')}</div>` : ''}
+      <div class="divider">${T('auth_divider')}</div>
+      <button class="btn-google" onclick="loginGoogle()">
+        <svg width="18" height="18" viewBox="0 0 18 18"><path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z"/><path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z"/><path fill="#FBBC05" d="M3.964 10.707A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.707V4.961H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.039l3.007-2.332z"/><path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.961L3.964 6.293C4.672 4.166 6.656 3.58 9 3.58z"/></svg>
+        ${T('auth_google')}
+      </button>
+      <div class="toggle-link">
+        ${isReg ? T('auth_toggle_to_register') : T('auth_toggle_to_login')}
+        <span onclick="toggleMode()">${isReg ? T('auth_toggle_login') : T('auth_toggle_register')}</span>
+      </div>
+    </div>
+  `;
+  const emailEl = document.getElementById('f-email');
+  if (emailEl) { if (prefillEmail) emailEl.value = prefillEmail; emailEl.focus(); }
+  const pwdEl = document.getElementById('f-password');
+  if (pwdEl) pwdEl.addEventListener('keydown', e => { if (e.key === 'Enter') submit(); });
+}
+
+async function loginGoogle() {
+  try {
+    const { error } = await sb.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: window.location.origin + '/' }
+    });
+    if (error) showToast(error.message);
+  } catch(e) {
+    showToast(T('auth_err_connection'));
+  }
+}
+
+function toggleMode() {
+  mode = mode === 'login' ? 'register' : 'login';
+  render();
+}
+
+async function submit() {
+  if (loading) return;
+  const email = (document.getElementById('f-email').value || '').trim();
+  const password = document.getElementById('f-password').value || '';
+  if (!email || !password) { showToast(T('auth_err_fill')); return; }
+  if (password.length < 6) { showToast(T('auth_err_password')); return; }
+
+  loading = true;
+  const btn = document.getElementById('submitBtn');
+  if (btn) { btn.disabled = true; btn.textContent = '…'; }
+
+  try {
+    if (mode === 'register') {
+      const { error } = await sb.auth.signUp({ email, password });
+      if (error) { showToast(error.message); return; }
+      showToast(T('auth_notice'));
+    } else {
+      const { error } = await sb.auth.signInWithPassword({ email, password });
+      if (error) { showToast(T('auth_err_wrong')); return; }
+      redirect();
+    }
+  } catch(e) {
+    showToast(T('auth_err_connection'));
+  } finally {
+    loading = false;
+    render();
+  }
+}
+
+function redirect() {
+  const back = localStorage.getItem('auth_redirect') || '/planner';
+  localStorage.removeItem('auth_redirect');
+  location.href = back;
+}
+
+// Init: load the active language, then route on session
+loadLocale(getLang())
+  .then(() => sb.auth.getSession())
+  .then(({ data: { session } }) => {
+    if (session) { redirect(); return; }
+    render();
+  })
+  .catch(() => render());
+</script>
+</body>
+</html>

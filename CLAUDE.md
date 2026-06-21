@@ -4,12 +4,14 @@ Full reference: **[ARCHITECTURE.md](ARCHITECTURE.md)**. This file is **rules onl
 "how it works" detail, read the referenced section (§) there.
 
 Orientation: vanilla HTML/CSS/JS, no framework/bundler; Supabase auth + cloud progress; deployed
-on Vercel (HTTPS). `index.html` (repo root) = login; the authenticated pages live in `views/` and
-are served via `vercel.json` pretty-URL rewrites — `views/planner.html` (`/planner`) /
-`views/vocab.html` (`/vocab`) / `views/verbs.html` (`/verbs`) / `views/collections.html`
-(`/collections`). All four share one header via `assets/js/header.js` (`appHeader()`) and one
-`--page-max` width. In-page asset/data/locale paths are root-absolute (`/assets`, `/data`,
-`/locales`). (Details: ARCHITECTURE.md §1–§3, collections = §16.)
+on Vercel (HTTPS). `index.html` (repo root) = the **public landing page** for guests (its own
+`render()` + `landing.css`, no cloud-sync); login/register lives at `views/login.html` (`/login`);
+the authenticated pages live in `views/` and are served via `vercel.json` pretty-URL rewrites —
+`views/planner.html` (`/planner`) / `views/vocab.html` (`/vocab`) / `views/verbs.html` (`/verbs`) /
+`views/collections.html` (`/collections`). The four app pages share one header via
+`assets/js/header.js` (`appHeader()`) and one `--page-max` width (the landing and login have their
+own chrome). In-page asset/data/locale paths are root-absolute (`/assets`, `/data`, `/locales`).
+(Details: ARCHITECTURE.md §1–§3, landing = §18, collections = §16.)
 
 ## Build
 - `npm run build` (`node build.js`) injects `NEXT_PUBLIC_SUPABASE_*` into

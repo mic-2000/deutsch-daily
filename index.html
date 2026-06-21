@@ -5,7 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="color-scheme" content="light dark">
 <script>try{document.documentElement.setAttribute('data-theme',localStorage.getItem('ui_theme')==='dark'?'dark':'light');}catch(e){}</script>
-<title>Deutsch Daily</title>
+<title>Deutsch Daily — German A1 → B1 by a daily plan</title>
+<meta name="description" content="Deutsch Daily: learn German from A1 to B1 on a 118-day plan — daily tasks, spaced-repetition vocabulary & verb trainers, and an AI tutor. Works offline.">
 <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
 <link rel="manifest" href="/manifest.webmanifest">
 <meta name="theme-color" content="#F2EDE3">
@@ -19,24 +20,11 @@
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500;9..144,600&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/assets/css/base.css">
 <link rel="stylesheet" href="/assets/css/components.css">
-<link rel="stylesheet" href="/assets/css/auth.css">
+<link rel="stylesheet" href="/assets/css/landing.css">
 </head>
 <body>
 
-<header>
-  <div class="container">
-    <div class="title-cat">Deutsch · A1 → B1</div>
-    <h1>Mein<em>kurs</em></h1>
-    <div class="subtitle" id="auth-subtitle"></div>
-  </div>
-</header>
-
-<main>
-  <div class="container">
-    <div id="auth-form"><div class="loading-msg">…</div></div>
-  </div>
-</main>
-
+<div id="app" class="lp"><div class="loading-msg">…</div></div>
 <div id="toast" class="toast"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
@@ -46,101 +34,240 @@
 <script src="/assets/js/pwa.js"></script>
 <script src="/assets/js/supabase.js"></script>
 <script>
-let mode = 'login'; // 'login' | 'register'
-let loading = false;
+/* Public landing page. No cloud-sync / progress here — it only checks whether a session
+   already exists (and forwards to the app) and otherwise renders the marketing page.
+   Render = full re-render of #app from template strings (project convention); inline
+   onclick/onsubmit handlers are therefore globals. All copy goes through T(). */
 
-function render() {
-  const isReg = mode === 'register';
-  // Header subtitle lives outside #auth-form, so localize it here too (covers language switching).
-  const sub = document.getElementById('auth-subtitle');
-  if (sub) sub.textContent = T('auth_subtitle');
-  document.getElementById('auth-form').innerHTML = `
-    <div class="auth-box">
-      <div style="display:flex;justify-content:flex-end;align-items:center;gap:8px;margin-bottom:16px">${renderLangSwitcher()}${renderThemeToggle()}</div>
-      <div class="auth-title">${isReg ? T('auth_title_register') : T('auth_title_login')}</div>
-      <div class="field">
-        <label>${T('auth_email')}</label>
-        <input type="email" id="f-email" placeholder="you@example.com" autocomplete="email" />
-      </div>
-      <div class="field">
-        <label>${T('auth_password')}</label>
-        <input type="password" id="f-password" placeholder="${T('auth_password_hint')}"
-               autocomplete="${isReg ? 'new-password' : 'current-password'}" />
-      </div>
-      <button class="btn-submit" id="submitBtn" onclick="submit()">
-        ${isReg ? T('auth_submit_register') : T('auth_submit_login')}
-      </button>
-      ${isReg ? `<div class="notice">${T('auth_notice')}</div>` : ''}
-      <div class="divider">${T('auth_divider')}</div>
-      <button class="btn-google" onclick="loginGoogle()">
-        <svg width="18" height="18" viewBox="0 0 18 18"><path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z"/><path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z"/><path fill="#FBBC05" d="M3.964 10.707A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.707V4.961H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.039l3.007-2.332z"/><path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.961L3.964 6.293C4.672 4.166 6.656 3.58 9 3.58z"/></svg>
-        ${T('auth_google')}
-      </button>
-      <div class="toggle-link">
-        ${isReg ? T('auth_toggle_to_register') : T('auth_toggle_to_login')}
-        <span onclick="toggleMode()">${isReg ? T('auth_toggle_login') : T('auth_toggle_register')}</span>
+const REGISTER_URL = '/login?mode=register';
+
+function header() {
+  return `
+  <header class="lp-header">
+    <div class="lp-header-inner">
+      <a href="#top" class="lp-brand">Deutsch <em>Daily</em></a>
+      <div class="lp-header-actions">
+        <div class="lang-switcher">${renderLangSwitcher()}</div>
+        ${typeof renderThemeToggle === 'function' ? renderThemeToggle() : ''}
+        <a href="/login" class="lp-btn lp-btn-outline lp-btn-sm">${T('lp_login')}</a>
+        <a href="${REGISTER_URL}" class="lp-btn lp-btn-solid lp-btn-sm">${T('lp_register')}</a>
       </div>
     </div>
-  `;
-  const emailEl = document.getElementById('f-email');
-  if (emailEl) emailEl.focus();
-  const pwdEl = document.getElementById('f-password');
-  if (pwdEl) pwdEl.addEventListener('keydown', e => { if (e.key === 'Enter') submit(); });
+  </header>`;
 }
 
-async function loginGoogle() {
-  try {
-    const { error } = await sb.auth.signInWithOAuth({
-      provider: 'google',
-      options: { redirectTo: window.location.origin + '/' }
-    });
-    if (error) showToast(error.message);
-  } catch(e) {
-    showToast(T('auth_err_connection'));
-  }
+function hero() {
+  return `
+  <section class="lp-hero" data-screen="hero">
+    <div class="lp-glow" aria-hidden="true"></div>
+    <div class="lp-hero-col">
+      <div class="lp-hero-badge"><span class="lp-dot lp-anim"></span>${T('lp_hero_badge')}</div>
+      <h1>${T('lp_hero_title')}</h1>
+      <p class="lp-lead">${T('lp_hero_sub')}</p>
+      <div class="lp-cta-row">
+        <a href="${REGISTER_URL}" class="lp-btn lp-btn-solid">${T('lp_hero_cta')}</a>
+        <a href="#how" class="lp-btn lp-btn-outline">${T('lp_hero_how')}</a>
+      </div>
+      <div class="lp-note">${T('lp_hero_note')}</div>
+    </div>
+    <div class="lp-hero-art" aria-hidden="true">
+      <div class="lp-card-float lp-card-1"><div class="lp-anim"><span class="g g-der">der</span> <span class="w">Weg</span></div></div>
+      <div class="lp-card-float lp-card-2"><div class="lp-anim"><span class="g g-das">das</span> <span class="w">Ziel</span></div></div>
+      <div class="lp-card-float lp-card-3"><div class="lp-anim"><span class="g g-die">die</span> <span class="w">Sprache</span></div></div>
+      <div class="lp-mock">
+        <div class="lp-mock-head">
+          <span class="lp-mock-title"><span class="lp-dot lp-anim"></span>${T('lp_mock_day_label')} <em>47</em></span>
+          <span class="lp-mock-level">${T('lp_mock_level')}</span>
+        </div>
+        <div class="lp-mock-list">
+          <div class="lp-mock-item lp-anim" style="animation-delay:.1s"><span class="lp-check done lp-anim" style="animation-delay:.55s">✓</span><span class="t">${T('lp_mock_topic')}</span></div>
+          <div class="lp-mock-item lp-anim" style="animation-delay:.25s"><span class="lp-check done lp-anim" style="animation-delay:.8s">✓</span><span class="t">${T('lp_mock_words')}</span></div>
+          <div class="lp-mock-item lp-anim" style="animation-delay:.4s"><span class="lp-check"></span><span>${T('lp_mock_articles')}</span></div>
+          <div class="lp-mock-item lp-anim" style="animation-delay:.55s"><span class="lp-check"></span><span>${T('lp_mock_verbs')}</span></div>
+        </div>
+        <div class="lp-mock-bars">
+          <span class="f b-der" style="animation-delay:.9s"></span>
+          <span class="f b-die" style="animation-delay:1.05s"></span>
+          <span class="f b-das" style="animation-delay:1.2s"></span>
+          <span></span>
+        </div>
+      </div>
+    </div>
+  </section>`;
 }
 
-function toggleMode() {
-  mode = mode === 'login' ? 'register' : 'login';
-  render();
+function pain() {
+  const items = [1, 2, 3, 4, 5, 6].map((i) =>
+    `<div class="lp-pain-card"><p>${T('lp_pain_' + i)}</p></div>`).join('');
+  return `
+  <section class="lp-section" data-screen="pain">
+    <div class="lp-eyebrow">${T('lp_pain_eyebrow')}</div>
+    <h2>${T('lp_pain_title')}</h2>
+    <div class="lp-pain-grid">${items}</div>
+  </section>`;
 }
 
-async function submit() {
-  if (loading) return;
-  const email = (document.getElementById('f-email').value || '').trim();
-  const password = document.getElementById('f-password').value || '';
-  if (!email || !password) { showToast(T('auth_err_fill')); return; }
-  if (password.length < 6) { showToast(T('auth_err_password')); return; }
-
-  loading = true;
-  const btn = document.getElementById('submitBtn');
-  if (btn) { btn.disabled = true; btn.textContent = '…'; }
-
-  try {
-    if (mode === 'register') {
-      const { error } = await sb.auth.signUp({ email, password });
-      if (error) { showToast(error.message); return; }
-      showToast(T('auth_notice'));
-    } else {
-      const { error } = await sb.auth.signInWithPassword({ email, password });
-      if (error) { showToast(T('auth_err_wrong')); return; }
-      redirect();
-    }
-  } catch(e) {
-    showToast(T('auth_err_connection'));
-  } finally {
-    loading = false;
-    render();
-  }
+function how() {
+  const steps = [
+    { n: '01', c: 'c-der' }, { n: '02', c: 'c-die' }, { n: '03', c: 'c-das' },
+    { n: '04', c: '' }, { n: '✓', c: 'c-accent', done: true },
+  ];
+  const rows = steps.map((s, i) => `
+    <div class="lp-how-row${s.done ? ' done' : ''}">
+      <span class="lp-how-num ${s.c}">${s.n}</span>
+      <div><div class="lp-how-t">${T('lp_how_' + (i + 1) + '_t')}</div><div class="lp-how-d">${T('lp_how_' + (i + 1) + '_d')}</div></div>
+    </div>`).join('');
+  return `
+  <section class="lp-section" id="how" data-screen="how">
+    <div class="lp-eyebrow">${T('lp_how_eyebrow')}</div>
+    <div class="lp-how-head">
+      <h2>${T('lp_how_title')}</h2>
+      <span class="lp-how-time">${T('lp_how_time')}</span>
+    </div>
+    <div class="lp-how">${rows}</div>
+  </section>`;
 }
 
+function features() {
+  const cells = [1, 2, 3, 4, 5, 6].map((i) => `
+    <div class="lp-feat-cell">
+      <div class="lp-feat-num">0${i}</div>
+      <div class="lp-feat-t">${T('lp_feat_' + i + '_t')}</div>
+      <div class="lp-feat-d">${T('lp_feat_' + i + '_d')}</div>
+    </div>`).join('');
+  return `
+  <section class="lp-section" data-screen="features">
+    <div class="lp-eyebrow">${T('lp_feat_eyebrow')}</div>
+    <h2>${T('lp_feat_title')}</h2>
+    <div class="lp-feat-grid">${cells}</div>
+  </section>`;
+}
+
+function forWhom() {
+  const li = [1, 2, 3, 4, 5].map((i) => `<li class="lp-whom-li">${T('lp_whom_' + i)}</li>`).join('');
+  return `
+  <section class="lp-section" data-screen="whom">
+    <div class="lp-whom">
+      <div>
+        <div class="lp-eyebrow">${T('lp_whom_eyebrow')}</div>
+        <h2>${T('lp_whom_title')}</h2>
+        <p class="lp-whom-lead">${T('lp_whom_lead')}</p>
+      </div>
+      <ul class="lp-whom-list">${li}</ul>
+    </div>
+  </section>`;
+}
+
+function pricing() {
+  return `
+  <section class="lp-section" data-screen="pricing">
+    <div class="lp-eyebrow">${T('lp_price_eyebrow')}</div>
+    <h2>${T('lp_price_title')}</h2>
+    <div class="lp-price-grid">
+      <div class="lp-price-card">
+        <div class="lp-price-name">${T('lp_price_free_name')}</div>
+        <div class="lp-price-amount">€0</div>
+        <ul class="lp-price-list">
+          <li>${T('lp_price_free_1')}</li>
+          <li>${T('lp_price_free_2')}</li>
+          <li class="muted">${T('lp_price_free_3')}</li>
+          <li class="muted">${T('lp_price_free_4')}</li>
+        </ul>
+        <a href="${REGISTER_URL}" class="lp-price-cta">${T('lp_price_free_cta')}</a>
+      </div>
+      <div class="lp-price-card">
+        <div class="lp-price-name">${T('lp_price_month_name')}</div>
+        <div class="lp-price-amount">€5,99<span class="suffix">${T('lp_price_month_suffix')}</span></div>
+        <ul class="lp-price-list">
+          <li>${T('lp_price_month_1')}</li>
+          <li>${T('lp_price_month_2')}</li>
+          <li>${T('lp_price_month_3')}</li>
+          <li>${T('lp_price_month_4')}</li>
+        </ul>
+        <a href="${REGISTER_URL}" class="lp-price-cta">${T('lp_price_month_cta')}</a>
+      </div>
+      <div class="lp-price-card featured">
+        <span class="lp-price-badge">${T('lp_price_year_badge')}</span>
+        <div class="lp-price-name">${T('lp_price_year_name')}</div>
+        <div class="lp-price-amount">€39<span class="suffix">${T('lp_price_year_suffix')}</span></div>
+        <ul class="lp-price-list">
+          <li>${T('lp_price_year_1')}</li>
+          <li>${T('lp_price_year_2')}</li>
+          <li>${T('lp_price_year_3')}</li>
+          <li>${T('lp_price_year_4')}</li>
+          <li>${T('lp_price_year_5')}</li>
+        </ul>
+        <a href="${REGISTER_URL}" class="lp-price-cta solid">${T('lp_price_year_cta')}</a>
+      </div>
+    </div>
+    <div class="lp-price-early">${T('lp_price_early')}</div>
+    <div class="lp-cta-center">
+      <a href="${REGISTER_URL}" class="lp-btn lp-btn-solid">${T('lp_hero_cta')}</a>
+      <div class="lp-note">${T('lp_no_card')}</div>
+    </div>
+  </section>`;
+}
+
+function faq() {
+  const items = [1, 2, 3, 4, 5, 6, 7, 8].map((i) => `
+    <details>
+      <summary>${T('lp_faq_' + i + '_q')}<span class="plus">+</span></summary>
+      <p>${T('lp_faq_' + i + '_a')}</p>
+    </details>`).join('');
+  return `
+  <section class="lp-section" data-screen="faq">
+    <div class="lp-eyebrow">${T('lp_faq_eyebrow')}</div>
+    <h2>${T('lp_faq_title')}</h2>
+    <div class="lp-faq">${items}</div>
+  </section>`;
+}
+
+function footerCta() {
+  return `
+  <section class="lp-section" data-screen="footer">
+    <div class="lp-foot-cta">
+      <h2>${T('lp_foot_title')}</h2>
+      <p>${T('lp_foot_sub')}</p>
+      <form class="lp-foot-form" onsubmit="onLandingSubmit(event)">
+        <input class="lp-foot-input" type="email" required placeholder="email@example.com" id="lp-email" autocomplete="email" />
+        <button type="submit" class="lp-btn lp-btn-solid">${T('lp_foot_btn')}</button>
+      </form>
+      <div class="lp-note" style="margin-top:10px">${T('lp_hero_note')}</div>
+    </div>
+    <footer class="lp-footer">
+      <span>© 2026 Deutsch Daily</span>
+      <div class="lp-footer-links">
+        <a href="https://github.com" target="_blank" rel="noopener">GitHub</a>
+        <a href="#">${T('lp_foot_privacy')}</a>
+        <a href="#">${T('lp_foot_terms')}</a>
+      </div>
+    </footer>
+  </section>`;
+}
+
+function render() {
+  document.getElementById('app').innerHTML =
+    header() +
+    `<main class="lp-main" id="top">` +
+    hero() + pain() + how() + features() + forWhom() + pricing() + faq() + footerCta() +
+    `</main>`;
+}
+
+/* Email field on the footer CTA → start registration with the address prefilled. */
+function onLandingSubmit(e) {
+  e.preventDefault();
+  const el = document.getElementById('lp-email');
+  const email = (el && el.value || '').trim();
+  location.href = REGISTER_URL + (email ? '&email=' + encodeURIComponent(email) : '');
+}
+
+/* A signed-in visitor never sees the landing — forward to where they were headed, or the app. */
 function redirect() {
   const back = localStorage.getItem('auth_redirect') || '/planner';
   localStorage.removeItem('auth_redirect');
   location.href = back;
 }
 
-// Init: load the active language, then route on session
 loadLocale(getLang())
   .then(() => sb.auth.getSession())
   .then(({ data: { session } }) => {

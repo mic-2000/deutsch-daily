@@ -71,14 +71,15 @@ language.
 
 ```
 deutsch-daily/
-├── index.html          # LOGIN / REGISTER page (email + Google OAuth). Root entry point ( / ).
-├── views/              # all authenticated app pages live here; served via pretty-URL rewrites
+├── index.html          # PUBLIC LANDING page for guests (marketing + auth entry points). Root ( / ). §18
+├── views/              # login + all authenticated app pages live here; served via pretty-URL rewrites
+│   ├── login.html       # LOGIN / REGISTER (email + Google OAuth).    ( /login ) §5
 │   ├── planner.html     # Daily planner + AI Lehrer chat.            ( /planner )
 │   ├── vocab.html       # Vocabulary trainer.                         ( /vocab )
 │   ├── verbs.html       # Irregular-verb trainer (triad / cloze / table). ( /verbs )
 │   └── collections.html # User word-set trainer (import/edit/drill/AI translate). ( /collections ) §16
 ├── assets/
-│   ├── css/  base.css · components.css · planner.css · chat.css · vocab.css · verbs.css · auth.css · collections.css
+│   ├── css/  base.css · components.css · planner.css · chat.css · vocab.css · verbs.css · auth.css · collections.css · landing.css
 │   ├── js/   i18n.js · theme.js · utils.js · supabase.js · cloud-sync.js · ai-config.js
 │   │         gemini.js · leitner.js · speech.js · header.js · pwa.js
 │   ├── favicon.svg · icon.svg · icon-maskable.svg     # icon sources (PNGs rendered into icons/)
@@ -90,12 +91,21 @@ deutsch-daily/
 ├── ARCHITECTURE.md · CLAUDE.md · README.md · LICENSE
 ```
 
-**Routing model:** `index.html` *is* the auth screen (the full login/register form) and is the only
-HTML at the repo root, served at `/`. The four authenticated pages live in `views/` and are reached
-via the `vercel.json` pretty-URL rewrites (`/planner` → `/views/planner.html`, …). All inter-page
-navigation (the nav tabs in `header.js`, the post-login redirect, the session-loss redirect) uses
-these pretty URLs / `/`. There is no separate "router" page — per-page session checks (`initApp`) do
-the gating. The legacy `auth.html` redirect stub was deleted.
+**Routing model:** `index.html` is the **public landing page** (marketing + auth entry points,
+§18) and is the only HTML at the repo root, served at `/`. The login/register form and the four
+authenticated pages all live in `views/` and are reached via the `vercel.json` pretty-URL rewrites
+(`/login` → `/views/login.html`, `/planner` → `/views/planner.html`, …). The auth flow:
+- A **guest** at `/` sees the landing; its "Log in" / "Sign up" buttons and every CTA go to `/login`
+  (register CTAs use `/login?mode=register`, and the footer email field deep-links
+  `/login?mode=register&email=…` so the address is prefilled).
+- A **signed-in** visitor to `/` is forwarded to the app (the landing's `redirect()` →
+  `auth_redirect` or `/planner`), so logged-in users never see the marketing page.
+- A guest who hits a protected page is bounced by `initApp` to **`/login`** (remembering the target
+  in `auth_redirect`); `logout()` returns to the landing (`/`).
+
+All inter-page navigation (the nav tabs in `header.js`, the post-login redirect, the session-loss
+redirect) uses these pretty URLs / `/`. There is no separate "router" page — per-page session checks
+(`initApp`) do the gating. The legacy `auth.html` redirect stub was deleted.
 
 ### Script load order
 
@@ -172,8 +182,11 @@ The saved language is known synchronously from `localStorage['ui_lang']`, so thi
 already in the right language; `initApp()` then re-renders once with the cloud data (progress,
 email). (Guarded by `tests/ui-refactor.test.js`.)
 
-`index.html` (the login page, at the repo root) loads only the subset it needs (it skips
-`cloud-sync.js`, `header.js`, and the data files). The legacy `auth.html` redirect stub was removed.
+`index.html` (the landing page, at the repo root) and `views/login.html` each load only the subset
+they need (Supabase CDN + `i18n.js` / `theme.js` / `utils.js` / `pwa.js` / `supabase.js`); both skip
+`cloud-sync.js`, `header.js`, and the data files. The landing's own `render()` (defined in its inline
+`<script>`) rebuilds `#app` from `T()`-keyed template strings — same full-re-render convention as the
+app pages. The legacy `auth.html` redirect stub was removed.
 
 ---
 
@@ -301,7 +314,7 @@ collection upserts **merge per id** so a create + later mastery update collapse 
 `cloud-sync.js` provides:
 - `currentUser` (global, set after auth).
 - `initApp()` — `sb.auth.getSession()`. **No session →** store `location.href` in
-  `localStorage['auth_redirect']` and redirect to `/` (the login page). **Session →** set `currentUser`,
+  `localStorage['auth_redirect']` and redirect to `/login`. **Session →** set `currentUser`,
   `SELECT <CLOUD_FIELD>, lang` from `progress`, apply the payload (only when non-empty — the `{}`
   column default is skipped). It resolves the language (cloud value if valid, else the localStorage
   default) **before** the first render, then `await setLang(lang, true)` loads that one locale,
@@ -441,15 +454,19 @@ clearing a lesson deletes the row (`deleteLessonFromCloud`); there is no soft-de
   (e.g. a row first created by the planner). The `mastery` guard inside `applyData` stays, because
   it also protects manual file import.
 
-**Login (`index.html`):**
+**Login (`views/login.html`, served at `/login`):**
 - On load, `sb.auth.getSession()`; if already signed in → `redirect()` (to
   `localStorage['auth_redirect']` or `/planner`). Otherwise render the form.
+- **Deep links from the landing:** `?mode=register` opens the form in register mode; `?email=…`
+  prefills the email field (the landing's footer CTA passes both).
 - Email/password sign-in (`signInWithPassword`) and sign-up (`signUp`, shows "confirm your email"
-  notice). Google OAuth (`signInWithOAuth`, `redirectTo` = production root).
+  notice). Google OAuth (`signInWithOAuth`, `redirectTo` = production root `/` — the landing then
+  forwards the now-signed-in user into the app).
+- A "← Home" link (`T('auth_back_home')`) returns to the landing.
 - Client-side validation: non-empty fields, password ≥ 6 chars. Error text via `T(...)`.
 
 **Protected pages (`views/planner.html`, `views/vocab.html`, …):** `initApp()` enforces the session
-(redirecting to `/` and remembering where to come back to via `auth_redirect`).
+(redirecting to **`/login`** and remembering where to come back to via `auth_redirect`).
 
 ---
 
@@ -825,15 +842,20 @@ Editorial/typographic aesthetic: large light (300) serif headings (Fraunces), Ma
 minimal rounding, thin borders, tabular numerals (`.num`). **Container width is unified:** every
 app page uses one `--page-max: 920px` token — `.container { max-width: var(--page-max) }` in
 `base.css`. The old per-page overrides (planner 820px, vocab's 26px header padding) were removed so
-the four sections read as one site; only `auth.css` (the login page) narrows to 480px. Responsive
-via `@media (max-width: 600px)` across `base.css` + every page CSS + `chat.css` (and a 700/720px
-tier on some pages).
+the four sections read as one site; `auth.css` (the login page) narrows to 480px and `landing.css`
+(the public landing) lays out its own editorial sections on the same `--page-max` content column.
+Responsive via `@media (max-width: 600px)` across `base.css` + every page CSS + `chat.css` (and a
+700/720px tier on some pages; `landing.css` collapses the hero/grids at 720px and tightens padding
+at 560px).
 
 CSS files: `base.css` (tokens, reset, header/footer/info-box/toast/container + `--page-max`),
 `components.css` (`.user-bar-right`, nav-tabs, lang-switcher + the mobile nav-tabs horizontal-scroll
 strip and email-ellipsis rules), then page-specific `planner.css` / `vocab.css` / `verbs.css` /
-`collections.css` / `auth.css`. `chat.css` is loaded only by `planner.html` and covers `.ai-messages`, `.ai-msg` (user + model variants), `.ai-input-row` (auto-growing
-`<textarea>`), `.ai-table`, the loading-dots animation, and the key/summary modals.
+`collections.css` / `auth.css` / `landing.css`. `chat.css` is loaded only by `planner.html` and covers `.ai-messages`, `.ai-msg` (user + model variants), `.ai-input-row` (auto-growing
+`<textarea>`), `.ai-table`, the loading-dots animation, and the key/summary modals. `landing.css`
+(loaded only by `index.html`) reuses the `base.css` tokens + `components.css` switcher/toggle and adds
+the editorial hero, the section grids, and the decorative `lp*`-prefixed keyframe animations
+(disabled under `prefers-reduced-motion`).
 
 ---
 
@@ -1043,7 +1065,7 @@ build step or store — it works off the existing Vercel HTTPS deploy.
   (full-bleed, content inside the maskable safe zone) are the **sources**; `assets/icons/*.png`
   (192/512 `any`, `maskable-512`, `apple-touch-icon` 180) are rendered from them with `rsvg-convert`.
   Regenerate the PNGs if you edit a source SVG.
-- **`<head>` tags** (all 5 pages) — `<link rel="manifest">`, `theme-color` (kept in sync with the
+- **`<head>` tags** (all 6 pages — landing, login + the 4 app pages) — `<link rel="manifest">`, `theme-color` (kept in sync with the
   active light/dark theme by `theme.js`'s `applyTheme()`), `mobile-web-app-capable` /
   `apple-mobile-web-app-*`, and `apple-touch-icon`.
 - **`assets/js/pwa.js`** — one line: registers `sw.js` on `window.load` (best-effort; no-op on
@@ -1069,3 +1091,40 @@ first-ever sign-in still need a connection.**
 > **TWA / Play Store (not done, easy follow-up).** This PWA is the prerequisite for a `.aab` via
 > PWABuilder/Bubblewrap (a Trusted Web Activity wrapping the same URL). That additionally needs a
 > Play Developer account and a `/.well-known/assetlinks.json` for Digital Asset Links.
+
+---
+
+## 18. `index.html` — public landing page
+
+The repo-root `index.html` is the **marketing landing page** shown to unauthenticated visitors at
+`/`. It is intentionally self-contained and lighter than the app pages: it loads the Supabase CDN +
+`i18n.js` / `theme.js` / `utils.js` / `pwa.js` / `supabase.js`, but **not** `cloud-sync.js`,
+`header.js`, or any `data/` file (there is no progress to sync and no app chrome to share).
+
+**Render model** — same convention as the app pages: a global `render()` rebuilds `#app` from
+`T()`-keyed template strings, with the page broken into section builders (`header`, `hero`, `pain`,
+`how`, `features`, `forWhom`, `pricing`, `faq`, `footerCta`). Inline `onclick`/`onsubmit` handlers
+(`onLandingSubmit`) are therefore globals. The shared `renderLangSwitcher()` / `renderThemeToggle()`
+drive the in-header language + theme controls, so switching either re-renders the landing in place
+(no cloud write — `saveLangToCloud`/`saveThemeToCloud` are simply absent here).
+
+**Auth routing** (see also §5):
+- On load: `loadLocale(getLang())` → `sb.auth.getSession()`. A signed-in visitor is forwarded by
+  `redirect()` (`auth_redirect` or `/planner`); a guest gets the rendered landing. Any error falls
+  through to rendering the landing (so it still works offline / if Supabase is unreachable).
+- Header "Log in" → `/login`; "Sign up" and every section CTA → `/login?mode=register`. The footer
+  email field submits to `/login?mode=register&email=…` (prefills the register form).
+
+**Copy & i18n** — every visible string is a `T('lp_*')` key present in all three locales
+(`lp_login` … `lp_foot_terms`, ~106 keys); `auth_back_home` (the login page's "← Home" link) is added
+alongside them. RU is the original source copy; EN/UA are translations. Brand name "Deutsch Daily",
+the German demo words (der Weg / das Ziel / die Sprache) and price numerals (`€0` / `€5,99` / `€39`)
+are literals in the markup; only the surrounding words/suffixes are translated.
+
+**Styling** — `landing.css` only (plus `base.css` tokens + `components.css` switcher/toggle). No new
+color or type system is introduced (§11). The decorative animations are `lp*`-prefixed keyframes and
+are disabled under `prefers-reduced-motion`; the hero artwork is `aria-hidden` and hidden below 720px.
+
+> **Pricing is presentational.** The Free/Monthly/Yearly tiers and the "early supporter" line are
+> marketing copy from the source design — there is **no billing integration**. Every pricing CTA just
+> routes to registration. Wire a real checkout (and gate features) before treating the tiers as live.
