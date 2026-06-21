@@ -35,9 +35,11 @@ function appHeader(active, opts) {
   <h1>${o.h1}</h1>
   <div class="subtitle">${T(o.subtitle)}</div>
   <div class="user-bar">
-    <div class="nav-tabs">${tabs}</div>
-    <div class="user-bar-right">
+    <div class="nav-group">
+      <div class="nav-tabs">${tabs}</div>
       <a class="settings-link${active === 'settings' ? ' active' : ''}" href="/settings" title="${T('settings_title')}" aria-label="${T('settings_title')}">⚙</a>
+    </div>
+    <div class="user-bar-right">
       <span class="user-email">${esc(currentUser ? currentUser.email : '')}</span>
       <button class="btn-logout" onclick="logout()">${T('logout')}</button>
     </div>

@@ -6,6 +6,7 @@
 .btn-logout:hover { color: var(--accent-2); }
 
 .nav-tabs { display: flex; gap: 8px; }
+.nav-group { display: flex; align-items: center; gap: 8px; }
 .nav-tab { font-size: 12px; padding: 5px 14px; border: 1px solid var(--line); color: var(--ink-soft); text-decoration: none; transition: all 0.15s; }
 .nav-tab:hover { border-color: var(--ink); color: var(--ink); }
 .nav-tab.active { border-color: var(--ink); background: var(--ink); color: var(--paper); }
@@ -28,8 +29,10 @@
    right-side controls drop onto their own full-width row so nothing overflows. */
 @media (max-width: 600px) {
   .user-bar { gap: 12px; margin-top: 16px; }
+  .nav-group { width: 100%; gap: 8px; }
   .nav-tabs {
-    width: 100%;
+    flex: 1 1 auto;
+    min-width: 0;
     overflow-x: auto;
     flex-wrap: nowrap;
     -webkit-overflow-scrolling: touch;
@@ -38,6 +41,7 @@
   }
   .nav-tabs::-webkit-scrollbar { display: none; }
   .nav-tab { white-space: nowrap; flex: 0 0 auto; }
+  .settings-link { flex: 0 0 auto; }
   .user-bar-right { width: 100%; gap: 10px; }
   .user-email { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .btn-logout { flex: 0 0 auto; }
