@@ -188,10 +188,21 @@ function loadPage(opts) {
   sandbox.document = makeDocument(appEl);
   sandbox.speechSynthesis = speech;
 
+  // Capture each requested name. A page may keep the function at top level (the historic
+  // shape) OR expose it on a trainer namespace object (window.VocabTrainer / VerbsTrainer)
+  // after the engines were extracted into shared modules. We try the top-level binding first,
+  // then fall back to the namespaces — so existing tests keep reading the REAL code through
+  // its current home regardless of which shape a page uses.
   const capture =
     '\n;globalThis.__captured = {};\n' +
+    ';globalThis.__ns = [globalThis.VocabTrainer, globalThis.VerbsTrainer].filter(Boolean);\n' +
     exports
-      .map((n) => `try{globalThis.__captured[${JSON.stringify(n)}]=${n};}catch(e){globalThis.__captured[${JSON.stringify(n)}]=undefined;}`)
+      .map((n) => {
+        const k = JSON.stringify(n);
+        return `try{globalThis.__captured[${k}]=${n};}catch(e){` +
+          `var __v=undefined;for(var __i=0;__i<globalThis.__ns.length;__i++){if(globalThis.__ns[__i]&&(${k} in globalThis.__ns[__i])){__v=globalThis.__ns[__i][${k}];break;}}` +
+          `globalThis.__captured[${k}]=__v;}`;
+      })
       .join('\n');
 
   const source = parts.join('\n;\n') + capture;

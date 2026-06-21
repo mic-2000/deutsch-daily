@@ -1,0 +1,72 @@
+/* today.css — the /today daily-flow wizard chrome (intro checklist, step header, grammar card,
+   AI step wrapper, done screen). Reuses the base.css design tokens; the in-flow vocab/verb
+   sessions are styled by vocab.css / verbs.css (loaded alongside this file). */
+
+/* ---- intro / checklist ---- */
+.today-hero { margin-top: 22px; }
+.today-hero-top { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.today-hero h1 { font-family: var(--serif); font-weight: 300; font-size: clamp(34px, 6vw, 56px); line-height: 1.04; margin: 6px 0 0; letter-spacing: -.01em; }
+.today-hero h1 em { font-style: italic; color: var(--accent); }
+.today-badge { border: 1px solid var(--line); border-radius: 999px; padding: 7px 16px; font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-soft); white-space: nowrap; }
+.today-lead { color: var(--ink-soft); font-size: 16px; line-height: 1.6; max-width: 56ch; margin: 16px 0 0; }
+
+.today-day-tag { margin-top: 18px; font-size: 13px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-soft); }
+.today-day-tag strong { color: var(--ink); font-weight: 600; }
+
+.today-banner { margin-top: 18px; border: 1px solid var(--line); border-left: 3px solid var(--gold); background: var(--paper-3); border-radius: 4px; padding: 12px 16px; color: var(--ink-soft); font-size: 14px; }
+
+.steps-label { margin: 26px 0 10px; font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-soft); }
+.steps-list { border: 1px solid var(--line); border-radius: 6px; overflow: hidden; background: var(--paper-3); }
+.step-row { display: flex; gap: 16px; align-items: flex-start; padding: 18px 20px; border-bottom: 1px solid var(--line); }
+.step-row:last-child { border-bottom: none; }
+.step-badge { flex: 0 0 auto; width: 44px; height: 44px; border: 1px solid var(--line); border-radius: 4px; display: grid; place-items: center; font-family: var(--serif); font-size: 19px; color: var(--ink-soft); }
+.step-row.c1 .step-badge { border-color: var(--der); color: var(--der); }
+.step-row.c2 .step-badge { border-color: var(--die); color: var(--die); }
+.step-row.c3 .step-badge { border-color: var(--green); color: var(--green); }
+.step-row.c4 .step-badge { border-color: var(--gold); color: var(--gold); }
+.step-row.c5 .step-badge { border-color: var(--accent); color: var(--accent); }
+.step-text h3 { margin: 2px 0 4px; font-size: 17px; font-weight: 600; }
+.step-text p { margin: 0; color: var(--ink-soft); font-size: 14px; line-height: 1.5; }
+
+.today-start-row { margin: 26px 0 10px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.btn.huge { font-size: 18px; padding: 14px 38px; }
+
+/* ---- in-flow step header (progress) ---- */
+.flow-top { border-bottom: 1px solid var(--line); background: var(--paper-3); }
+.flow-top-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 0; }
+.flow-step-name { font-family: var(--serif); font-size: 20px; font-weight: 400; }
+.flow-step-counter { font-size: 13px; color: var(--ink-soft); letter-spacing: .04em; }
+.flow-exit { background: none; border: none; cursor: pointer; font-size: 22px; line-height: 1; color: var(--ink-soft); padding: 4px 8px; }
+.flow-exit:hover { color: var(--ink); }
+.flow-progress { height: 4px; background: var(--paper-2); border-radius: 2px; overflow: hidden; }
+.flow-progress-fill { height: 100%; background: var(--accent); transition: width .25s ease; }
+
+/* ---- grammar step ---- */
+.flow-body { padding: 32px 0 56px; }
+.grammar-card { border: 1px solid var(--line); border-radius: 8px; background: var(--paper-3); padding: 28px; }
+.grammar-kicker { font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--accent); }
+.grammar-theme { font-family: var(--serif); font-weight: 300; font-size: clamp(26px, 4.5vw, 38px); line-height: 1.1; margin: 8px 0 0; }
+.grammar-focus { margin-top: 14px; font-size: 17px; color: var(--ink); line-height: 1.5; }
+.grammar-task { margin-top: 18px; padding-top: 18px; border-top: 1px solid var(--line); font-size: 16px; color: var(--ink-soft); line-height: 1.6; }
+.grammar-task .task-type { display: inline-block; font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-soft); border: 1px solid var(--line); border-radius: 3px; padding: 2px 8px; margin-bottom: 8px; }
+.flow-actions { margin-top: 26px; display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+
+/* ---- AI step ---- */
+.ai-wrap { max-width: 720px; margin: 0 auto; }
+.ai-head h2 { font-family: var(--serif); font-weight: 300; font-size: 28px; margin: 0 0 6px; }
+.ai-head p { color: var(--ink-soft); margin: 0 0 18px; font-size: 15px; }
+.ai-nokey { border: 1px solid var(--line); border-radius: 6px; background: var(--paper-3); padding: 22px; text-align: center; color: var(--ink-soft); }
+.ai-nokey p { margin: 0 0 16px; }
+
+/* ---- done step ---- */
+.flow-done { max-width: 540px; margin: 8vh auto 0; text-align: center; }
+.flow-done .done-mark { font-size: 52px; line-height: 1; color: var(--green); }
+.flow-done h2 { font-family: var(--serif); font-weight: 300; font-size: 38px; margin: 14px 0 8px; }
+.flow-done p { color: var(--ink-soft); font-size: 16px; line-height: 1.6; margin: 0 0 24px; }
+.flow-done .restart { display: inline-block; margin-top: 16px; background: none; border: none; cursor: pointer; color: var(--ink-soft); font-size: 13px; text-decoration: underline; text-underline-offset: 3px; }
+
+@media (max-width: 600px) {
+  .step-row { padding: 14px 14px; gap: 12px; }
+  .step-badge { width: 38px; height: 38px; font-size: 16px; }
+  .grammar-card { padding: 20px; }
+}

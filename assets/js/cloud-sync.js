@@ -259,6 +259,10 @@ async function saveThemeToCloud(theme) { return _pushProgress({ theme: theme });
 // Persist the shared verb-mastery store (verbs_data). Used by the vocabulary page, which writes
 // verb progress here so it stays in sync with the verb trainer (which owns verbs_data directly).
 async function saveVerbsToCloud(payload) { return _pushProgress({ verbs_data: payload }); }
+// Persist the vocabulary progress (vocab_data) by itself. Used by the /today wizard, which drives
+// the vocab engine without owning vocab_data as its CLOUD_FIELD (it owns planner_data); the /vocab
+// page keeps writing vocab_data via saveToCloud + its CLOUD_FIELD.
+async function saveVocabToCloud(payload) { return _pushProgress({ vocab_data: payload }); }
 // Persist the user's Gemini key on their account (opt-in, planner only). Pass '' to clear it.
 async function saveGeminiKeyToCloud(key) { return _pushProgress({ gemini_key: key || null }); }
 // Stamp (ISO string) or clear (null) the account-deletion request. Server-side purge runs 30 days later.

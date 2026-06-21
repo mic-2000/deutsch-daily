@@ -3,7 +3,7 @@
    (same markup, same width, same nav) — the app reads as one site, not four pages.
 
    appHeader(active, { cat, h1, subtitle })
-     active   — nav key of the current page ('planner' | 'vocab' | 'verbs' | 'collections' | 'settings')
+     active   — nav key of the current page ('today' | 'planner' | 'vocab' | 'verbs' | 'collections' | 'settings')
      cat      — T() key for the small uppercase category line
      h1       — raw HTML for the page title (may contain <em>…</em>)
      subtitle — T() key for the italic subtitle
@@ -18,6 +18,7 @@
    the Settings page (/settings), not in the header.
 */
 const NAV_ITEMS = [
+  { key: 'today',       href: '/today',       label: 'nav_today' },
   { key: 'planner',     href: '/planner',     label: 'nav_planner' },
   { key: 'vocab',       href: '/vocab',       label: 'nav_vocab' },
   { key: 'verbs',       href: '/verbs',       label: 'nav_verbs' },

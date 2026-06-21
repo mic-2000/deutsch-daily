@@ -2,6 +2,7 @@
   "outputDirectory": ".",
   "rewrites": [
     { "source": "/login", "destination": "/views/login.html" },
+    { "source": "/today", "destination": "/views/today.html" },
     { "source": "/planner", "destination": "/views/planner.html" },
     { "source": "/vocab", "destination": "/views/vocab.html" },
     { "source": "/verbs", "destination": "/views/verbs.html" },

@@ -38,6 +38,15 @@ test('verbs: render() shows the home screen without an active session', () => {
   assert.ok(vb.app.innerHTML.length > 500);
 });
 
+test('today: render() shows the intro checklist with translations resolved', () => {
+  const t = loadPage({ page: 'today.html', extraFiles: ['locales/en.js'], exports: ['render'] });
+  t.render();
+  const html = t.app.innerHTML;
+  assert.ok(html.length > 500, 'app markup is substantial');
+  assert.match(html, /nav-tab/, 'shared header/nav rendered');
+  assert.doesNotMatch(html, /today_[a-z_]+/, 'no raw today_* keys leaked into markup');
+});
+
 test('settings: render() shows the account screen with translations resolved', () => {
   const s = loadPage({ page: 'settings.html', extraFiles: ['locales/en.js'], exports: ['render', 'state'] });
   s.render();

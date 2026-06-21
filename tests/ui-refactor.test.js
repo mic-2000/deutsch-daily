@@ -65,11 +65,11 @@ test('navigation uses pretty URLs — no *.html inter-page links anywhere', () =
   }
 });
 
-test('header is shared: appHeader renders the four nav tabs with pretty URLs', () => {
+test('header is shared: appHeader renders the nav tabs with pretty URLs', () => {
   const v = loadPage({ page: 'views/vocab.html', extraFiles: ['locales/en.js'], exports: ['appHeader'] });
   assert.equal(typeof v.appHeader, 'function', 'appHeader should be a global from header.js');
   const html = v.appHeader('vocab', { cat: 'vocab_title_cat', h1: 'X', subtitle: 'vocab_subtitle' });
-  for (const href of ['/planner', '/vocab', '/verbs', '/collections']) {
+  for (const href of ['/today', '/planner', '/vocab', '/verbs', '/collections']) {
     assert.ok(html.includes(`href="${href}"`), `header should link to ${href}`);
   }
   assert.match(html, /nav-tab active" href="\/vocab"/, 'active tab marks the current page');
@@ -78,6 +78,7 @@ test('header is shared: appHeader renders the four nav tabs with pretty URLs', (
 test('vercel.json maps the pretty URLs to views/*.html', () => {
   const cfg = JSON.parse(read('vercel.json'));
   const map = Object.fromEntries((cfg.rewrites || []).map((r) => [r.source, r.destination]));
+  assert.equal(map['/today'], '/views/today.html');
   assert.equal(map['/planner'], '/views/planner.html');
   assert.equal(map['/vocab'], '/views/vocab.html');
   assert.equal(map['/verbs'], '/views/verbs.html');

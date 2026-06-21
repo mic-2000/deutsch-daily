@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="light dark">
+<script>try{document.documentElement.setAttribute('data-theme',localStorage.getItem('ui_theme')==='dark'?'dark':'light');}catch(e){}</script>
+<title>Deutsch · Heute</title>
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#F2EDE3">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Deutsch Daily">
+<link rel="apple-touch-icon" href="/assets/icons/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,300;1,9..144,400;1,9..144,500&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/css/base.css">
+<link rel="stylesheet" href="/assets/css/components.css">
+<link rel="stylesheet" href="/assets/css/vocab.css">
+<link rel="stylesheet" href="/assets/css/verbs.css">
+<link rel="stylesheet" href="/assets/css/chat.css">
+<link rel="stylesheet" href="/assets/css/today.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="/assets/js/i18n.js"></script>
+<script src="/assets/js/theme.js"></script>
+<script src="/assets/js/utils.js"></script>
+<script src="/assets/js/pwa.js"></script>
+<script src="/assets/js/leitner.js"></script>
+<script src="/assets/js/speech.js"></script>
+<script src="/assets/js/supabase.js"></script>
+<script src="/assets/js/cloud-sync.js"></script>
+<script src="/assets/js/ai-config.js"></script>
+<script src="/assets/js/gemini.js"></script>
+<script src="/assets/js/header.js"></script>
+<script src="/data/weeks.js"></script>
+<script src="/data/vocab.js"></script>
+<script src="/data/verbs.js"></script>
+<script src="/assets/js/planner-data.js"></script>
+<script src="/assets/js/vocab-trainer.js"></script>
+<script src="/assets/js/verbs-trainer.js"></script>
+</head>
+<body>
+<div id="app"></div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ==========================================================================
+   /today — the daily-flow wizard. Walks the user through ONE study day in order:
+   grammar → words → verbs → AI tutor → done, with no manual navigation between
+   sections. It hosts the SHARED engines (vocab-trainer.js / verbs-trainer.js) in
+   `embedded` mode (sessions only, end screen advances the flow) and reuses the
+   curriculum day model (planner-data.js). "Today" = the planner's currentDay.
+
+   Cloud columns touched, each written independently (see cloud-sync.js):
+     • planner_data — read currentDay, write completion on finish (this page's CLOUD_FIELD)
+     • verbs_data   — ONE shared mastery map, mutated by both engines (wireSharedVerbStore)
+     • vocab_data   — driven by the vocab engine (loaded after initApp, saved via saveVocabToCloud)
+   The per-day AI tutor with persisted history lives on /planner; the AI step here is a
+   lightweight in-flow chat (not persisted) so it can't clobber the planner's lesson rows.
+   ========================================================================== */
+
+/* ---- planner progress (this page owns planner_data via CLOUD_FIELD) ---- */
+let planner = { currentDay: 1, viewingDay: 1, completed: {} };
+const CLOUD_FIELD = 'planner_data';
+function getCloudPayload(){ return planner; }
+function applyCloudData(d){
+  if (d && typeof d === 'object') {
+    planner = Object.assign({ currentDay: 1, viewingDay: 1, completed: {} }, d);
+    if (!planner.completed || typeof planner.completed !== 'object') planner.completed = {};
+  }
+}
+function dayOf(){ return planner.currentDay; }
+function localizedToday(){ return getLocalizedDay(DAYS[Math.min(dayOf(), TOTAL_DAYS) - 1]); }
+
+/* ---- shared verbs_data store: both engines mutate ONE mastery map ---- */
+function wireSharedVerbStore(){
+  const map = (VerbsTrainer.state.mastery && typeof VerbsTrainer.state.mastery === 'object') ? VerbsTrainer.state.mastery : {};
+  VerbsTrainer.setMasteryStore(map);
+  VocabTrainer.setVerbStore({ mastery: map });
+}
+function applyVerbProgress(d){ VerbsTrainer.applyData(d && typeof d === 'object' ? d : { mastery: {} }); wireSharedVerbStore(); }
+
+/* ---- engine persistence hooks (three independent columns) ---- */
+function saveVerbsNow(){ if (typeof saveVerbsToCloud === 'function') saveVerbsToCloud(VerbsTrainer.serialize()); }
+function saveVocabNow(){ if (typeof saveVocabToCloud === 'function') saveVocabToCloud(VocabTrainer.serialize()); }
+VocabTrainer.init({ embedded: true, onSessionEnd: nextStep, onSaveVocab: saveVocabNow, onSaveVerbs: saveVerbsNow });
+VerbsTrainer.init({ embedded: true, onSessionEnd: nextStep, onSave: saveVerbsNow });
+
+/* ==========================================================================
+   FLOW
+   ========================================================================== */
+const STEPS = ['grammar', 'vocab', 'verbs', 'ai', 'done'];
+let flow = { running: false, step: 0, day: 1 };
+let ai = { messages: [], loading: false };
+
+function render(){ if (flow.running) renderStep(); else renderIntro(); }
+
+function startFlow(){
+  if (dayOf() > TOTAL_DAYS) return;
+  ai = { messages: [], loading: false };
+  flow = { running: true, step: 0, day: dayOf() };
+  renderStep();
+}
+function exitFlow(){ flow.running = false; if (window.speechSynthesis) window.speechSynthesis.cancel(); render(); }
+function nextStep(){ flow.step = Math.min(flow.step + 1, STEPS.length - 1); renderStep(); }
+
+function renderStep(){
+  const step = STEPS[flow.step];
+  if (step === 'grammar') renderGrammar();
+  else if (step === 'vocab') startVocabStep();
+  else if (step === 'verbs') startVerbsStep();
+  else if (step === 'ai') renderAi();
+  else renderDone();
+}
+function startVocabStep(){
+  VocabTrainer.startSession({ type: 'week', week: localizedToday().week });
+  if (!VocabTrainer.state.session) nextStep();   // (shouldn't happen — week scope always has cards)
+}
+function startVerbsStep(){
+  VerbsTrainer.startSession({ type: 'due' });                          // repetition first
+  if (!VerbsTrainer.state.session) VerbsTrainer.startSession({ type: 'filter', filter: 'all' }); // else due + some new
+  if (!VerbsTrainer.state.session) nextStep();
+}
+
+/* ---- shared in-flow header (progress) ---- */
+function flowHeader(){
+  const idx = flow.step + 1, n = STEPS.length;
+  const pct = (flow.step / (STEPS.length - 1)) * 100;
+  return `
+<div class="flow-top">
+  <div class="container flow-top-row">
+    <span class="flow-step-name">${T('today_step_' + STEPS[flow.step])}</span>
+    <span class="flow-step-counter">${T('today_progress', idx, n)}</span>
+    <button class="flow-exit" onclick="exitFlow()" aria-label="${esc(T('today_skip'))}">×</button>
+  </div>
+  <div class="container"><div class="flow-progress"><div class="flow-progress-fill" style="width:${pct}%"></div></div></div>
+</div>`;
+}
+
+/* ---- step: grammar of the day ---- */
+function renderGrammar(){
+  const d = localizedToday();
+  document.getElementById('app').innerHTML = flowHeader() + `
+<main class="container flow-body">
+  <div class="grammar-card">
+    <div class="grammar-kicker">${T('today_grammar_intro')}</div>
+    <div class="grammar-theme">${esc(d.weekTheme)}</div>
+    <div class="grammar-focus">${esc(d.grammar)}</div>
+    <div class="grammar-task"><span class="task-type">${T('type_' + d.type)}</span><br>${esc(d.text)}</div>
+  </div>
+  <div class="flow-actions">
+    <button class="btn accent big" onclick="nextStep()">${T('today_next')}</button>
+  </div>
+</main>`;
+}
+
+/* ---- step: AI tutor (lightweight, in-flow, not persisted) ---- */
+function mdLite(s){ return esc(String(s)).replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>'); }
+function dayPlanText(){ const d = localizedToday(); return `${d.weekTheme}\n${d.grammar}\n\n${T('type_' + d.type)}: ${d.text}`; }
+function scrollAi(){ setTimeout(() => { const el = document.querySelector('.ai-messages'); if (el) el.scrollTop = el.scrollHeight; }, 30); }
+
+function renderAi(){
+  const hasKey = (typeof getGeminiKey === 'function') && !!getGeminiKey();
+  let body;
+  if (!hasKey) {
+    body = `<div class="ai-nokey">
+      <p>${T('today_ai_nokey')}</p>
+      <a class="btn accent" href="/settings">${T('today_ai_addkey')}</a>
+      <div class="flow-actions"><button class="btn" onclick="nextStep()">${T('today_skip')}</button></div>
+    </div>`;
+  } else {
+    const msgs = ai.messages.map(m => m.role === 'model'
+      ? `<div class="ai-msg model">${mdLite(m.text)}</div>`
+      : `<div class="ai-msg user">${esc(m.text)}</div>`).join('');
+    const thinking = ai.loading ? `<div class="ai-msg model">${esc(T('today_ai_thinking'))}</div>` : '';
+    const starter = ai.messages.length === 0
+      ? `<div class="flow-actions"><button class="btn accent" onclick="askTopic()">${T('today_ai_ask')}</button></div>` : '';
+    body = `
+      <div class="ai-messages">${msgs}${thinking}</div>
+      ${starter}
+      <div class="ai-input-row">
+        <textarea id="aiInput" rows="1" placeholder="${esc(T('today_ai_placeholder'))}" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendAi();}"></textarea>
+        <button class="btn accent" onclick="sendAi()" ${ai.loading ? 'disabled' : ''}>${T('today_ai_send')}</button>
+      </div>
+      <div class="flow-actions"><button class="btn" onclick="nextStep()">${T('today_next')}</button></div>`;
+  }
+  document.getElementById('app').innerHTML = flowHeader() + `
+<main class="container flow-body"><div class="ai-wrap">
+  <div class="ai-head"><h2>${T('today_ai_title')}</h2><p>${T('today_ai_lead')}</p></div>
+  ${body}
+</div></main>`;
+  scrollAi();
+}
+function askTopic(){ sendAiText(dayPlanText()); }
+function sendAi(){ const inp = document.getElementById('aiInput'); const t = inp ? inp.value.trim() : ''; if (t) sendAiText(t); }
+async function sendAiText(text){
+  if (ai.loading) return;
+  ai.messages.push({ role: 'user', text });
+  ai.loading = true; renderAi();
+  try {
+    const reply = await geminiRequest(AI_MODEL_ID, getAiSystemPrompt(), ai.messages.map(m => ({ role: m.role, text: m.text })));
+    ai.messages.push({ role: 'model', text: reply });
+  } catch (e) { showToast((e && e.message) || 'AI error'); }
+  ai.loading = false; renderAi();
+}
+
+/* ---- step: done — close the day ---- */
+function renderDone(){
+  const day = flow.day;
+  if (!planner.completed[day]) {
+    planner.completed[day] = true;
+    if (day === planner.currentDay && planner.currentDay < TOTAL_DAYS) planner.currentDay = day + 1;
+    saveToCloud();
+  }
+  document.getElementById('app').innerHTML = flowHeader() + `
+<main class="container flow-body"><div class="flow-done">
+  <div class="done-mark">✓</div>
+  <h2>${T('today_done_title')}</h2>
+  <p>${T('today_done_msg')}</p>
+  <div class="flow-actions"><a class="btn accent big" href="/planner">${T('today_done_to_planner')}</a></div>
+  <button class="restart" onclick="startFlow()">↻ ${T('today_restart_day')}</button>
+</div></main>`;
+}
+
+/* ==========================================================================
+   INTRO / CHECKLIST
+   ========================================================================== */
+function renderIntro(){
+  let main;
+  if (dayOf() > TOTAL_DAYS) {
+    main = `<main class="container flow-body"><div class="flow-done">
+      <div class="done-mark">✓</div>
+      <h2>${T('today_course_done_title')}</h2>
+      <p>${T('today_course_done_msg')}</p>
+      <div class="flow-actions"><a class="btn accent big" href="/planner">${T('today_done_to_planner')}</a></div>
+    </div></main>`;
+  } else {
+    const d = localizedToday();
+    const list = STEPS.map((k, i) => `
+      <div class="step-row c${i + 1}">
+        <div class="step-badge">${k === 'done' ? '✓' : String(i + 1).padStart(2, '0')}</div>
+        <div class="step-text"><h3>${T('today_step_' + k)}</h3><p>${T('today_step_' + k + '_sub')}</p></div>
+      </div>`).join('');
+    const banner = planner.completed[dayOf()] ? `<div class="today-banner">${T('today_already_msg')}</div>` : '';
+    main = `<main class="container">
+      <section class="today-hero">
+        <div class="today-hero-top">
+          <p class="today-lead" style="margin-top:0">${T('today_lead')}</p>
+          <div class="today-badge">${T('today_minutes')}</div>
+        </div>
+        <div class="today-day-tag"><strong>${esc(d.weekTheme)}</strong> · ${esc(d.grammar)}</div>
+        ${banner}
+        <div class="steps-label">${T('today_steps_label')}</div>
+        <div class="steps-list">${list}</div>
+        <div class="today-start-row"><button class="btn accent huge" onclick="startFlow()">${T('today_start')}</button></div>
+      </section>
+    </main>`;
+  }
+  document.getElementById('app').innerHTML =
+    appHeader('today', { cat: 'today_title_cat', h1: T('today_steps_label'), subtitle: 'today_subtitle' })
+    + main + appFooter({});
+}
+
+/* ==========================================================================
+   KEYBOARD (route to whichever engine has an active session) + INIT
+   ========================================================================== */
+document.addEventListener('keydown', e => {
+  if (VocabTrainer.state.session) { VocabTrainer.handleKeydown(e); return; }
+  if (VerbsTrainer.state.session) { VerbsTrainer.handleKeydown(e); return; }
+});
+
+async function loadVocabData(){
+  if (typeof currentUser === 'undefined' || !currentUser) return;
+  try {
+    const { data, error } = await sb.from('progress').select('vocab_data').eq('user_id', currentUser.id).single();
+    if (error) throw error;
+    if (data && data.vocab_data && Object.keys(data.vocab_data).length) VocabTrainer.applyData(data.vocab_data);
+  } catch (e) { /* offline or no record yet — vocab starts empty */ }
+}
+function afterInit(){ wireSharedVerbStore(); loadVocabData(); }
+
+// Paint the shell right away in the saved language; initApp() re-renders with cloud data.
+loadLocale(getLang()).then(() => { try { render(); } catch (_) {} });
+initApp().then(afterInit);
+</script>
+</body>
+</html>

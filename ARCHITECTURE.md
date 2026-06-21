@@ -38,6 +38,11 @@ and a built-in AI tutor:
    cancel it any time in the window; `cloud-sync.initApp` loads the flag into the global
    `accountDeletionAt` and toasts a reminder on every page. Reached via the ⚙ link in the shared
    header (`appHeader`). Owns no `progress` column (omits `CLOUD_FIELD`, like collections).
+7. **Today** (`today.html`, `/today`) — a **daily-flow wizard** (the first nav tab; the recommended
+   starting point).
+   The user presses one "Learn" button and is walked through the whole study day in order —
+   grammar → words → verbs → AI tutor → done — with no manual section-switching. It hosts the
+   shared trainer engines in `embedded` mode and reuses the planner's day model. (See §19.)
 
 The curriculum runs 24 weeks in 3 phases:
 
@@ -87,15 +92,17 @@ deutsch-daily/
 ├── index.html          # PUBLIC LANDING page for guests (marketing + auth entry points). Root ( / ). §18
 ├── views/              # login + all authenticated app pages live here; served via pretty-URL rewrites
 │   ├── login.html       # LOGIN / REGISTER (email + Google OAuth).    ( /login ) §5
+│   ├── today.html       # Daily-flow wizard (grammar→words→verbs→AI→done). ( /today ) §19
 │   ├── planner.html     # Daily planner + AI Lehrer chat.            ( /planner )
-│   ├── vocab.html       # Vocabulary trainer.                         ( /vocab )
-│   ├── verbs.html       # Irregular-verb trainer (triad / cloze / table). ( /verbs )
+│   ├── vocab.html       # Vocabulary trainer (thin host → VocabTrainer). ( /vocab )
+│   ├── verbs.html       # Irregular-verb trainer (thin host → VerbsTrainer). ( /verbs )
 │   ├── collections.html # User word-set trainer (import/edit/drill/AI translate). ( /collections ) §16
 │   └── settings.html    # Account: password / AI key / theme / lang / delete. ( /settings )
 ├── assets/
-│   ├── css/  base.css · components.css · planner.css · chat.css · vocab.css · verbs.css · auth.css · collections.css · landing.css · settings.css
+│   ├── css/  base.css · components.css · planner.css · chat.css · vocab.css · verbs.css · auth.css · collections.css · landing.css · settings.css · today.css
 │   ├── js/   i18n.js · theme.js · utils.js · supabase.js · cloud-sync.js · ai-config.js
 │   │         gemini.js · leitner.js · speech.js · header.js · pwa.js
+│   │         planner-data.js · vocab-trainer.js · verbs-trainer.js   # shared day model + trainer engines
 │   ├── favicon.svg · icon.svg · icon-maskable.svg     # icon sources (PNGs rendered into icons/)
 │   └── icons/  icon-192.png · icon-512.png · maskable-512.png · apple-touch-icon.png
 ├── data/   weeks.js (WEEKS) · vocab.js (VOCAB) · verbs.js (VERBS — master verb dictionary)
@@ -135,6 +142,7 @@ Supabase CDN
 → assets/js/gemini.js              (getGeminiKey, geminiRequest)
 → assets/js/header.js              (appHeader — shared header/nav markup)
 → data/weeks.js                    (WEEKS)
+→ assets/js/planner-data.js        (DAYS, TOTAL_DAYS, getLocalizedDay — shared with /today)
 → inline page <script>             (state, chat state, render, page logic)
    initApp().then(loadLessonsThenRender)
 ```
@@ -156,7 +164,9 @@ Supabase CDN
 → speech.js                        (speak, pickVoice)
 → header.js                        (appHeader)
 → data/vocab.js                    (VOCAB)
-→ inline page <script>             (state, verbStore, render, page logic; calls initApp() last)
+→ data/verbs.js                    (VERBS)
+→ vocab-trainer.js                 (window.VocabTrainer — the whole vocab engine)
+→ inline page <script>             (thin host: CLOUD_FIELD + delegates render/keyboard to VocabTrainer)
 ```
 
 **verbs.html:**
@@ -167,7 +177,19 @@ Supabase CDN
 → speech.js
 → header.js                        (appHeader)
 → data/verbs.js                    (VERBS)
-→ inline page <script>             (state, render, page logic; calls initApp() last)
+→ verbs-trainer.js                 (window.VerbsTrainer — the whole verb engine)
+→ inline page <script>             (thin host: CLOUD_FIELD + delegates render/keyboard to VerbsTrainer)
+```
+
+**today.html:** (the wizard hosts BOTH engines + the planner day model)
+```
+Supabase CDN
+→ i18n.js → theme.js → utils.js → pwa.js → leitner.js → speech.js → supabase.js → cloud-sync.js
+→ ai-config.js → gemini.js → header.js
+→ data/weeks.js → data/vocab.js → data/verbs.js
+→ planner-data.js                  (DAYS, TOTAL_DAYS, getLocalizedDay)
+→ vocab-trainer.js → verbs-trainer.js
+→ inline page <script>             (flow controller; CLOUD_FIELD='planner_data'; initApp().then(afterInit))
 ```
 
 **collections.html:** (no `data/` files — words come from the user / cloud `collections` table)
@@ -256,6 +278,35 @@ The single source of truth for the header + nav, so all four sections render an 
   (note text via `T()`, GitHub + Privacy + Terms links, and an optional `right` slot for a tagline or
   a "reset all" button). planner passes `planner_footer` + `showEmail`; vocab/verbs pass the reset
   button; collections calls it bare. Privacy/Terms point to the `/privacy` `/terms` pages.
+
+### `planner-data.js` — curriculum day model (planner + today)
+The flattening of `WEEKS` into `DAYS` (one task = one day), `TOTAL_DAYS`, and `getLocalizedDay(d)`
+(the active-locale overlay) — extracted from `planner.html` so `/planner` and the `/today` wizard
+share one day model. Top-level `const`/`function` in a classic script live in the shared global
+lexical scope (same pattern as `leitner.js` `MAX_BOX`), so both pages see these directly. Depends on
+`WEEKS` (must load first) and `getLang`.
+
+### `vocab-trainer.js` / `verbs-trainer.js` — the shared trainer engines (`window.VocabTrainer` / `window.VerbsTrainer`)
+Each is a single namespace object holding the **entire** trainer: helpers, Leitner routing, the
+session state machine, every sub-renderer, and the keyboard handler — extracted from the old inline
+scripts so the **same engine runs on both the standalone page and the `/today` wizard**. Template
+`onclick`/`onkeydown` strings are namespaced (`VocabTrainer.answer(true)`) so the two engines coexist
+on `/today` without colliding on global names. The host wires them via `init(opts)`:
+- `embedded` — `false` on `/vocab` `/verbs` (home screen + sessions); `true` on `/today` (sessions
+  only — `render()` is a no-op between sessions, and the end screen's primary button + the session
+  `×` call `onSessionEnd` to advance the flow instead of returning home).
+- `onSaveVocab` / `onSaveVerbs` (vocab) / `onSave` (verbs) — persistence callbacks. Default to the
+  globals (`saveToCloud` / `saveVerbsToCloud`), so the standalone pages need no overrides; `/today`
+  routes each to a single-column writer (`saveVocabToCloud` / `saveVerbsToCloud`).
+- `onSessionEnd` — embedded only; the flow's `nextStep`.
+Cloud-contract helpers live on the engine (`serialize`, `applyData`, `applyVerbProgress`/`setVerbStore`
+on vocab; `serialize`, `applyData`, `setMasteryStore` on verbs); the thin host's
+`getCloudPayload`/`applyCloudData` delegate to them. `setVerbStore`/`setMasteryStore` let `/today`
+point BOTH engines at one shared `verbs_data.mastery` map (see §19). The engines depend on the same
+globals the inline code used (`T`/`getLang`, `esc`/`showToast`/`normalize`/`diffChars`/`track`/
+`stageConfirm`, `leitner*`/`MAX_BOX`, `speak`, `VOCAB`/`PLURALS`/`VERBS`). Tests reach engine
+internals through the namespace via a small `harness.js` bridge (top-level lookup falls back to
+`window.VocabTrainer`/`VerbsTrainer`), so the existing trainer tests kept their `exports` lists.
 
 ### `legal.js` — shared renderer for the static legal pages (`/privacy` · `/terms`)
 `renderLegal(active, doc)` builds the landing-style chrome (header + footer) around a per-language
@@ -351,9 +402,11 @@ collection upserts **merge per id** so a create + later mastery update collapse 
   syncs it into `localStorage`, and renders **once** — so there's no language flash and only the
   chosen locale is fetched.
 - `saveToCloud()` / `saveLangToCloud(code)` / `saveThemeToCloud(theme)` / `saveVerbsToCloud(payload)`
-  — all route through the internal `_pushProgress(fields)`, which `upsert`s
-  `{ user_id, …fields, updated_at }` on the `progress` row (`onConflict: 'user_id'`). They write
-  only their own column(s), so they compose without clobbering each other.
+  / `saveVocabToCloud(payload)` — all route through the internal `_pushProgress(fields)`, which
+  `upsert`s `{ user_id, …fields, updated_at }` on the `progress` row (`onConflict: 'user_id'`). They
+  write only their own column(s), so they compose without clobbering each other. `saveVocabToCloud`
+  is used by the `/today` wizard, which drives the vocab engine without owning `vocab_data` as its
+  `CLOUD_FIELD` (it owns `planner_data`); the `/vocab` page still writes `vocab_data` via `saveToCloud`.
 - During `initApp`, if the page defines `applyVerbProgress(d)`, the shared `verbs_data` is loaded
   into it (separate query, before render) — this is how the vocabulary page gets cross-cutting verb
   mastery without changing its own `CLOUD_FIELD`.
@@ -701,6 +754,12 @@ headings (`#`–`####`), horizontal rules (`---`), unordered/ordered lists, GFM 
 
 ## 9. `vocab.html`
 
+> **The engine lives in `assets/js/vocab-trainer.js` (`window.VocabTrainer`), not in the page.**
+> `vocab.html` is now a thin host that wires the cloud-sync contract + keyboard and calls
+> `VocabTrainer.init({ embedded:false })`; the same engine powers the `/today` wizard (§19). Handler
+> names below are methods on the namespace (`VocabTrainer.startSession(…)`), referenced that way in
+> the template `onclick` strings. The state/behaviour described here is unchanged. (See §4.)
+
 ### State & persistence
 ```js
 let state = {
@@ -803,6 +862,11 @@ same track. Flashcards advance immediately; article/spelling/plural-choose/plura
 
 ## 10. `verbs.html`
 
+> **The engine lives in `assets/js/verbs-trainer.js` (`window.VerbsTrainer`), not in the page.**
+> `verbs.html` is a thin host (cloud-sync contract + keyboard + `VerbsTrainer.init({ embedded:false })`);
+> the same engine powers the `/today` wizard (§19). Handler names below are methods on the namespace
+> (`VerbsTrainer.answer(…)`). The state/behaviour described here is unchanged. (See §4.)
+
 ### State & persistence
 ```js
 let state = {
@@ -894,7 +958,8 @@ at 560px).
 CSS files: `base.css` (tokens, reset, header/footer/info-box/toast/container + `--page-max`),
 `components.css` (`.user-bar-right`, nav-tabs, lang-switcher + the mobile nav-tabs horizontal-scroll
 strip and email-ellipsis rules), then page-specific `planner.css` / `vocab.css` / `verbs.css` /
-`collections.css` / `auth.css` / `landing.css`. `chat.css` is loaded only by `planner.html` and covers `.ai-messages`, `.ai-msg` (user + model variants), `.ai-input-row` (auto-growing
+`collections.css` / `auth.css` / `landing.css` / `today.css` (the `/today` wizard chrome — intro
+checklist, step header, grammar card, done screen; the in-flow sessions reuse `vocab.css`/`verbs.css`). `chat.css` is loaded only by `planner.html` and covers `.ai-messages`, `.ai-msg` (user + model variants), `.ai-input-row` (auto-growing
 `<textarea>`), `.ai-table`, the loading-dots animation, and the key/summary modals. `landing.css`
 (loaded only by `index.html`) reuses the `base.css` tokens + `components.css` switcher/toggle and adds
 the editorial hero, the section grids, and the decorative `lp*`-prefixed keyframe animations
@@ -1022,7 +1087,11 @@ runs `node --test tests/`; `npm run test:regression` runs the curated subset.
   `vm` sandbox seeded with browser shims (`document`, `localStorage`, `speechSynthesis`, …), and
   returns the captured globals. Because it follows the real `<script src>` list, it keeps working as
   helpers move between modules — top-level `const`/`function` from `assets/js/*` are in scope for the
-  inline page code, exactly as in the browser. `resolvePage(page)` lets a test pass a bare page name
+  inline page code, exactly as in the browser. When the trainer engines were extracted into
+  **namespaces** (`vocab-trainer.js` → `window.VocabTrainer`, `verbs-trainer.js` → `window.VerbsTrainer`),
+  the capture step gained a fallback: a requested name not bound at top level is looked up on those
+  namespaces — so the existing trainer tests kept their flat `exports` lists (`updateCard`, `state`,
+  `render`, …) and read the engine through its current home unchanged. `resolvePage(page)` lets a test pass a bare page name
   (e.g. `'verbs.html'`) and resolves it to the repo root **or** `views/`; root-absolute `<script
   src="/assets/…">` paths are normalised before the denylist/dir filters run.
 - **What's covered:** `leitner.test.js` (box transitions/scheduling), `helpers.test.js`
@@ -1037,7 +1106,10 @@ runs `node --test tests/`; `npm run test:regression` runs the curated subset.
   `outbox.test.js` (the offline write queue — see §4 — eval'd directly with a toggleable mock
   Supabase client, since the page harness shims `cloud-sync.js`; covers progress/lessons/collections
   queueing), and `collections.test.js` (`parseDelimited`/`parseTranslations` parsers, `colAvailableModes`,
-  and list/import render-smoke — see §16). `ui-refactor.test.js` guards the move to `views/` +
+  and list/import render-smoke — see §16), and `today-flow.test.js` (the `/today` wizard — engines
+  present as namespaces, intro/grammar render, flow advance grammar→vocab→verbs, the shared
+  `verbs_data` mastery map is one object across both engines, and the done step closes the day +
+  advances `currentDay`; see §19). `ui-refactor.test.js` guards the move to `views/` +
   unified chrome: app pages live in `views/` with `index.html` alone at root, pages use
   root-absolute `/assets`/`/data`/`/locales` paths and load `header.js`, the inline theme snippet
   runs before the Supabase CDN (FOUC guard), no `*.html` inter-page links remain, `appHeader()`
@@ -1178,3 +1250,49 @@ are disabled under `prefers-reduced-motion`; the hero artwork is `aria-hidden` a
 > **Pricing is presentational.** The Free/Monthly/Yearly tiers and the "early supporter" line are
 > marketing copy from the source design — there is **no billing integration**. Every pricing CTA just
 > routes to registration. Wire a real checkout (and gate features) before treating the tiers as live.
+
+---
+
+## 19. `today.html` — the daily-flow wizard (`/today`)
+
+A guided "do today's day in one run" experience and the **first nav tab**. Instead of hopping between
+sections, the user presses one **Learn** button and is walked through the day in order. "Today" =
+the planner's `currentDay` (read from `planner_data`); the day's content comes from the shared day
+model (`planner-data.js` — `getLocalizedDay(DAYS[currentDay-1])`).
+
+**Steps** (`STEPS = ['grammar','vocab','verbs','ai','done']`):
+1. **grammar** — the day card (week theme · grammar focus · today's task with its `type_<type>` label),
+   rendered by the page. "Continue →" advances.
+2. **vocab** — `VocabTrainer.startSession({ type:'week', week })` for the current week (due words +
+   up to 12 new; articles `der/die/das` ride along as a mode).
+3. **verbs** — `VerbsTrainer.startSession({ type:'due' })` (repetition first); falls back to
+   `{ type:'filter', filter:'all' }` (due + some new) when nothing is due.
+4. **ai** — a **lightweight in-flow chat** (reuses `gemini.js` / `ai-config.js` / `chat.css`). If no
+   Gemini key, it nudges to `/settings` and offers **Skip**. It is **ephemeral** (not written to the
+   `lessons` table) so it can't clobber the planner's per-day lesson rows — the full tutor with
+   persisted history stays on `/planner`.
+5. **done** — marks `planner_data.completed[day] = true`, advances `currentDay` (when finishing the
+   current day), persists via `saveToCloud`, and shows the completion screen → "Open the planner".
+
+**Hosting the engines.** The vocab + verb steps reuse the **shared engines** (§4) in `embedded:true`
+mode: their immersive `.session-bg` overlay takes over `#app`, and the session end screen's primary
+button (and the `×`) call the engine's `onSessionEnd` → the flow's `nextStep`. Between sessions the
+engines' `render()` is a no-op (the wizard owns the screen — intro, grammar, ai, done). A single
+`keydown` listener routes to whichever engine has an active session.
+
+**Cloud columns** (each written independently, §4):
+- `planner_data` — this page's `CLOUD_FIELD`; read for `currentDay`, written on finish.
+- `verbs_data` — loaded via `applyVerbProgress` during `initApp`. The wizard wires **one shared
+  mastery map** into both engines (`wireSharedVerbStore()` → `VerbsTrainer.setMasteryStore(map)` +
+  `VocabTrainer.setVerbStore({ mastery: map })`), so a verb answered in either step counts once.
+  Both engines' save hooks persist `VerbsTrainer.serialize()` via `saveVerbsToCloud`.
+- `vocab_data` — `initApp` does not load it (it isn't the `CLOUD_FIELD`), so the page fetches it once
+  after `initApp` (`loadVocabData` → `VocabTrainer.applyData`); the vocab engine saves it via
+  `saveVocabToCloud`.
+
+**Edge cases:** `currentDay > TOTAL_DAYS` → a "course complete" screen; a day already completed shows
+a review banner on the intro but still lets the user run it again.
+
+**Styling** — `today.css` for the wizard chrome (intro checklist, step header with progress, grammar
+card, AI wrapper, done screen); the in-flow sessions reuse `vocab.css` / `verbs.css`. No new tokens
+(§11). Guarded by `tests/today-flow.test.js` + a `render-smoke` entry.

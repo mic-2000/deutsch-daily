@@ -32,6 +32,7 @@
 <script src="/assets/js/gemini.js"></script>
 <script src="/assets/js/header.js"></script>
 <script src="/data/weeks.js"></script>
+<script src="/assets/js/planner-data.js"></script>
 </head>
 <body>
 <div id="app"></div>
@@ -40,38 +41,10 @@
 <script>
 /* ==========================================================================
    CURRICULUM (24 weeks) lives in data/weeks.js (global `WEEKS`).
+   The day model — DAYS / TOTAL_DAYS / getLocalizedDay — lives in
+   assets/js/planner-data.js (shared with the /today wizard).
    Task-type labels come from the `type_<type>` UI key (see locales/*.ui).
    ========================================================================== */
-
-/* Flatten weeks into days (one task = one day) */
-const DAYS = [];
-WEEKS.forEach(w => {
-  w.tasks.forEach(([type, text], taskIdx) => {
-    DAYS.push({
-      day: DAYS.length + 1,
-      week: w.n,
-      weekTheme: w.theme,
-      grammar: w.grammar,
-      vocab: w.vocab,
-      type, text, taskIdx
-    });
-  });
-});
-const TOTAL_DAYS = DAYS.length;
-
-/* Return a day object with content translated to the active UI language */
-function getLocalizedDay(d) {
-  const localeObj = window['LOCALE_' + getLang().toUpperCase()] || window.LOCALE_EN || {};
-  const weekLoc = (localeObj.weeks || {})[d.week];
-  if (!weekLoc) return d;
-  return {
-    ...d,
-    weekTheme: weekLoc.theme   || d.weekTheme,
-    grammar:   weekLoc.grammar || d.grammar,
-    vocab:     weekLoc.vocab   || d.vocab,
-    text:      (weekLoc.tasks && weekLoc.tasks[d.taskIdx] != null) ? weekLoc.tasks[d.taskIdx] : d.text,
-  };
-}
 
 /* ==========================================================================
    AI CHAT — Gemini, user-provided key. Lessons are per-day and synced to the
