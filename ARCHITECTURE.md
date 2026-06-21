@@ -55,11 +55,14 @@ language.
   `.html` paths to extensionless ones, which breaks a rewrite whose destination ends in `.html`.)
   Production URL is
   `https://deutsch-daily-red.vercel.app/` (referenced as the OAuth `redirectTo`).
-- **Build:** `npm run build` → `node build.js`. `build.js` reads `NEXT_PUBLIC_SUPABASE_URL` and
+- **Build:** `npm run build` → `node build.js`. `build.js` (1) reads `NEXT_PUBLIC_SUPABASE_URL` and
   `NEXT_PUBLIC_SUPABASE_ANON_KEY` from the environment and replaces the `YOUR_PROJECT_ID` /
-  `YOUR_ANON_KEY` placeholders inside `assets/js/supabase.js`. It exits non-zero if either env var
-  is missing. The committed `supabase.js` holds placeholders; real credentials are injected at
-  deploy time on Vercel.
+  `YOUR_ANON_KEY` placeholders inside `assets/js/supabase.js` (exits non-zero if either env var is
+  missing), and (2) **stamps the `sw.js` cache `VERSION`** with a monotonic build stamp
+  (`<commitSHA8>-<UTC YYYYMMDDHHMM>`, SHA from `VERCEL_GIT_COMMIT_SHA` when present) so every deploy
+  busts the old service-worker shell cache automatically — no manual bump. The committed
+  `supabase.js` / `sw.js` hold placeholders / a static dev `VERSION`; both are rewritten at deploy
+  time on Vercel. (Guarded by `tests/build.test.js`.)
 
 > The app is now an **authenticated HTTPS web app**. It requires a Supabase session, so it does
 > not function when opened from the filesystem (`file://`). The heavy `file://` defensiveness in
@@ -1090,8 +1093,9 @@ build step or store — it works off the existing Vercel HTTPS deploy.
   sign-in.
 - **`sw.js`** (root, scope `/`) — the service worker.
 
-**Service-worker caching strategy** (one cache per `VERSION`; bump it to ship changed shell assets —
-old caches are pruned on `activate`):
+**Service-worker caching strategy** (one cache per `VERSION`; `build.js` re-stamps `VERSION` on every
+deploy (§2) so each deploy gets a fresh cache and old ones are pruned on `activate` — you no longer
+hand-bump it for cache refresh, only keep `SHELL_ASSETS` accurate when assets are added/removed):
 - **navigations** (HTML pages) → **network-first**, cached page as the offline fallback.
 - **same-origin static** (`/assets`, `/data`, `/locales`) → **stale-while-revalidate**.
 - **CDN libs + fonts** (Supabase UMD on jsDelivr, Google Fonts) → **cache-first** — the app can't

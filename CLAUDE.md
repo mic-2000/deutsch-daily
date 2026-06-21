@@ -50,8 +50,10 @@ own chrome). In-page asset/data/locale paths are root-absolute (`/assets`, `/dat
   `showToast`). (§12)
 - **PWA shell:** the app is installable — `manifest.webmanifest` + `sw.js` (root) + `assets/js/pwa.js`
   in every `<head>`. When you **add/rename/remove a shell asset** (CSS/JS/data/locale/icon or a page),
-  update `SHELL_ASSETS` in `sw.js` **and bump its `VERSION`** so caches refresh. Keep `*.supabase.co`
-  uncached (JS owns offline data); icon PNGs are rendered from the `assets/icon*.svg` sources. (§17)
+  update `SHELL_ASSETS` in `sw.js`. You **don't** need to hand-bump `VERSION` — `build.js` re-stamps it
+  on every deploy so caches refresh automatically (§2); the committed `VERSION` is only the local-dev
+  default. Keep `*.supabase.co` uncached (JS owns offline data); icon PNGs are rendered from the
+  `assets/icon*.svg` sources. (§17)
 - **Don't reintroduce the already-fixed bugs in ARCHITECTURE.md §14.**
 
 ## Before finishing
