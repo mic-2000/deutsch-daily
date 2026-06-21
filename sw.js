@@ -3,7 +3,8 @@
    Strategy by request kind:
    - navigations (the HTML pages)            → network-first, fall back to the cached page,
                                                 so the app still opens with no connection.
-   - same-origin static (assets/data/locales) → stale-while-revalidate (instant, refreshes in bg).
+   - same-origin assets/data → stale-while-revalidate (instant, refreshes in bg).
+   - same-origin locales → network-first (fresh translations land immediately; cache is offline fallback).
    - CDN libs + fonts (Supabase UMD, Google  → cache-first. The app can't boot without the Supabase
      Fonts)                                     library, so it MUST be available offline.
    - Supabase REST/Auth (*.supabase.co)      → never touched here: passed straight to the network.
@@ -13,7 +14,7 @@
                                                 here would serve stale/incorrect data.
 
    Bump VERSION when shipping changed shell assets; stale caches are pruned on activate. */
-const VERSION = 'v8';
+const VERSION = 'v9';
 const SHELL = 'dd-shell-' + VERSION;
 const RUNTIME = 'dd-runtime-' + VERSION;
 
@@ -107,7 +108,22 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Same-origin static (assets/data/locales) — stale-while-revalidate.
+  // Locales — network-first so freshly shipped translation keys land immediately
+  // (stale-while-revalidate would show the previous copy on the first load after a deploy).
+  if (url.origin === self.location.origin && url.pathname.startsWith('/locales/')) {
+    event.respondWith((async () => {
+      try {
+        const fresh = await fetch(req);
+        if (fresh && fresh.ok) (await caches.open(RUNTIME)).put(req, fresh.clone());
+        return fresh;
+      } catch (e) {
+        return (await caches.match(req)) || Response.error();
+      }
+    })());
+    return;
+  }
+
+  // Same-origin static (assets/data) — stale-while-revalidate.
   if (url.origin === self.location.origin) {
     event.respondWith((async () => {
       const cached = await caches.match(req);
