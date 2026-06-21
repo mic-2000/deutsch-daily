@@ -1,7 +1,8 @@
-/* tests/markdown.test.js — the planner's AI-chat markdown renderer.
- * Covers escHtml(), inlineMd(), renderMdTable(), renderMd(). This stays in planner.html
- * after the refactor (planner-only); the harness loads it from there either way.
- * Security-relevant: all content must be HTML-escaped before inline markup is applied.
+/* tests/markdown.test.js — the AI-chat markdown renderer (assets/js/markdown.js, shared by the
+ * planner's AI Lehrer chat and the /today wizard). Covers escHtml(), inlineMd(), renderMdTable(),
+ * renderMd(). Loaded here via planner.html (which loads the module); the harness picks up the
+ * top-level functions either way. Security-relevant: all content must be HTML-escaped before inline
+ * markup is applied.
  */
 const test = require('node:test');
 const assert = require('node:assert/strict');

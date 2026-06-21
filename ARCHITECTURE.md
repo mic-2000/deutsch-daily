@@ -102,7 +102,7 @@ deutsch-daily/
 │   ├── css/  base.css · components.css · planner.css · chat.css · vocab.css · verbs.css · auth.css · collections.css · landing.css · settings.css · today.css
 │   ├── js/   i18n.js · theme.js · utils.js · supabase.js · cloud-sync.js · ai-config.js
 │   │         gemini.js · leitner.js · speech.js · header.js · pwa.js
-│   │         planner-data.js · vocab-trainer.js · verbs-trainer.js   # shared day model + trainer engines
+│   │         markdown.js · planner-data.js · vocab-trainer.js · verbs-trainer.js   # AI md + day model + trainer engines
 │   ├── favicon.svg · icon.svg · icon-maskable.svg     # icon sources (PNGs rendered into icons/)
 │   └── icons/  icon-192.png · icon-512.png · maskable-512.png · apple-touch-icon.png
 ├── data/   weeks.js (WEEKS) · vocab.js (VOCAB) · verbs.js (VERBS — master verb dictionary)
@@ -140,6 +140,7 @@ Supabase CDN
 → assets/js/cloud-sync.js          (initApp, saveToCloud, … logout, currentUser, lessons functions)
 → assets/js/ai-config.js           (AI_MODEL_ID, AI_PRO_MODEL_ID, getAiSystemPrompt, getAiSummaryPrompt, getCollectionsTranslatePrompt)
 → assets/js/gemini.js              (getGeminiKey, geminiRequest)
+→ assets/js/markdown.js            (renderMd — AI reply markdown, shared with /today)
 → assets/js/header.js              (appHeader — shared header/nav markup)
 → data/weeks.js                    (WEEKS)
 → assets/js/planner-data.js        (DAYS, TOTAL_DAYS, getLocalizedDay — shared with /today)
@@ -185,7 +186,7 @@ Supabase CDN
 ```
 Supabase CDN
 → i18n.js → theme.js → utils.js → pwa.js → leitner.js → speech.js → supabase.js → cloud-sync.js
-→ ai-config.js → gemini.js → header.js
+→ ai-config.js → gemini.js → markdown.js → header.js
 → data/weeks.js → data/vocab.js → data/verbs.js
 → planner-data.js                  (DAYS, TOTAL_DAYS, getLocalizedDay)
 → vocab-trainer.js → verbs-trainer.js
@@ -324,7 +325,8 @@ getters:
 - `getAiSystemPrompt()` — returns the tutor system prompt for the active UI language (RU/UA/EN).
   The prompt sets the persona, student context (A1→B1, lives in Berlin), output format (theory +
   examples + exercises + answer key), formatting rules for German (nouns with article/plural,
-  verb conjugation tables), and per-task-type adaptation rules.
+  verb conjugation tables), per-task-type adaptation rules, and a rule that any external resource
+  must be given with a direct markdown link (no invented URLs — rendered clickable by `markdown.js`).
 - `getAiSummaryPrompt()` — returns the weekly-summary system prompt (also per language).
 - `getCollectionsTranslatePrompt()` — returns the batch-translation prompt (per language): translate
   a JSON array of German terms into the active UI language, returning ONLY a same-order JSON array.
@@ -339,6 +341,13 @@ The two functions extracted so both AI features share one implementation:
 - `geminiRequest(model, systemPrompt, messages)` — one `generateContent` fetch; maps
   `role:'model'|'user'`, throws on `data.error`, returns the reply text. No app-specific globals, so
   it's safe to load anywhere.
+
+### `markdown.js` — inline Markdown renderer for AI replies (planner + today)
+`escHtml` / `inlineMd` / `renderMdTable` / `renderMd` — extracted from `planner.html` so the planner's
+AI Lehrer chat and the `/today` wizard render model output identically (headings, lists, GFM tables,
+bold/italic/code, safe http(s)/mailto links). Security-relevant: content is HTML-escaped **before**
+inline markup is applied; the link autolinker parks markdown links behind a NUL sentinel so bare-URL
+detection can't double-wrap them. Guarded by `tests/markdown.test.js` (loaded via `planner.html`).
 
 ### `leitner.js` — spaced-repetition core (shared by vocab + verbs)
 A small pure-logic library; no DOM access.
@@ -710,13 +719,19 @@ user's own RLS-protected row and to Google; it never reaches other users.
 Sends `system_instruction` + `contents` (maps `role:'model'`/`'user'`). Throws on `data.error`.
 
 **Lesson flow:**
-1. `startAILesson(day)` — seeds `lessonsCache[day]` with the day plan as the first user message,
-   calls `runLessonTurn(day)`.
+1. `startAILesson(day)` — seeds `lessonsCache[day]` with the day plan as the first user message
+   (flagged `seed:true` → hidden from the chat), calls `runLessonTurn(day)`.
 2. `sendChatMessage(day)` — appends the user's text to `lessonsCache[day]`, calls
    `runLessonTurn(day)`.
 3. `runLessonTurn(day)` — calls `geminiRequest(AI_MODEL_ID, systemPrompt, messages)`, pushes the
-   model reply into `lessonsCache[day]`, persists via `saveLessonToCloud`, then `render()` +
-   `scrollChatToBottom()`.
+   model reply into `lessonsCache[day]` (the **first** reply flagged `pinned:true` → the day's
+   explanation), persists via `saveLessonToCloud`, then `render()` + `scrollChatToBottom()`.
+
+> **Pinned explanation + shared with `/today`.** `renderAiSection` shows `pinned` model messages as a
+> highlighted "topic breakdown" block (`.ai-rule-wrap`, `ai_pinned_label`) above the chat, hides
+> `seed` prompts, and lists the rest as follow-up chat. The `/today` wizard writes the **same**
+> `lessons` row, so a day studied there is revisitable here and vice-versa. Old lessons without the
+> flags render as plain chat (backward compatible). See §19.
 
 **Weekly summary:**
 `generateWeeklySummary(week)` builds a transcript of all lesson messages for the week
@@ -729,10 +744,11 @@ re-read a cached summary without regenerating.
 and renders once; `loadLessonsThenRender` then fetches all lesson rows from `lessons` table,
 populates `lessonsCache`/`summaryCache`, and re-renders to show chat history.
 
-**Markdown renderer (`renderMd`):** inline-only renderer used for model messages. Handles:
-headings (`#`–`####`), horizontal rules (`---`), unordered/ordered lists, GFM tables
-(→ `<table class="ai-table">`), blank lines (→ spacer `div`), and paragraphs. Inline:
-`**bold**`, `*italic*`, `` `code` ``. All content is HTML-escaped before inline markup is applied.
+**Markdown renderer (`renderMd`):** lives in `assets/js/markdown.js` (§4), shared with `/today`.
+Inline-only renderer used for model messages. Handles: headings (`#`–`####`), horizontal rules
+(`---`), unordered/ordered lists, GFM tables (→ `<table class="ai-table">`), blank lines (→ spacer
+`div`), and paragraphs. Inline: `**bold**`, `*italic*`, `` `code` ``, safe links. All content is
+HTML-escaped before inline markup is applied.
 
 **UI functions:** `renderAiSection(d)` renders either a "no key" nudge, a "Start lesson" button
 (empty cache), or the full chat view (messages + input row). `renderKeyModal()` and
@@ -959,8 +975,9 @@ CSS files: `base.css` (tokens, reset, header/footer/info-box/toast/container + `
 `components.css` (`.user-bar-right`, nav-tabs, lang-switcher + the mobile nav-tabs horizontal-scroll
 strip and email-ellipsis rules), then page-specific `planner.css` / `vocab.css` / `verbs.css` /
 `collections.css` / `auth.css` / `landing.css` / `today.css` (the `/today` wizard chrome — intro
-checklist, step header, grammar card, done screen; the in-flow sessions reuse `vocab.css`/`verbs.css`). `chat.css` is loaded only by `planner.html` and covers `.ai-messages`, `.ai-msg` (user + model variants), `.ai-input-row` (auto-growing
-`<textarea>`), `.ai-table`, the loading-dots animation, and the key/summary modals. `landing.css`
+checklist, step header, grammar card, done screen; the in-flow sessions reuse `vocab.css`/`verbs.css`). `chat.css` is loaded by `planner.html` **and** `today.html` and covers `.ai-messages`, `.ai-msg` (user + model variants), `.ai-input-row` (auto-growing
+`<textarea>`), `.ai-table`, the loading-dots animation, the key/summary modals, and the pinned
+`.ai-rule-wrap` "topic breakdown" block (shared by both AI views). `landing.css`
 (loaded only by `index.html`) reuses the `base.css` tokens + `components.css` switcher/toggle and adds
 the editorial hero, the section grids, and the decorative `lp*`-prefixed keyframe animations
 (disabled under `prefers-reduced-motion`).
@@ -1262,17 +1279,32 @@ model (`planner-data.js` — `getLocalizedDay(DAYS[currentDay-1])`).
 
 **Steps** (`STEPS = ['grammar','vocab','verbs','ai','done']`):
 1. **grammar** — the day card (week theme · grammar focus · today's task with its `type_<type>` label),
-   rendered by the page. "Continue →" advances.
+   rendered by the page. A **"Break it down with AI"** button (`explainDay`) expands the AI chat panel
+   right under the card and auto-sends a point-by-point breakdown request (`dayBreakdownText` →
+   `today_ai_breakdown_req`: rule + examples + tables + a "what to memorize" checklist for EACH item).
+   The panel reuses the shared `renderAiPanel()` / `ai` state, so the conversation carries over to the
+   AI step. "Continue →" advances (the breakdown does not change the flow order).
 2. **vocab** — `VocabTrainer.startSession({ type:'week', week })` for the current week (due words +
    up to 12 new; articles `der/die/das` ride along as a mode).
 3. **verbs** — `VerbsTrainer.startSession({ type:'due' })` (repetition first); falls back to
    `{ type:'filter', filter:'all' }` (due + some new) when nothing is due.
-4. **ai** — a **lightweight in-flow chat** (reuses `gemini.js` / `ai-config.js` / `chat.css`). If no
-   Gemini key, it nudges to `/settings` and offers **Skip**. It is **ephemeral** (not written to the
-   `lessons` table) so it can't clobber the planner's per-day lesson rows — the full tutor with
-   persisted history stays on `/planner`.
+4. **ai** — an in-flow chat (reuses `gemini.js` / `ai-config.js` / `markdown.js` / `chat.css`),
+   **persisted** to the same `lessons` row the planner uses (one per user×day). If no Gemini key, it
+   nudges to `/settings` and offers **Skip**. Same `ai` state + `renderAiPanel()` as the grammar
+   panel, so it shows the breakdown done earlier plus any follow-ups.
 5. **done** — marks `planner_data.completed[day] = true`, advances `currentDay` (when finishing the
    current day), persists via `saveToCloud`, and shows the completion screen → "Open the planner".
+
+**Pinned explanation + follow-up chat (shared with the planner).** A lesson's `messages` carry two
+optional flags: `seed:true` (the hidden prompt that elicits the explanation — the breakdown request
+on `/today`, the day-plan on `/planner`) and `pinned:true` (the **first** model reply = the day's
+explanation). Both `renderAiPanel()` (today) and the planner's `renderAiSection` render `pinned`
+messages as a highlighted **"topic breakdown"** block (`.ai-rule-wrap`, label `ai_pinned_label`) on
+top, hide `seed`, and show the rest as the follow-up chat below. Because both write the **same**
+`lessons` row, the user can study a day on `/today` and later revisit/refresh it from `/planner` (any
+day) — and vice-versa. Old lessons (no flags) fall through to plain chat, so the change is backward
+compatible. `/today` loads the day's row via `loadDayLesson` (reusing `loadLessonsFromCloud`) when the
+flow starts and saves each turn via `saveLessonToCloud(day, …)`.
 
 **Hosting the engines.** The vocab + verb steps reuse the **shared engines** (§4) in `embedded:true`
 mode: their immersive `.session-bg` overlay takes over `#app`, and the session end screen's primary
@@ -1289,6 +1321,8 @@ engines' `render()` is a no-op (the wizard owns the screen — intro, grammar, a
 - `vocab_data` — `initApp` does not load it (it isn't the `CLOUD_FIELD`), so the page fetches it once
   after `initApp` (`loadVocabData` → `VocabTrainer.applyData`); the vocab engine saves it via
   `saveVocabToCloud`.
+- `lessons` (table) — the AI step's per-day history, shared with the planner (see the pinned-explanation
+  note above): `loadDayLesson` reads it, `saveLessonToCloud` writes it.
 
 **Edge cases:** `currentDay > TOTAL_DAYS` → a "course complete" screen; a day already completed shows
 a review banner on the intro but still lets the user run it again.

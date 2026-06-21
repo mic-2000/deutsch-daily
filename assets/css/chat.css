@@ -137,3 +137,21 @@
 }
 .ai-summary-body code { font-size: 13px; background: var(--paper-2); padding: 1px 5px; }
 
+
+/* Pinned "topic breakdown" — the day's first AI explanation, highlighted above the follow-up chat.
+   Shared by the planner's AI Lehrer chat and the /today wizard. */
+.ai-rule-wrap {
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--accent);
+  background: var(--paper-3);
+  border-radius: 6px;
+  padding: 14px 18px;
+  margin: 4px 0 16px;
+}
+.ai-rule-label {
+  font-size: 11px; letter-spacing: .14em; text-transform: uppercase;
+  color: var(--accent); margin-bottom: 8px;
+}
+.ai-rule { font-size: 15px; line-height: 1.7; color: var(--ink); }
+.ai-rule > :first-child { margin-top: 0; }
+.ai-rule > :last-child { margin-bottom: 0; }

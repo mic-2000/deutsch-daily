@@ -34,6 +34,7 @@
 <script src="/assets/js/cloud-sync.js"></script>
 <script src="/assets/js/ai-config.js"></script>
 <script src="/assets/js/gemini.js"></script>
+<script src="/assets/js/markdown.js"></script>
 <script src="/assets/js/header.js"></script>
 <script src="/data/weeks.js"></script>
 <script src="/data/vocab.js"></script>
@@ -95,14 +96,28 @@ VerbsTrainer.init({ embedded: true, onSessionEnd: nextStep, onSave: saveVerbsNow
 const STEPS = ['grammar', 'vocab', 'verbs', 'ai', 'done'];
 let flow = { running: false, step: 0, day: 1 };
 let ai = { messages: [], loading: false };
+let grammarExplain = false;   // grammar step: AI breakdown panel expanded under the day card
 
 function render(){ if (flow.running) renderStep(); else renderIntro(); }
 
 function startFlow(){
   if (dayOf() > TOTAL_DAYS) return;
   ai = { messages: [], loading: false };
+  grammarExplain = false;
   flow = { running: true, step: 0, day: dayOf() };
   renderStep();
+  loadDayLesson(flow.day);   // pull any saved explanation/chat for this day (shared with the planner)
+}
+
+/* Load this day's AI lesson (same `lessons` row the planner uses) so a saved explanation reappears. */
+async function loadDayLesson(day){
+  try {
+    const rows = (typeof loadLessonsFromCloud === 'function') ? await loadLessonsFromCloud() : [];
+    const row = Array.isArray(rows) ? rows.find(r => r.day === day) : null;
+    ai.messages = (row && Array.isArray(row.messages)) ? row.messages.slice() : [];
+  } catch (e) { ai.messages = []; }
+  if (ai.messages.length) grammarExplain = true;   // show the saved explanation right on the grammar card
+  if (flow.running) render();
 }
 function exitFlow(){ flow.running = false; if (window.speechSynthesis) window.speechSynthesis.cancel(); render(); }
 function nextStep(){ flow.step = Math.min(flow.step + 1, STEPS.length - 1); renderStep(); }
@@ -140,9 +155,12 @@ function flowHeader(){
 </div>`;
 }
 
-/* ---- step: grammar of the day ---- */
+/* ---- step: grammar of the day (with an inline "break it down with AI" panel) ---- */
 function renderGrammar(){
   const d = localizedToday();
+  const aiBlock = grammarExplain
+    ? `<div class="ai-wrap" style="margin-top:22px">${renderAiPanel()}</div>`
+    : `<div class="flow-actions" style="margin-top:18px"><button class="btn" onclick="explainDay()">${T('today_grammar_explain')}</button></div>`;
   document.getElementById('app').innerHTML = flowHeader() + `
 <main class="container flow-body">
   <div class="grammar-card">
@@ -151,60 +169,84 @@ function renderGrammar(){
     <div class="grammar-focus">${esc(d.grammar)}</div>
     <div class="grammar-task"><span class="task-type">${T('type_' + d.type)}</span><br>${esc(d.text)}</div>
   </div>
+  ${aiBlock}
   <div class="flow-actions">
     <button class="btn accent big" onclick="nextStep()">${T('today_next')}</button>
   </div>
 </main>`;
+  scrollAi();
+}
+/* Open the AI panel right on the grammar card and auto-ask for a point-by-point breakdown. */
+function explainDay(){
+  grammarExplain = true;
+  render();
+  if ((typeof getGeminiKey === 'function') && getGeminiKey() && ai.messages.length === 0 && !ai.loading) askTopic();
 }
 
-/* ---- step: AI tutor (lightweight, in-flow, not persisted) ---- */
-function mdLite(s){ return esc(String(s)).replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>'); }
-function dayPlanText(){ const d = localizedToday(); return `${d.weekTheme}\n${d.grammar}\n\n${T('type_' + d.type)}: ${d.text}`; }
+/* ---- AI tutor — persisted to the shared `lessons` row; pinned explanation + follow-up chat ---- */
+function dayBreakdownText(){
+  const d = localizedToday();
+  return `${d.weekTheme}\n${d.grammar}\n\n${T('type_' + d.type)}: ${d.text}\n\n${T('today_ai_breakdown_req')}`;
+}
 function scrollAi(){ setTimeout(() => { const el = document.querySelector('.ai-messages'); if (el) el.scrollTop = el.scrollHeight; }, 30); }
 
-function renderAi(){
+/* The chat panel — pinned explanation (highlighted, on top) + the follow-up chat + input.
+   Reused by the grammar step and the AI step; renders model output via the shared renderMd. */
+function renderAiPanel(){
   const hasKey = (typeof getGeminiKey === 'function') && !!getGeminiKey();
-  let body;
   if (!hasKey) {
-    body = `<div class="ai-nokey">
+    return `<div class="ai-nokey">
       <p>${T('today_ai_nokey')}</p>
       <a class="btn accent" href="/settings">${T('today_ai_addkey')}</a>
-      <div class="flow-actions"><button class="btn" onclick="nextStep()">${T('today_skip')}</button></div>
     </div>`;
-  } else {
-    const msgs = ai.messages.map(m => m.role === 'model'
-      ? `<div class="ai-msg model">${mdLite(m.text)}</div>`
-      : `<div class="ai-msg user">${esc(m.text)}</div>`).join('');
-    const thinking = ai.loading ? `<div class="ai-msg model">${esc(T('today_ai_thinking'))}</div>` : '';
-    const starter = ai.messages.length === 0
-      ? `<div class="flow-actions"><button class="btn accent" onclick="askTopic()">${T('today_ai_ask')}</button></div>` : '';
-    body = `
-      <div class="ai-messages">${msgs}${thinking}</div>
-      ${starter}
-      <div class="ai-input-row">
-        <textarea id="aiInput" rows="1" placeholder="${esc(T('today_ai_placeholder'))}" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendAi();}"></textarea>
-        <button class="btn accent" onclick="sendAi()" ${ai.loading ? 'disabled' : ''}>${T('today_ai_send')}</button>
-      </div>
-      <div class="flow-actions"><button class="btn" onclick="nextStep()">${T('today_next')}</button></div>`;
   }
+  const pinned = ai.messages.filter(m => m.role === 'model' && m.pinned);
+  const chat = ai.messages.filter(m => !m.seed && !(m.role === 'model' && m.pinned));
+  const pinnedHtml = pinned.length
+    ? `<div class="ai-rule-wrap"><div class="ai-rule-label">${T('ai_pinned_label')}</div>${pinned.map(m => `<div class="ai-rule">${renderMd(m.text)}</div>`).join('')}</div>`
+    : '';
+  const chatHtml = chat.map(m => m.role === 'model'
+    ? `<div class="ai-msg model">${renderMd(m.text)}</div>`
+    : `<div class="ai-msg user">${esc(m.text)}</div>`).join('');
+  const thinking = ai.loading ? `<div class="ai-msg model">${esc(T('today_ai_thinking'))}</div>` : '';
+  const starter = (ai.messages.length === 0 && !ai.loading)
+    ? `<div class="flow-actions"><button class="btn accent" onclick="askTopic()">${T('today_ai_ask')}</button></div>` : '';
+  const chatBlock = (chatHtml || thinking) ? `<div class="ai-messages">${chatHtml}${thinking}</div>` : '';
+  return `
+    ${pinnedHtml}
+    ${starter}
+    ${chatBlock}
+    <div class="ai-input-row">
+      <textarea id="aiInput" rows="1" placeholder="${esc(T('today_ai_placeholder'))}" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendAi();}"></textarea>
+      <button class="btn accent" onclick="sendAi()" ${ai.loading ? 'disabled' : ''}>${T('today_ai_send')}</button>
+    </div>`;
+}
+
+/* ---- step: AI tutor (free-form follow-up) ---- */
+function renderAi(){
+  const hasKey = (typeof getGeminiKey === 'function') && !!getGeminiKey();
+  const skip = !hasKey ? `<div class="flow-actions"><button class="btn" onclick="nextStep()">${T('today_skip')}</button></div>` : '';
+  const cont = hasKey ? `<div class="flow-actions"><button class="btn" onclick="nextStep()">${T('today_next')}</button></div>` : '';
   document.getElementById('app').innerHTML = flowHeader() + `
 <main class="container flow-body"><div class="ai-wrap">
   <div class="ai-head"><h2>${T('today_ai_title')}</h2><p>${T('today_ai_lead')}</p></div>
-  ${body}
+  ${renderAiPanel()}
+  ${skip}${cont}
 </div></main>`;
   scrollAi();
 }
-function askTopic(){ sendAiText(dayPlanText()); }
-function sendAi(){ const inp = document.getElementById('aiInput'); const t = inp ? inp.value.trim() : ''; if (t) sendAiText(t); }
-async function sendAiText(text){
-  if (ai.loading) return;
-  ai.messages.push({ role: 'user', text });
-  ai.loading = true; renderAi();
+/* Starter = the point-by-point breakdown (seed prompt is hidden); follow-ups are normal chat. */
+function askTopic(){ if (ai.loading) return; ai.messages.push({ role: 'user', text: dayBreakdownText(), seed: true }); runTodayTurn(); }
+function sendAi(){ const inp = document.getElementById('aiInput'); const t = inp ? inp.value.trim() : ''; if (!t || ai.loading) return; ai.messages.push({ role: 'user', text: t }); runTodayTurn(); }
+async function runTodayTurn(){
+  ai.loading = true; render();
   try {
     const reply = await geminiRequest(AI_MODEL_ID, getAiSystemPrompt(), ai.messages.map(m => ({ role: m.role, text: m.text })));
-    ai.messages.push({ role: 'model', text: reply });
+    const pin = !ai.messages.some(m => m.role === 'model' && m.pinned);   // first reply = the explanation
+    ai.messages.push(pin ? { role: 'model', text: reply, pinned: true } : { role: 'model', text: reply });
+    if (typeof saveLessonToCloud === 'function') saveLessonToCloud(flow.day, ai.messages);   // shared with the planner
   } catch (e) { showToast((e && e.message) || 'AI error'); }
-  ai.loading = false; renderAi();
+  ai.loading = false; render();
 }
 
 /* ---- step: done — close the day ---- */

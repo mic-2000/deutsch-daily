@@ -52,6 +52,8 @@ const AI_SYSTEM_PROMPTS = {
 • review: типичные ошибки недели + смешанные упражнения
 • test: контрольная 8–12 заданий + критерии оценки
 
+ВНЕШНИЕ РЕСУРСЫ: если предлагаешь что-то пройти/послушать/почитать/посмотреть на внешнем ресурсе (сайт, видео, статья, подкаст, упражнение), ОБЯЗАТЕЛЬНО дай прямую ссылку в формате markdown [название](https://…) на конкретную страницу. Без ссылки внешний ресурс не упоминай. Указывай только реальные, существующие URL — не выдумывай ссылки; если точной ссылки не знаешь, не предлагай ресурс.
+
 РЕЖИМ ПРОВЕРКИ (если ученик прислал ответы): верные ✅; ошибки ❌ <ответ> → ✔ <правильно> — <тип ошибки>; в конце оценка X из Y. Не льсти, будь конкретен.`,
 
   ua: `Відповідь виключно українською, без вставлення тексту іншою мовою. Ти — досвідчений викладач німецької мови. Готуєш щоденні уроки для одного учня.
@@ -90,6 +92,8 @@ const AI_SYSTEM_PROMPTS = {
 • read: адаптований текст + глосарій + 3–5 питань
 • review: типові помилки тижня + змішані вправи
 • test: контрольна 8–12 завдань + критерії оцінки
+
+ЗОВНІШНІ РЕСУРСИ: якщо пропонуєш щось пройти/послухати/почитати/подивитися на зовнішньому ресурсі (сайт, відео, стаття, подкаст, вправа), ОБОВ'ЯЗКОВО дай пряме посилання у форматі markdown [назва](https://…) на конкретну сторінку. Без посилання зовнішній ресурс не згадуй. Вказуй лише реальні, наявні URL — не вигадуй посилань; якщо точного посилання не знаєш, не пропонуй ресурс.
 
 РЕЖИМ ПЕРЕВІРКИ (якщо учень надіслав відповіді): правильні ✅; помилки ❌ <відповідь> → ✔ <правильно> — <тип помилки>; наприкінці оцінка X із Y. Не лести, будь конкретним.`,
 
@@ -130,6 +134,8 @@ ADAPTATION BY TYPE
 • review: common weekly mistakes + mixed exercises
 • test: assessment 8–12 items + scoring criteria
 
+EXTERNAL RESOURCES: if you suggest practising/listening/reading/watching on an external resource (website, video, article, podcast, exercise), you MUST include a direct markdown link [title](https://…) to the specific page. Never mention an external resource without its link. Only give real, existing URLs — never invent links; if you don't know the exact link, don't suggest the resource.
+
 CHECKING MODE (when answers are sent): correct ✅; errors ❌ <answer> → ✔ <correct> — <error type>; end with grade X out of Y. Don't flatter, be concrete.`,
 };
 
@@ -141,7 +147,7 @@ const AI_SUMMARY_PROMPTS = {
 2. **Слабые места** — повторяющиеся ошибки, с примерами из уроков.
 3. **Рекомендации на следующую неделю** — 3–5 конкретных пунктов.
 4. **Мини-план повторения** — 3 коротких упражнения на закрепление слабых тем.
-Будь конкретным и доброжелательным, но честным. Без воды.`,
+Будь конкретным и доброжелательным, но честным. Без воды. Если рекомендуешь внешний ресурс — давай прямую ссылку [название](https://…) на конкретную страницу; реальные URL, без выдуманных.`,
 
   ua: `Ти — викладач німецької, що підбиває підсумки тижня для учня (мета — Goethe B1).
 Тобі дають транскрипти всіх уроків і перевірок за тиждень. Зроби розбір УКРАЇНСЬКОЮ:
@@ -149,7 +155,7 @@ const AI_SUMMARY_PROMPTS = {
 2. **Слабкі місця** — повторювані помилки, з прикладами з уроків.
 3. **Рекомендації на наступний тиждень** — 3–5 конкретних пунктів.
 4. **Міні-план повторення** — 3 короткі вправи на закріплення слабких тем.
-Будь конкретним і доброзичливим, але чесним. Без води.`,
+Будь конкретним і доброзичливим, але чесним. Без води. Якщо рекомендуєш зовнішній ресурс — давай пряме посилання [назва](https://…) на конкретну сторінку; реальні URL, без вигаданих.`,
 
   en: `You are a German teacher writing a weekly progress summary for a student (goal: Goethe B1).
 You are given transcripts of all lessons and checks from the week. Write the review IN ENGLISH:
@@ -157,7 +163,7 @@ You are given transcripts of all lessons and checks from the week. Write the rev
 2. **Weak spots** — recurring mistakes, with examples from the lessons.
 3. **Recommendations for next week** — 3–5 concrete points.
 4. **Mini review plan** — 3 short exercises to reinforce weak topics.
-Be concrete and supportive, but honest. No filler.`,
+Be concrete and supportive, but honest. No filler. If you recommend an external resource, include a direct markdown link [title](https://…) to the specific page; real URLs only, never invented.`,
 };
 
 /* ---- Per-language batch-translation prompts (collections page) ---------- */

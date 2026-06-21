@@ -74,3 +74,50 @@ test('the done step closes the day and advances currentDay', () => {
   assert.equal(t.planner.currentDay, before + 1, 'currentDay advanced');
   assert.match(t.app.innerHTML, /flow-done/);
 });
+
+/* A localStorage that reports a saved Gemini key, so the AI panel renders (not the no-key nudge). */
+function keyStore() {
+  const m = new Map([['gemini_key', 'testkey'], ['ui_lang', 'en']]);
+  return { getItem: (k) => (m.has(k) ? m.get(k) : null), setItem: (k, v) => m.set(k, String(v)), removeItem: (k) => m.delete(k), clear: () => m.clear() };
+}
+
+test('a saved lesson loads with the explanation pinned on top and the seed hidden', async () => {
+  const rows = [{ day: 1, messages: [
+    { role: 'user', text: 'HIDDEN_SEED_PROMPT', seed: true },
+    { role: 'model', text: 'THE EXPLANATION', pinned: true },
+    { role: 'user', text: 'my follow-up question' },
+    { role: 'model', text: 'a follow-up answer' },
+  ] }];
+  const t = loadPage({
+    page: 'today.html', extraFiles: ['locales/en.js'], exports: ['startFlow'],
+    shims: { localStorage: keyStore(), loadLessonsFromCloud: async () => rows, saveLessonToCloud: async () => {} },
+  });
+  t.startFlow();                                   // kicks off the async loadDayLesson(1)
+  await new Promise((r) => setImmediate(r));        // let the load + re-render settle
+  const html = t.app.innerHTML;
+  assert.match(html, /ai-rule-wrap/, 'pinned explanation block rendered');
+  assert.match(html, /THE EXPLANATION/, 'explanation text shown');
+  assert.match(html, /my follow-up question/, 'follow-up chat shown');
+  assert.match(html, /a follow-up answer/);
+  assert.ok(!html.includes('HIDDEN_SEED_PROMPT'), 'seed prompt is NOT displayed');
+});
+
+test('planner: a pinned reply renders highlighted and the seed prompt is hidden', () => {
+  const p = loadPage({
+    page: 'planner.html', extraFiles: ['locales/en.js'], exports: ['render', 'state', 'lessonsCache'],
+    shims: { localStorage: keyStore() },
+  });
+  p.state.currentDay = 1; p.state.viewingDay = 1;
+  p.lessonsCache[1] = [
+    { role: 'user', text: 'HIDDEN_DAY_PLAN', seed: true },
+    { role: 'model', text: 'PINNED RULE', pinned: true },
+    { role: 'user', text: 'student question' },
+    { role: 'model', text: 'tutor answer' },
+  ];
+  p.render();
+  const html = p.app.innerHTML;
+  assert.match(html, /ai-rule-wrap/, 'pinned block rendered in the planner too');
+  assert.match(html, /PINNED RULE/);
+  assert.match(html, /student question/);
+  assert.ok(!html.includes('HIDDEN_DAY_PLAN'), 'seed day-plan is hidden');
+});
