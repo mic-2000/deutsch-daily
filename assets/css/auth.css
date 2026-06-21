@@ -2,6 +2,10 @@
 .container { max-width: 480px; }
 main { padding: 48px 0 60px; }
 
+/* The header title block is a link back to the public landing page. */
+.auth-home { display: inline-block; text-decoration: none; color: inherit; }
+.auth-home:hover h1 { color: var(--accent); }
+
 .auth-box { border: 2px solid var(--ink); background: var(--paper-3); padding: 32px; }
 .auth-title { font-family: var(--serif); font-size: 26px; font-weight: 300; margin-bottom: 24px; }
 

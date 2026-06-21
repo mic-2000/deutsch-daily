@@ -466,8 +466,18 @@ clearing a lesson deletes the row (`deleteLessonFromCloud`); there is no soft-de
 - Email/password sign-in (`signInWithPassword`) and sign-up (`signUp`, shows "confirm your email"
   notice). Google OAuth (`signInWithOAuth`, `redirectTo` = production root `/` — the landing then
   forwards the now-signed-in user into the app).
-- A "← Home" link (`T('auth_back_home')`) returns to the landing.
-- Client-side validation: non-empty fields, password ≥ 6 chars. Error text via `T(...)`.
+- **Password recovery** — a single page with four `mode`s (`login` | `register` | `reset` |
+  `update`). The "Forgot password?" link (login mode) → **`reset`**: enter the email,
+  `sb.auth.resetPasswordForEmail(email, { redirectTo: origin + '/login' })` sends a recovery link.
+  Clicking that link returns to `/login` with a recovery token; the page detects it (URL
+  `#…type=recovery` fast path **and** the `onAuthStateChange` `PASSWORD_RECOVERY` event) and shows
+  **`update`** — a new-password field that calls `sb.auth.updateUser({ password })`, then
+  `redirect()`s into the app. The recovery case is the one time `initApp`/the page does **not**
+  auto-redirect a live session straight to the app. (Guarded by `tests/login.test.js`.)
+- Both the **header title block** (an `<a href="/">` around the logo) and an in-box "← Home" link
+  (`T('auth_back_home')`) return to the landing.
+- Client-side validation: non-empty fields, password ≥ 6 chars (also enforced on the new password).
+  Error text via `T(...)`.
 
 **Protected pages (`views/planner.html`, `views/vocab.html`, …):** `initApp()` enforces the session
 (redirecting to **`/login`** and remembering where to come back to via `auth_redirect`).
@@ -835,7 +845,7 @@ CSS custom properties on `:root`:
 ```css
 --paper:#F2EDE3; --paper-2:#E8E0D0; --paper-3:#FAF6EC;   /* warm-paper backgrounds */
 --ink:#1C1A17;  --ink-soft:#4A453D;  --line:#BFB5A0;      /* text + borders */
---accent:#B5512A; --accent-2:#8C3F1F;                     /* terracotta + hover */
+--accent:#8F3B6B; --accent-2:#6B2C50;                     /* plum ("Слива") + hover (dark: #C77EA8/#A85E8A) */
 --green:#4A7C3A;  --gold:#C5963B;                         /* mastered / in-progress */
 --der:#2F5C8F;  --die:#A23B2D;  --das:#3F7A3A;            /* trainer gender colors */
 --serif:'Fraunces', Georgia, serif;  --sans:'Manrope', system-ui, sans-serif;

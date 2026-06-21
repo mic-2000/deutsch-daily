@@ -6,8 +6,8 @@
   --ink: #1C1A17;
   --ink-soft: #4A453D;
   --line: #BFB5A0;
-  --accent: #B5512A;
-  --accent-2: #8C3F1F;
+  --accent: #8F3B6B;     /* plum ("Слива" — the landing design's accent) */
+  --accent-2: #6B2C50;
   --green: #4A7C3A;
   --gold: #C5963B;
   --der: #2F5C8F;
@@ -24,8 +24,8 @@
   --ink: #ECE6DA;
   --ink-soft: #A89F8E;
   --line: #3D372D;
-  --accent: #D9763F;
-  --accent-2: #C0673A;
+  --accent: #C77EA8;     /* plum ("Слива") — dark variant */
+  --accent-2: #A85E8A;
   --green: #6FA45A;
   --gold: #D4A954;
   --der: #5B8FC2;
