@@ -1,5 +1,5 @@
 /* components.css — shared header chrome: user bar, nav tabs, language switcher. */
-.user-bar { display: flex; align-items: center; justify-content: flex-start; flex-wrap: wrap; gap: 16px; margin-top: 14px; }
+.user-bar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; margin-top: 14px; }
 .user-bar-right { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .user-email { font-size: 12px; color: var(--ink-soft); }
 .btn-logout { font-size: 12px; color: var(--accent); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; background: none; border: none; font-family: inherit; }
