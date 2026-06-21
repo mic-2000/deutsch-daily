@@ -28,6 +28,15 @@ and a built-in AI tutor:
 5. **Collections** (`collections.html`) — user-supplied word sets imported from CSV or pasted from
    Excel/Sheets, drilled with the **same** flashcard/article/spelling trainers and Leitner model.
    Unlimited collections; optional one-click AI translation of missing entries. (See §16.)
+6. **Settings** (`settings.html`, `/settings`) — authenticated account page: change password
+   (`sb.auth.updateUser`), add/remove the Gemini AI key (reuses the planner's `gemini_key` /
+   `gemini_key_sync` logic), switch theme + UI language, and request **account deletion** with a
+   30-day recovery window. Deletion stamps `progress.deletion_requested_at`; a `SECURITY DEFINER`
+   `purge_deleted_accounts()` SQL function (scheduled via pg_cron, see `schema.sql`) hard-deletes
+   the user's rows + `auth.users` entry after 30 days. The client only sets/clears the flag and can
+   cancel it any time in the window; `cloud-sync.initApp` loads the flag into the global
+   `accountDeletionAt` and toasts a reminder on every page. Reached via the ⚙ link in the shared
+   header (`appHeader`). Owns no `progress` column (omits `CLOUD_FIELD`, like collections).
 
 The curriculum runs 24 weeks in 3 phases:
 
@@ -80,9 +89,10 @@ deutsch-daily/
 │   ├── planner.html     # Daily planner + AI Lehrer chat.            ( /planner )
 │   ├── vocab.html       # Vocabulary trainer.                         ( /vocab )
 │   ├── verbs.html       # Irregular-verb trainer (triad / cloze / table). ( /verbs )
-│   └── collections.html # User word-set trainer (import/edit/drill/AI translate). ( /collections ) §16
+│   ├── collections.html # User word-set trainer (import/edit/drill/AI translate). ( /collections ) §16
+│   └── settings.html    # Account: password / AI key / theme / lang / delete. ( /settings )
 ├── assets/
-│   ├── css/  base.css · components.css · planner.css · chat.css · vocab.css · verbs.css · auth.css · collections.css · landing.css
+│   ├── css/  base.css · components.css · planner.css · chat.css · vocab.css · verbs.css · auth.css · collections.css · landing.css · settings.css
 │   ├── js/   i18n.js · theme.js · utils.js · supabase.js · cloud-sync.js · ai-config.js
 │   │         gemini.js · leitner.js · speech.js · header.js · pwa.js
 │   ├── favicon.svg · icon.svg · icon-maskable.svg     # icon sources (PNGs rendered into icons/)

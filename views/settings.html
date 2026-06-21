@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="light dark">
+<script>try{document.documentElement.setAttribute('data-theme',localStorage.getItem('ui_theme')==='dark'?'dark':'light');}catch(e){}</script>
+<title>Deutsch · Einstellungen</title>
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#F2EDE3">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Deutsch Daily">
+<link rel="apple-touch-icon" href="/assets/icons/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,300;1,9..144,400;1,9..144,500&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/css/base.css">
+<link rel="stylesheet" href="/assets/css/components.css">
+<link rel="stylesheet" href="/assets/css/vocab.css">
+<link rel="stylesheet" href="/assets/css/settings.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="/assets/js/i18n.js"></script>
+<script src="/assets/js/theme.js"></script>
+<script src="/assets/js/utils.js"></script>
+<script src="/assets/js/pwa.js"></script>
+<script src="/assets/js/supabase.js"></script>
+<script src="/assets/js/cloud-sync.js"></script>
+<script src="/assets/js/header.js"></script>
+<script src="/assets/js/gemini.js"></script>
+</head>
+<body>
+<div id="app"></div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ==========================================================================
+   Settings — account management for the authenticated app.
+   Sections: account (email + change password), AI tutor key, appearance
+   (theme + language), and a danger zone (delete account with a 30-day
+   recovery window — see cloud-sync.js / schema.sql purge_deleted_accounts).
+   Cloud is the source of truth; this page owns no progress column.
+   ========================================================================== */
+const state = { confirm: null };
+
+/* ---------- AI key (mirrors the planner's key management) ---------- */
+function _storeGeminiKey(k){ if(k) localStorage.setItem('gemini_key', k.trim()); else localStorage.removeItem('gemini_key'); }
+function keySynced(){ return localStorage.getItem('gemini_key_sync') === '1'; }
+function _setKeySync(on){ if(on) localStorage.setItem('gemini_key_sync','1'); else localStorage.removeItem('gemini_key_sync'); }
+/* Called by cloud-sync.initApp when the account carries a saved key. */
+function applyCloudKey(key){ if(key){ _storeGeminiKey(key); _setKeySync(true); } else _setKeySync(false); }
+/* Called by cloud-sync.initApp with the pending-deletion timestamp (or null). */
+function applyDeletionStatus(){ try { render(); } catch(_){} }
+
+/* ---------- change password (active session) ---------- */
+async function changePassword(){
+  const p1 = document.getElementById('newPw'); const p2 = document.getElementById('confPw');
+  const a = p1 ? p1.value : ''; const b = p2 ? p2.value : '';
+  if(a.length < 6){ showToast(T('auth_err_password')); return; }
+  if(a !== b){ showToast(T('settings_pw_mismatch')); return; }
+  const btn = document.getElementById('pwBtn'); if(btn) btn.disabled = true;
+  try {
+    const { error } = await sb.auth.updateUser({ password: a });
+    if(error){ showToast(error.message); return; }
+    showToast(T('auth_pw_updated'));
+    if(p1) p1.value = ''; if(p2) p2.value = '';
+  } catch(e){ showToast(T('auth_err_connection')); }
+  finally { const b2 = document.getElementById('pwBtn'); if(b2) b2.disabled = false; }
+}
+
+/* ---------- AI key add / remove ---------- */
+function saveKey(){
+  const inp = document.getElementById('keyInput'); const syncEl = document.getElementById('keySync');
+  const key = inp ? inp.value.trim() : '';
+  const wantSync = !!(syncEl && syncEl.checked) && !!key;
+  const wasSynced = keySynced();
+  _storeGeminiKey(key); _setKeySync(wantSync);
+  if(typeof saveGeminiKeyToCloud === 'function'){
+    if(wantSync) saveGeminiKeyToCloud(key);
+    else if(wasSynced) saveGeminiKeyToCloud('');
+  }
+  render(); showToast(T(key ? 'settings_ai_saved' : 'settings_ai_removed'));
+}
+function removeKey(){
+  const wasSynced = keySynced();
+  _storeGeminiKey(''); _setKeySync(false);
+  if(wasSynced && typeof saveGeminiKeyToCloud === 'function') saveGeminiKeyToCloud('');
+  render(); showToast(T('settings_ai_removed'));
+}
+
+/* ---------- delete account (30-day recovery window) ---------- */
+function askDelete(){ stageConfirm(state, T('settings_delete_confirm'), { type:'delete' }); render(); }
+function cancelDeletion(){
+  if(typeof saveDeletionRequestToCloud === 'function') saveDeletionRequestToCloud(null);
+  render(); showToast(T('settings_deletion_canceled'));
+}
+function confirmNo(){ clearConfirm(state); render(); }
+function confirmYes(){
+  const a = state.confirm && state.confirm.action; clearConfirm(state);
+  if(a && a.type === 'delete'){
+    const ts = new Date().toISOString();
+    if(typeof saveDeletionRequestToCloud === 'function') saveDeletionRequestToCloud(ts);
+    render(); showToast(T('settings_delete_requested'));
+  } else render();
+}
+
+/* ---------- date helpers ---------- */
+function _locale(){ const l = getLang(); return l === 'en' ? 'en-GB' : (l === 'ua' ? 'uk-UA' : 'ru-RU'); }
+function fmtDate(iso){ try { return new Date(iso).toLocaleDateString(_locale(), { year:'numeric', month:'long', day:'numeric' }); } catch(e){ return iso; } }
+function purgeDate(iso){ return fmtDate(new Date(new Date(iso).getTime() + 30*24*60*60*1000).toISOString()); }
+
+/* ==========================================================================
+   RENDER
+   ========================================================================== */
+function header(){ return appHeader('settings', { cat:'settings_cat', h1:'<em>Einstellungen</em>', subtitle:'settings_subtitle' }); }
+
+function render(){
+  const hasKey = !!getGeminiKey();
+  const pending = (typeof accountDeletionAt !== 'undefined') && accountDeletionAt;
+  const html = header() + `
+<main class="container">
+  <div class="set-list">
+
+    <section class="set-card">
+      <h2>${T('settings_sec_account')}</h2>
+      <div class="set-row">
+        <span class="set-row-label">${T('settings_email_label')}</span>
+        <span class="set-row-value">${esc(currentUser ? currentUser.email : '')}</span>
+      </div>
+      <div style="margin-top:14px">
+        <div class="set-field">
+          <label for="newPw">${T('auth_new_password')}</label>
+          <input class="set-input" id="newPw" type="password" autocomplete="new-password" placeholder="${T('auth_password_hint')}">
+        </div>
+        <div class="set-field">
+          <label for="confPw">${T('settings_confirm_pw')}</label>
+          <input class="set-input" id="confPw" type="password" autocomplete="new-password" onkeydown="if(event.key==='Enter')changePassword()">
+        </div>
+        <div class="set-actions">
+          <button class="btn accent" id="pwBtn" onclick="changePassword()">${T('settings_change_pw')}</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="set-card">
+      <h2>${T('settings_sec_ai')}</h2>
+      <div class="set-card-desc">${T('settings_ai_desc')}</div>
+      ${hasKey ? `<div class="set-status" style="margin-bottom:12px">${T('settings_ai_set')}${keySynced() ? ' · ' + T('settings_ai_synced') : ''}</div>` : ''}
+      <div class="set-field">
+        <label for="keyInput">${T('settings_ai_key_label')}</label>
+        <input class="set-input" id="keyInput" type="password" placeholder="${T('ai_key_placeholder')}" value="${esc(getGeminiKey())}"
+          onkeydown="if(event.key==='Enter')saveKey()">
+      </div>
+      <label class="set-check">
+        <input type="checkbox" id="keySync" ${keySynced() ? 'checked' : ''}>
+        <span>${T('ai_key_sync_label')}</span>
+      </label>
+      <div class="set-hint">${T('ai_key_sync_hint')}</div>
+      <div class="set-actions">
+        <button class="btn accent" onclick="saveKey()">${T('ai_key_save')}</button>
+        ${hasKey ? `<button class="btn" onclick="removeKey()" style="color:var(--die)">${T('ai_key_remove')}</button>` : ''}
+      </div>
+    </section>
+
+    <section class="set-card">
+      <h2>${T('settings_sec_appearance')}</h2>
+      <div class="set-row">
+        <span class="set-row-label">${T('settings_theme_label')}</span>
+        <span>${renderThemeToggle()}</span>
+      </div>
+      <div class="set-row">
+        <span class="set-row-label">${T('settings_lang_label')}</span>
+        <span class="lang-switcher">${renderLangSwitcher()}</span>
+      </div>
+    </section>
+
+    <section class="set-card danger">
+      <h2>${T('settings_sec_danger')}</h2>
+      ${pending ? `
+        <div class="set-pending">${T('settings_deletion_scheduled', purgeDate(accountDeletionAt))}</div>
+        <div class="set-actions"><button class="btn accent" onclick="cancelDeletion()">${T('settings_cancel_deletion')}</button></div>
+      ` : `
+        <div class="set-card-desc">${T('settings_delete_desc')}</div>
+        <div class="set-actions"><button class="btn danger" onclick="askDelete()">${T('settings_delete_account')}</button></div>
+      `}
+    </section>
+
+  </div>
+</main>
+${appFooter()}`;
+  document.getElementById('app').innerHTML = html + confirmHtml();
+}
+
+function confirmHtml(){
+  if(!state.confirm) return '';
+  return `
+<div class="confirm-bg" onclick="if(event.target===this)confirmNo()">
+  <div class="confirm-box">
+    <div class="confirm-msg">${esc(state.confirm.message)}</div>
+    <div class="confirm-actions">
+      <button class="btn" onclick="confirmNo()">${T('confirm_no')}</button>
+      <button class="btn danger" onclick="confirmYes()">${T('settings_delete_btn')}</button>
+    </div>
+  </div>
+</div>`;
+}
+
+// Paint the shell right away in the saved language; initApp() re-renders with cloud data
+// (and adopts the account AI key + pending-deletion status before the second render).
+loadLocale(getLang()).then(() => { try { render(); } catch (_) {} });
+initApp();
+</script>
+</body>
+</html>

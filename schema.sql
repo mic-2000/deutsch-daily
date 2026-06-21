@@ -13,11 +13,13 @@ create table if not exists public.progress (
   lang         text        default 'en'::text,
   theme        text,
   gemini_key   text,                          -- opt-in: user's Gemini API key, synced across devices
+  deletion_requested_at timestamptz,          -- set when the user asks to delete their account; purged after 30 days
   updated_at   timestamptz default now()
 );
 
 -- For existing databases (table already created without the column):
 alter table public.progress add column if not exists gemini_key text;
+alter table public.progress add column if not exists deletion_requested_at timestamptz;
 
 alter table public.progress enable row level security;
 
@@ -82,3 +84,43 @@ do $$ begin
       for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
   end if;
 end $$;
+-- -------------------------------------------------------------------------
+-- Account deletion (30-day recovery window)
+--   The client stamps progress.deletion_requested_at = now() when a user asks
+--   to delete their account, and clears it (back to null) if they change their
+--   mind / sign back in and cancel. The actual hard-delete happens server-side,
+--   30 days later, so the request can be undone during the recovery window.
+--
+--   The client CANNOT delete auth.users rows (RLS + anon key), so the purge
+--   must run with elevated rights. The function below is SECURITY DEFINER and
+--   removes the user's data + auth row once the window has elapsed. Schedule it
+--   daily with pg_cron (Dashboard → Database → Extensions → enable pg_cron).
+-- -------------------------------------------------------------------------
+create or replace function public.purge_deleted_accounts()
+returns integer
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  purged integer := 0;
+  uid uuid;
+begin
+  for uid in
+    select user_id from public.progress
+    where deletion_requested_at is not null
+      and deletion_requested_at < now() - interval '30 days'
+  loop
+    delete from public.lessons     where user_id = uid;
+    delete from public.collections where user_id = uid;
+    delete from public.progress    where user_id = uid;
+    delete from auth.users         where id = uid;   -- removes the login itself
+    purged := purged + 1;
+  end loop;
+  return purged;
+end;
+$$;
+
+-- Run daily at 03:00 UTC (requires the pg_cron extension):
+--   select cron.schedule('purge-deleted-accounts', '0 3 * * *',
+--                        $$select public.purge_deleted_accounts()$$);

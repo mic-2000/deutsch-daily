@@ -6,6 +6,7 @@
     { "source": "/vocab", "destination": "/views/vocab.html" },
     { "source": "/verbs", "destination": "/views/verbs.html" },
     { "source": "/collections", "destination": "/views/collections.html" },
+    { "source": "/settings", "destination": "/views/settings.html" },
     { "source": "/privacy", "destination": "/views/privacy.html" },
     { "source": "/terms", "destination": "/views/terms.html" }
   ]

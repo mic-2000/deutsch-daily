@@ -20,6 +20,9 @@
    it, and it is wiped on logout or when a different user signs in. See the READ MIRROR section.
 */
 let currentUser = null;
+// Pending account-deletion timestamp (ISO) or null. Loaded on init and surfaced everywhere so the
+// user can still cancel within the 30-day recovery window (see schema.sql purge_deleted_accounts).
+let accountDeletionAt = null;
 
 /* ==========================================================================
    OFFLINE OUTBOX — replay failed writes when back online.
@@ -236,6 +239,15 @@ async function initApp() {
     } catch(e) { /* gemini_key column may not exist yet */ }
   }
 
+  // Pending account-deletion flag (recovery window). Separate query so a missing column can't break
+  // the main load. Surfaced on every page so the user is reminded they can still cancel.
+  try {
+    const { data } = await sb.from('progress').select('deletion_requested_at').eq('user_id', session.user.id).single();
+    accountDeletionAt = (data && data.deletion_requested_at) || null;
+  } catch(e) { /* deletion_requested_at column may not exist yet */ }
+  if (typeof applyDeletionStatus === 'function') applyDeletionStatus(accountDeletionAt);
+  if (accountDeletionAt && typeof showToast === 'function' && typeof T === 'function') showToast(T('settings_deletion_pending_toast'));
+
   // setLang(skipSave) loads the resolved locale, syncs it into localStorage, and renders once.
   if (lang !== getLang()) { await setLang(lang, true); }
   else { await loadLocale(lang).catch(()=>{}); render(); }
@@ -249,6 +261,8 @@ async function saveThemeToCloud(theme) { return _pushProgress({ theme: theme });
 async function saveVerbsToCloud(payload) { return _pushProgress({ verbs_data: payload }); }
 // Persist the user's Gemini key on their account (opt-in, planner only). Pass '' to clear it.
 async function saveGeminiKeyToCloud(key) { return _pushProgress({ gemini_key: key || null }); }
+// Stamp (ISO string) or clear (null) the account-deletion request. Server-side purge runs 30 days later.
+async function saveDeletionRequestToCloud(ts) { accountDeletionAt = ts || null; return _pushProgress({ deletion_requested_at: ts || null }); }
 
 async function logout() {
   await sb.auth.signOut();

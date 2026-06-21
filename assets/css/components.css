@@ -19,6 +19,10 @@
 
 .theme-toggle { font-size: 13px; line-height: 1; padding: 3px 9px; border: 1px solid var(--line); color: var(--ink-soft); background: none; font-family: inherit; cursor: pointer; }
 .theme-toggle:hover { border-color: var(--ink); color: var(--ink); }
+.settings-link { font-size: 13px; line-height: 1; padding: 3px 9px; border: 1px solid var(--line); color: var(--ink-soft); text-decoration: none; cursor: pointer; }
+.settings-link:hover { border-color: var(--ink); color: var(--ink); }
+.settings-link.active { border-color: var(--ink); background: var(--ink); color: var(--paper); }
+[data-theme="dark"] .settings-link.active { background: var(--ink-soft); border-color: var(--ink-soft); }
 
 /* On phones the header stacks: nav tabs become a horizontal scroll strip and the
    right-side controls drop onto their own full-width row so nothing overflows. */

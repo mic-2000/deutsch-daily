@@ -3,7 +3,7 @@
    (same markup, same width, same nav) — the app reads as one site, not four pages.
 
    appHeader(active, { cat, h1, subtitle })
-     active   — nav key of the current page ('planner' | 'vocab' | 'verbs' | 'collections')
+     active   — nav key of the current page ('planner' | 'vocab' | 'verbs' | 'collections' | 'settings')
      cat      — T() key for the small uppercase category line
      h1       — raw HTML for the page title (may contain <em>…</em>)
      subtitle — T() key for the italic subtitle
@@ -38,6 +38,7 @@ function appHeader(active, opts) {
     <div class="user-bar-right">
       <div class="lang-switcher">${renderLangSwitcher()}</div>
       ${typeof renderThemeToggle === 'function' ? renderThemeToggle() : ''}
+      <a class="settings-link${active === 'settings' ? ' active' : ''}" href="/settings" title="${T('settings_title')}" aria-label="${T('settings_title')}">⚙</a>
       <span class="user-email">${esc(currentUser ? currentUser.email : '')}</span>
       <button class="btn-logout" onclick="logout()">${T('logout')}</button>
     </div>
