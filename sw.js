@@ -13,7 +13,7 @@
                                                 here would serve stale/incorrect data.
 
    Bump VERSION when shipping changed shell assets; stale caches are pruned on activate. */
-const VERSION = 'v3';
+const VERSION = 'v4';
 const SHELL = 'dd-shell-' + VERSION;
 const RUNTIME = 'dd-runtime-' + VERSION;
 
