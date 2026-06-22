@@ -327,8 +327,10 @@ getters:
 - `getAiSystemPrompt()` — returns the tutor system prompt for the active UI language (RU/UA/EN).
   The prompt sets the persona, student context (A1→B1, lives in Berlin), output format (theory +
   examples + exercises + answer key), formatting rules for German (nouns with article/plural,
-  verb conjugation tables), per-task-type adaptation rules, and a rule that any external resource
-  must be given with a direct markdown link (no invented URLs — rendered clickable by `markdown.js`).
+  verb conjugation tables), per-task-type adaptation rules, a "this app" rule (don't recommend
+  third-party apps like Anki/Quizlet for flashcards/SRS/articles — point to the built-in trainers),
+  and an external-resource rule (only for unique material not in the app, always with a direct
+  markdown link, no invented URLs — rendered clickable by `markdown.js`).
 - `getAiSummaryPrompt()` — returns the weekly-summary system prompt (also per language).
 - `getCollectionsTranslatePrompt()` — returns the batch-translation prompt (per language): translate
   a JSON array of German terms into the active UI language, returning ONLY a same-order JSON array.
