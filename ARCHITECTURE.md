@@ -1308,8 +1308,10 @@ flags: `seed:true` (the hidden prompt that elicits a pinned reply — the breakd
 summary request), `pinned:true` (render on top, highlighted), and `kind` (`'explanation'` → label
 `ai_pinned_label` "Topic breakdown"; `'summary'` → label `today_summary_label` "Day summary"). Both
 `renderAiPanel()` (today) and the planner's `renderAiSection` render each `pinned` message as its own
-`.ai-rule-wrap` block (labelled by `kind`) on top, hide `seed`, and show the rest as the follow-up
-chat below. Because both write the **same**
+collapsible `.ai-rule-wrap` (`<details>`, labelled by `kind`) inside an `.ai-pinned-group`, hide
+`seed`, then an `.ai-sep` divider (`ai_chat_sep`) separates them from the follow-up chat. On the
+**AI step** the breakdown is collapsed by default and the summary stays open (the summary is what
+matters there); on the grammar step and in the planner the blocks default open. Because both write the **same**
 `lessons` row, the user can study a day on `/today` and later revisit/refresh it from `/planner` (any
 day) — and vice-versa. Old lessons (no flags) fall through to plain chat, so the change is backward
 compatible. `/today` loads the day's row via `loadDayLesson` (reusing `loadLessonsFromCloud`) when the
@@ -1332,6 +1334,12 @@ engines' `render()` is a no-op (the wizard owns the screen — intro, grammar, a
   `saveVocabToCloud`.
 - `lessons` (table) — the AI step's per-day history, shared with the planner (see the pinned-explanation
   note above): `loadDayLesson` reads it, `saveLessonToCloud` writes it.
+
+**Resume on refresh.** The flow position is mirrored to `sessionStorage['today_flow']` (`{step, day}`)
+on each `renderStep` and cleared on exit (`×`). After `initApp`, `afterInit` reads it and `resumeFlow`
+re-enters that step (transient per-tab nav state — survives reload, clears on tab close; NOT a
+progress store). vocab/verb steps restart their session for that step (individual cards can't be
+restored); grammar/ai/done re-render with the day's saved lesson reloaded.
 
 **Edge cases:** `currentDay > TOTAL_DAYS` → a "course complete" screen; a day already completed shows
 a review banner on the intro but still lets the user run it again.

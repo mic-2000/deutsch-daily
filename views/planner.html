@@ -283,14 +283,17 @@ function renderAiSection(d) {
   const chat = msgs.filter(m => !m.seed && !(m.role === 'model' && m.pinned));
   const pinnedHtml = pinned.map(m => {
     const label = m.kind === 'summary' ? T('today_summary_label') : T('ai_pinned_label');
-    return `<div class="ai-rule-wrap"><div class="ai-rule-label">${label}</div><div class="ai-rule">${renderMd(m.text)}</div></div>`;
+    return `<details class="ai-rule-wrap" open><summary class="ai-rule-label">${label}</summary><div class="ai-rule">${renderMd(m.text)}</div></details>`;
   }).join('');
+  const pinnedGroup = pinned.length ? `<div class="ai-pinned-group">${pinnedHtml}</div>` : '';
+  const sep = pinned.length ? `<div class="ai-sep"><span>${T('ai_chat_sep')}</span></div>` : '';
   const msgsHtml = chat.map(m =>
     `<div class="ai-msg ${m.role === 'model' ? 'model' : 'user'}">${m.role === 'model' ? renderMd(m.text) : esc(m.text)}</div>`
   ).join('');
   return `<div class="ai-section">
   ${header}
-  ${pinnedHtml}
+  ${pinnedGroup}
+  ${sep}
   <div class="ai-messages" id="chatMessages">
     ${msgsHtml}
     ${chatState.loading && chatState.summaryWeek === null ? '<div class="ai-msg model ai-loading"><div class="ai-thinking-dots"><span></span><span></span><span></span></div></div>' : ''}

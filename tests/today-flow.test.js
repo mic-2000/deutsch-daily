@@ -127,6 +127,34 @@ test('the AI step shows the day summary pinned (own label) alongside the topic b
   assert.match(html, /GRAMMAR EXPLANATION/);
   // a saved summary must NOT be regenerated (no thinking indicator left hanging)
   assert.ok(!html.includes('seedA') && !html.includes('seedB'), 'seed prompts hidden');
+  // on the AI step: the summary is expanded, the breakdown is collapsed, and a separator divides
+  // the pinned blocks from the chat.
+  assert.match(html, /<details class="ai-rule-wrap" open><summary class="ai-rule-label">Day summary/, 'summary open');
+  assert.ok(!/<details class="ai-rule-wrap" open><summary class="ai-rule-label">Topic breakdown/.test(html), 'breakdown collapsed');
+  assert.match(html, /ai-sep/, 'pinned blocks separated from the chat');
+});
+
+test('renderStep persists the position and resumeFlow restores it (refresh → same step)', async () => {
+  const rows = [{ day: 1, messages: [{ role: 'model', text: 'SUMM', pinned: true, kind: 'summary' }] }];
+  const t = loadPage({
+    page: 'today.html', extraFiles: ['locales/en.js'],
+    exports: ['startFlow', 'nextStep', 'resumeFlow'],
+    shims: { localStorage: keyStore(), loadLessonsFromCloud: async () => rows, saveLessonToCloud: async () => {}, saveToCloud: () => {} },
+  });
+  // Drive into the flow, then read what was persisted for a refresh.
+  t.startFlow();           // grammar (step 0)
+  t.nextStep();            // vocab (step 1)
+  const saved = JSON.parse(t.sandbox.sessionStorage.getItem('today_flow'));
+  assert.equal(saved.step, 1, 'current step persisted');
+  assert.equal(saved.day, 1);
+
+  // Simulate a fresh page that resumes from the saved position (AI step here).
+  t.resumeFlow({ step: 3, day: 1 });
+  await new Promise((r) => setImmediate(r));
+  const html = t.app.innerHTML;
+  assert.match(html, /flow-top/, 'resumed into a flow step, not the intro');
+  assert.match(html, /Step 4 of 5/, 'resumed onto the AI step');
+  assert.match(html, /Day summary/, 'the saved summary is shown');
 });
 
 test('planner: a pinned reply renders highlighted and the seed prompt is hidden', () => {

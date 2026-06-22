@@ -44,6 +44,7 @@ window.LOCALE_RU = {
     today_ai_send: 'Отправить',
     today_ai_thinking: 'Думаю…',
     ai_pinned_label: 'Разбор темы',
+    ai_chat_sep: 'Ваши вопросы',
     today_skip: 'Пропустить',
     today_done_words: 'Слова',
     today_done_verbs: 'Глаголы',

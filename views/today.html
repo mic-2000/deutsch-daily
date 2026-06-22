@@ -74,7 +74,14 @@ function applyCloudData(d){
   }
 }
 function dayOf(){ return planner.currentDay; }
-function localizedToday(){ return getLocalizedDay(DAYS[Math.min(dayOf(), TOTAL_DAYS) - 1]); }
+function activeDay(){ return flow.running ? flow.day : dayOf(); }   // the day the flow is on (== currentDay normally)
+function localizedToday(){ return getLocalizedDay(DAYS[Math.min(activeDay(), TOTAL_DAYS) - 1]); }
+
+/* Resume position across a page refresh — transient per-tab nav state (NOT progress; progress lives
+   in the cloud). sessionStorage survives reload, clears on tab close — exactly "same step on refresh". */
+function saveFlow(){ try { sessionStorage.setItem('today_flow', JSON.stringify({ step: flow.step, day: flow.day })); } catch (e) {} }
+function clearFlow(){ try { sessionStorage.removeItem('today_flow'); } catch (e) {} }
+function readFlow(){ try { return JSON.parse(sessionStorage.getItem('today_flow')); } catch (e) { return null; } }
 
 /* ---- shared verbs_data store: both engines mutate ONE mastery map ---- */
 function wireSharedVerbStore(){
@@ -119,10 +126,11 @@ async function loadDayLesson(day){
   if (ai.messages.length) grammarExplain = true;   // show the saved explanation right on the grammar card
   if (flow.running) render();
 }
-function exitFlow(){ flow.running = false; if (window.speechSynthesis) window.speechSynthesis.cancel(); render(); }
+function exitFlow(){ flow.running = false; clearFlow(); if (window.speechSynthesis) window.speechSynthesis.cancel(); render(); }
 function nextStep(){ flow.step = Math.min(flow.step + 1, STEPS.length - 1); renderStep(); }
 
 function renderStep(){
+  saveFlow();   // remember where we are, so a refresh resumes the same step
   const step = STEPS[flow.step];
   if (step === 'grammar') renderGrammar();
   else if (step === 'vocab') startVocabStep();
@@ -159,7 +167,7 @@ function flowHeader(){
 function renderGrammar(){
   const d = localizedToday();
   const aiBlock = grammarExplain
-    ? `<div class="ai-wrap" style="margin-top:22px">${renderAiPanel()}</div>`
+    ? `<div class="ai-wrap" style="margin-top:22px">${renderAiPanel('grammar')}</div>`
     : `<div class="flow-actions" style="margin-top:18px"><button class="btn" onclick="explainDay()">${T('today_grammar_explain')}</button></div>`;
   document.getElementById('app').innerHTML = flowHeader() + `
 <main class="container flow-body">
@@ -190,9 +198,11 @@ function dayBreakdownText(){
 }
 function scrollAi(){ setTimeout(() => { const el = document.querySelector('.ai-messages'); if (el) el.scrollTop = el.scrollHeight; }, 30); }
 
-/* The chat panel — pinned explanation (highlighted, on top) + the follow-up chat + input.
-   Reused by the grammar step and the AI step; renders model output via the shared renderMd. */
-function renderAiPanel(){
+/* The chat panel — pinned blocks (highlighted, on top) + the follow-up chat + input. Reused by the
+   grammar step (context 'grammar') and the AI step (context 'ai'); renders model output via the
+   shared renderMd. Pinned blocks are collapsible <details>: on the AI step the "topic breakdown" is
+   collapsed by default (the day summary is what matters there); the summary stays open everywhere. */
+function renderAiPanel(context){
   const hasKey = (typeof getGeminiKey === 'function') && !!getGeminiKey();
   if (!hasKey) {
     return `<div class="ai-nokey">
@@ -203,8 +213,10 @@ function renderAiPanel(){
   const pinned = ai.messages.filter(m => m.role === 'model' && m.pinned);
   const chat = ai.messages.filter(m => !m.seed && !(m.role === 'model' && m.pinned));
   const pinnedHtml = pinned.map(m => {
-    const label = m.kind === 'summary' ? T('today_summary_label') : T('ai_pinned_label');
-    return `<div class="ai-rule-wrap"><div class="ai-rule-label">${label}</div><div class="ai-rule">${renderMd(m.text)}</div></div>`;
+    const isSummary = m.kind === 'summary';
+    const label = isSummary ? T('today_summary_label') : T('ai_pinned_label');
+    const open = isSummary || context === 'grammar';   // AI step → collapse the breakdown
+    return `<details class="ai-rule-wrap"${open ? ' open' : ''}><summary class="ai-rule-label">${label}</summary><div class="ai-rule">${renderMd(m.text)}</div></details>`;
   }).join('');
   const chatHtml = chat.map(m => m.role === 'model'
     ? `<div class="ai-msg model">${renderMd(m.text)}</div>`
@@ -213,8 +225,11 @@ function renderAiPanel(){
   const starter = (ai.messages.length === 0 && !ai.loading)
     ? `<div class="flow-actions"><button class="btn accent" onclick="askTopic()">${T('today_ai_ask')}</button></div>` : '';
   const chatBlock = (chatHtml || thinking) ? `<div class="ai-messages">${chatHtml}${thinking}</div>` : '';
+  const pinnedGroup = pinned.length ? `<div class="ai-pinned-group">${pinnedHtml}</div>` : '';
+  const sep = pinned.length ? `<div class="ai-sep"><span>${T('ai_chat_sep')}</span></div>` : '';
   return `
-    ${pinnedHtml}
+    ${pinnedGroup}
+    ${sep}
     ${starter}
     ${chatBlock}
     <div class="ai-input-row">
@@ -233,7 +248,7 @@ function renderAi(){
   document.getElementById('app').innerHTML = flowHeader() + `
 <main class="container flow-body"><div class="ai-wrap">
   <div class="ai-head"><h2>${T('today_ai_title')}</h2><p>${T('today_ai_lead')}</p></div>
-  ${renderAiPanel()}
+  ${renderAiPanel('ai')}
   ${skip}${cont}
 </div></main>`;
   scrollAi();
@@ -349,7 +364,23 @@ async function loadVocabData(){
     if (data && data.vocab_data && Object.keys(data.vocab_data).length) VocabTrainer.applyData(data.vocab_data);
   } catch (e) { /* offline or no record yet — vocab starts empty */ }
 }
-function afterInit(){ wireSharedVerbStore(); loadVocabData(); }
+async function afterInit(){
+  wireSharedVerbStore();
+  await loadVocabData();
+  // Resume the same step after a page refresh (sessionStorage), if a flow was in progress for a
+  // valid day. vocab/verb steps restart their session for that step (cards can't be restored).
+  const saved = readFlow();
+  if (saved && Number.isInteger(saved.step) && saved.step >= 0 && saved.step < STEPS.length
+      && Number.isInteger(saved.day) && saved.day >= 1 && saved.day <= TOTAL_DAYS) {
+    resumeFlow(saved);
+  }
+}
+function resumeFlow(saved){
+  ai = { messages: [], loading: false };
+  grammarExplain = false;
+  flow = { running: true, step: saved.step, day: saved.day, vocabResult: null, verbResult: null };
+  loadDayLesson(flow.day);   // its trailing render() paints the resumed step with the lesson loaded
+}
 
 // Paint the shell right away in the saved language; initApp() re-renders with cloud data.
 loadLocale(getLang()).then(() => { try { render(); } catch (_) {} });

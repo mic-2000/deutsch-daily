@@ -44,6 +44,7 @@ window.LOCALE_EN = {
     today_ai_send: 'Send',
     today_ai_thinking: 'Thinking…',
     ai_pinned_label: 'Topic breakdown',
+    ai_chat_sep: 'Your questions',
     today_skip: 'Skip',
     today_done_words: 'Words',
     today_done_verbs: 'Verbs',

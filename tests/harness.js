@@ -156,6 +156,7 @@ function loadPage(opts) {
     navigator: { language: 'en', clipboard: undefined },
     location: { href: '', replace() {}, assign() {} },
     localStorage: makeLocalStorage(),
+    sessionStorage: makeLocalStorage(),
     fetch: () => Promise.reject(new Error('network disabled in tests')),
     // --- shimmed modules (supabase / cloud-sync / theme / ai-config) ---
     sb: { auth: { getSession: async () => ({ data: { session: null } }) } },

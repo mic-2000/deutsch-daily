@@ -43,6 +43,7 @@ window.LOCALE_UA = {
     today_ai_send: 'Надіслати',
     today_ai_thinking: 'Думаю…',
     ai_pinned_label: 'Розбір теми',
+    ai_chat_sep: 'Ваші запитання',
     today_skip: 'Пропустити',
     today_done_words: 'Слова',
     today_done_verbs: 'Дієслова',

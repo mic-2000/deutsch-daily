@@ -155,3 +155,23 @@
 .ai-rule { font-size: 15px; line-height: 1.7; color: var(--ink); }
 .ai-rule > :first-child { margin-top: 0; }
 .ai-rule > :last-child { margin-bottom: 0; }
+
+/* Pinned blocks are collapsible (<details>) and grouped, then visually separated from the chat. */
+details.ai-rule-wrap { padding: 0; }
+details.ai-rule-wrap > summary {
+  list-style: none; cursor: pointer;
+  display: flex; align-items: center; gap: 8px;
+  padding: 14px 18px; margin: 0;
+  font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--accent);
+}
+details.ai-rule-wrap > summary::-webkit-details-marker { display: none; }
+details.ai-rule-wrap > summary::before {
+  content: '▸'; font-size: 12px; line-height: 1; display: inline-block; transition: transform .15s ease;
+}
+details.ai-rule-wrap[open] > summary::before { transform: rotate(90deg); }
+details.ai-rule-wrap > .ai-rule { padding: 0 18px 16px; }
+.ai-pinned-group { margin-bottom: 4px; }
+
+.ai-sep { display: flex; align-items: center; gap: 12px; margin: 18px 0 14px; color: var(--ink-soft); }
+.ai-sep::before, .ai-sep::after { content: ''; flex: 1; height: 1px; background: var(--line); }
+.ai-sep span { font-size: 11px; letter-spacing: .14em; text-transform: uppercase; white-space: nowrap; }
