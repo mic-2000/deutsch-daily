@@ -30,6 +30,7 @@
 <script src="/assets/js/cloud-sync.js"></script>
 <script src="/assets/js/ai-config.js"></script>
 <script src="/assets/js/gemini.js"></script>
+<script src="/assets/js/gemini-key.js"></script>
 <script src="/assets/js/markdown.js"></script>
 <script src="/assets/js/header.js"></script>
 <script src="/data/weeks.js"></script>
@@ -55,48 +56,9 @@ let lessonsCache = {};   // { day: [ {role,text}, ... ] }
 let summaryCache = {};   // { week: [ {role,text}, ... ] }
 let chatState = { loading: false, showKeyModal: false, summaryWeek: null };
 
-/* getGeminiKey() + geminiRequest() live in assets/js/gemini.js (shared with collections.html). */
-function _storeGeminiKey(k) {
-  if (k) localStorage.setItem('gemini_key', k.trim());
-  else localStorage.removeItem('gemini_key');
-}
-/* Whether the user opted to keep the key on their account (synced across devices). */
-function keySynced() { return localStorage.getItem('gemini_key_sync') === '1'; }
-function _setKeySync(on) {
-  if (on) localStorage.setItem('gemini_key_sync', '1');
-  else localStorage.removeItem('gemini_key_sync');
-}
-
-/* Called by cloud-sync.initApp when the account carries a saved key — adopt it locally so this
-   device works without re-pasting; clear the synced flag if the account no longer has one. */
-function applyCloudKey(key) {
-  if (key) { _storeGeminiKey(key); _setKeySync(true); }
-  else _setKeySync(false);
-}
-
-function saveGeminiKeyAndClose() {
-  const inp = document.getElementById('geminiKeyInput');
-  const syncEl = document.getElementById('geminiKeySync');
-  const key = inp ? inp.value.trim() : '';
-  const wantSync = !!(syncEl && syncEl.checked) && !!key;
-  const wasSynced = keySynced();
-  _storeGeminiKey(key);
-  _setKeySync(wantSync);
-  if (typeof saveGeminiKeyToCloud === 'function') {
-    if (wantSync) saveGeminiKeyToCloud(key);            // keep the account copy in sync
-    else if (wasSynced) saveGeminiKeyToCloud('');       // opted out → wipe the account copy
-  }
-  chatState.showKeyModal = false;
-  render();
-}
-function removeGeminiKey() {
-  const wasSynced = keySynced();
-  _storeGeminiKey('');
-  _setKeySync(false);
-  if (wasSynced && typeof saveGeminiKeyToCloud === 'function') saveGeminiKeyToCloud('');
-  chatState.showKeyModal = false;
-  render();
-}
+/* getGeminiKey() + geminiRequest() live in assets/js/gemini.js. Key storage, validation, the
+   connect modal and the save/remove path live in assets/js/gemini-key.js (window.GeminiKey) —
+   shared with settings/today/welcome/collections. */
 function openKeyModal()  { chatState.showKeyModal = true;  render(); }
 function closeKeyModal() { chatState.showKeyModal = false; render(); }
 function clearChat(day) {
@@ -152,7 +114,7 @@ async function runLessonTurn(day) {
     lessonsCache[day].push(pin ? { role: 'model', text: reply, pinned: true } : { role: 'model', text: reply });
     saveLessonToCloud(day, lessonsCache[day]);
   } catch (e) {
-    showToast(e.message || T('ai_error'));
+    showToast(GeminiKey.friendlyError(e));
   } finally {
     chatState.loading = false;
     render();
@@ -187,7 +149,7 @@ async function generateWeeklySummary(week) {
     summaryCache[week].push({ role: 'model', text: reply });
     saveLessonToCloud(-week, summaryCache[week]);
   } catch (e) {
-    showToast(e.message || T('ai_error'));
+    showToast(GeminiKey.friendlyError(e));
     chatState.summaryWeek = null;
   } finally {
     chatState.loading = false;
@@ -208,26 +170,7 @@ function scrollChatToBottom() {
 /* escHtml / inlineMd / renderMdTable / renderMd live in assets/js/markdown.js (shared with /today). */
 
 function renderKeyModal() {
-  const cur = esc(getGeminiKey());
-  return `<div class="ai-key-bg" onclick="if(event.target===this)closeKeyModal()">
-  <div class="ai-key-box">
-    <h3>${T('ai_key_title')}</h3>
-    <p>${T('ai_key_desc')}</p>
-    <input id="geminiKeyInput" class="ai-key-input" type="password"
-      placeholder="${T('ai_key_placeholder')}" value="${cur}"
-      onkeydown="if(event.key==='Enter')saveGeminiKeyAndClose()">
-    <label class="ai-key-sync">
-      <input type="checkbox" id="geminiKeySync" ${keySynced() ? 'checked' : ''}>
-      <span>${T('ai_key_sync_label')}</span>
-    </label>
-    <div class="ai-key-sync-hint">${T('ai_key_sync_hint')}</div>
-    <div class="ai-key-actions">
-      <button class="btn done" onclick="saveGeminiKeyAndClose()">${T('ai_key_save')}</button>
-      <button class="btn" onclick="closeKeyModal()">${T('ai_key_cancel')}</button>
-      ${getGeminiKey() ? `<button class="btn" style="margin-left:auto;color:var(--die)" onclick="removeGeminiKey()">${T('ai_key_remove')}</button>` : ''}
-    </div>
-  </div>
-</div>`;
+  return GeminiKey.renderModal({ withRemove: true, onClose: closeKeyModal, onSaved: closeKeyModal });
 }
 
 function renderSummaryModal() {

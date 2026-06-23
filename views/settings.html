@@ -29,7 +29,9 @@
 <script src="/assets/js/supabase.js"></script>
 <script src="/assets/js/cloud-sync.js"></script>
 <script src="/assets/js/header.js"></script>
+<script src="/assets/js/ai-config.js"></script>
 <script src="/assets/js/gemini.js"></script>
+<script src="/assets/js/gemini-key.js"></script>
 </head>
 <body>
 <div id="app"></div>
@@ -45,12 +47,8 @@
    ========================================================================== */
 const state = { confirm: null };
 
-/* ---------- AI key (mirrors the planner's key management) ---------- */
-function _storeGeminiKey(k){ if(k) localStorage.setItem('gemini_key', k.trim()); else localStorage.removeItem('gemini_key'); }
-function keySynced(){ return localStorage.getItem('gemini_key_sync') === '1'; }
-function _setKeySync(on){ if(on) localStorage.setItem('gemini_key_sync','1'); else localStorage.removeItem('gemini_key_sync'); }
-/* Called by cloud-sync.initApp when the account carries a saved key. */
-function applyCloudKey(key){ if(key){ _storeGeminiKey(key); _setKeySync(true); } else _setKeySync(false); }
+/* AI key storage + validation live in assets/js/gemini-key.js (window.GeminiKey, shared with the
+   planner/today/welcome). keySynced()/applyCloudKey() are globals defined there. */
 /* Called by cloud-sync.initApp with the pending-deletion timestamp (or null). */
 function applyDeletionStatus(){ try { render(); } catch(_){} }
 
@@ -76,23 +74,26 @@ async function changePassword(){
   finally { const b2 = document.getElementById('pwBtn'); if(b2) b2.disabled = false; }
 }
 
-/* ---------- AI key add / remove ---------- */
-function saveKey(){
+/* ---------- AI key add / remove (validated via GeminiKey) ---------- */
+function _keyStatus(cls, text){ const el = document.getElementById('keyStatus'); if(el){ el.className = 'ai-key-status ' + cls; el.textContent = text; } }
+async function saveKey(){
   const inp = document.getElementById('keyInput'); const syncEl = document.getElementById('keySync');
-  const key = inp ? inp.value.trim() : '';
-  const wantSync = !!(syncEl && syncEl.checked) && !!key;
-  const wasSynced = keySynced();
-  _storeGeminiKey(key); _setKeySync(wantSync);
-  if(typeof saveGeminiKeyToCloud === 'function'){
-    if(wantSync) saveGeminiKeyToCloud(key);
-    else if(wasSynced) saveGeminiKeyToCloud('');
+  const wantSync = !!(syncEl && syncEl.checked);
+  const raw = inp ? inp.value : '';
+  if(!GeminiKey.normalize(raw)){ removeKey(); return; }   // cleared field → remove
+  const btn = document.getElementById('keySaveBtn'); if(btn) btn.disabled = true;
+  _keyStatus('warn', T('ai_key_checking'));
+  const r = await GeminiKey.save(raw, wantSync);
+  if(btn) btn.disabled = false;
+  if(r.ok){
+    _keyStatus('ok', r.warn === 'network' ? T('ai_key_offline') : T('ai_key_ok'));
+    render(); showToast(T('settings_ai_saved'));
+  } else {
+    _keyStatus('err', T(r.reason === 'format' ? 'ai_key_format' : 'ai_key_invalid'));
   }
-  render(); showToast(T(key ? 'settings_ai_saved' : 'settings_ai_removed'));
 }
 function removeKey(){
-  const wasSynced = keySynced();
-  _storeGeminiKey(''); _setKeySync(false);
-  if(wasSynced && typeof saveGeminiKeyToCloud === 'function') saveGeminiKeyToCloud('');
+  GeminiKey.remove();
   render(); showToast(T('settings_ai_removed'));
 }
 
@@ -163,13 +164,14 @@ function render(){
         <input class="set-input" id="keyInput" type="password" placeholder="${T('ai_key_placeholder')}" value="${esc(getGeminiKey())}"
           onkeydown="if(event.key==='Enter')saveKey()">
       </div>
+      <div class="ai-key-status" id="keyStatus"></div>
       <label class="set-check">
         <input type="checkbox" id="keySync" ${keySynced() ? 'checked' : ''}>
         <span>${T('ai_key_sync_label')}</span>
       </label>
       <div class="set-hint">${T('ai_key_sync_hint')}</div>
       <div class="set-actions">
-        <button class="btn accent" onclick="saveKey()">${T('ai_key_save')}</button>
+        <button class="btn accent" id="keySaveBtn" onclick="saveKey()">${T('ai_key_save')}</button>
         ${hasKey ? `<button class="btn" onclick="removeKey()" style="color:var(--die)">${T('ai_key_remove')}</button>` : ''}
       </div>
     </section>

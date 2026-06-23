@@ -34,6 +34,7 @@
 <script src="/assets/js/cloud-sync.js"></script>
 <script src="/assets/js/ai-config.js"></script>
 <script src="/assets/js/gemini.js"></script>
+<script src="/assets/js/gemini-key.js"></script>
 <script src="/assets/js/markdown.js"></script>
 <script src="/assets/js/header.js"></script>
 <script src="/data/weeks.js"></script>
@@ -213,10 +214,11 @@ function scrollAi(){ setTimeout(() => { const el = document.querySelector('.ai-m
 function renderAiPanel(context){
   const hasKey = (typeof getGeminiKey === 'function') && !!getGeminiKey();
   if (!hasKey) {
+    const modal = ai.keyModalOpen ? GeminiKey.renderModal({ withRemove: false, onClose: closeTodayKeyModal, onSaved: onTodayKeySaved }) : '';
     return `<div class="ai-nokey">
       <p>${T('today_ai_nokey')}</p>
-      <a class="btn accent" href="/settings">${T('today_ai_addkey')}</a>
-    </div>`;
+      <button class="btn accent" onclick="openTodayKeyModal()">${T('today_ai_addkey')}</button>
+    </div>${modal}`;
   }
   const pinned = ai.messages.filter(m => m.role === 'model' && m.pinned);
   const chat = ai.messages.filter(m => !m.seed && !(m.role === 'model' && m.pinned));
@@ -262,6 +264,12 @@ function renderAi(){
   scrollAi();
 }
 /* Starter = the point-by-point breakdown (seed prompt is hidden); follow-ups are normal chat. */
+/* Keyless AI step: open the shared connect modal in-page (no jump to /settings); on save the panel
+   re-renders and the AI step unlocks. */
+function openTodayKeyModal(){ ai.keyModalOpen = true; render(); }
+function closeTodayKeyModal(){ ai.keyModalOpen = false; render(); }
+function onTodayKeySaved(){ ai.keyModalOpen = false; render(); }
+
 function askTopic(){ if (ai.loading) return; ai.messages.push({ role: 'user', text: dayBreakdownText(), seed: true }); runTodayTurn({ pin: 'explanation' }); }
 function sendAi(){ const inp = document.getElementById('aiInput'); const t = inp ? inp.value.trim() : ''; if (!t || ai.loading) return; ai.messages.push({ role: 'user', text: t }); runTodayTurn(); }
 
@@ -287,7 +295,7 @@ async function runTodayTurn(opts){
     else if (!ai.messages.some(m => m.role === 'model' && m.pinned)) { msg.pinned = true; msg.kind = 'explanation'; }
     ai.messages.push(msg);
     if (typeof saveLessonToCloud === 'function') saveLessonToCloud(flow.day, ai.messages);   // shared with the planner
-  } catch (e) { showToast((e && e.message) || 'AI error'); }
+  } catch (e) { showToast(GeminiKey.friendlyError(e)); }
   ai.loading = false; render();
 }
 
