@@ -10,6 +10,11 @@
 .today-badge { border: 1px solid var(--line); border-radius: 999px; padding: 7px 16px; font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-soft); white-space: nowrap; }
 .today-lead { color: var(--ink-soft); font-size: 16px; line-height: 1.6; max-width: 56ch; margin: 16px 0 0; }
 
+/* "Day N of 118 · Week W · theme" — the prominent where-am-I indicator on the intro */
+.today-daynum { display: flex; align-items: baseline; flex-wrap: wrap; gap: 6px 14px; margin-top: 8px; }
+.today-daynum-big { font-family: var(--serif); font-size: clamp(22px, 3.4vw, 30px); color: var(--accent); line-height: 1.1; }
+.today-daynum-sub { font-size: 13px; letter-spacing: .04em; color: var(--ink-soft); }
+
 .today-day-tag { margin-top: 18px; font-size: 13px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-soft); }
 .today-day-tag strong { color: var(--ink); font-weight: 600; }
 
@@ -61,7 +66,8 @@
 /* ---- done step ---- */
 .flow-done { max-width: 540px; margin: 8vh auto 0; text-align: center; }
 .flow-done .done-mark { font-size: 52px; line-height: 1; color: var(--green); }
-.flow-done h2 { font-family: var(--serif); font-weight: 300; font-size: 38px; margin: 14px 0 8px; }
+.flow-done h2 { font-family: var(--serif); font-weight: 300; font-size: 38px; margin: 14px 0 4px; }
+.flow-done .done-day { font-size: 17px; font-weight: 600; color: var(--accent); margin: 0 0 12px; }
 .flow-done p { color: var(--ink-soft); font-size: 16px; line-height: 1.6; margin: 0 0 24px; }
 .flow-done .restart { display: inline-block; margin-top: 16px; background: none; border: none; cursor: pointer; color: var(--ink-soft); font-size: 13px; text-decoration: underline; text-underline-offset: 3px; }
 

@@ -1279,7 +1279,9 @@ are disabled under `prefers-reduced-motion`; the hero artwork is `aria-hidden` a
 A guided "do today's day in one run" experience and the **first nav tab**. Instead of hopping between
 sections, the user presses one **Learn** button and is walked through the day in order. "Today" =
 the planner's `currentDay` (read from `planner_data`); the day's content comes from the shared day
-model (`planner-data.js` — `getLocalizedDay(DAYS[currentDay-1])`).
+model (`planner-data.js` — `getLocalizedDay(DAYS[currentDay-1])`). The intro shows a prominent
+**"Day N of TOTAL · Week W · theme"** indicator (`today_day_of`) so it's clear which day you're on;
+the done screen states **"You completed Day N"** (`today_done_day`).
 
 **Steps** (`STEPS = ['grammar','vocab','verbs','ai','done']`):
 1. **grammar** — the day card (week theme · grammar focus · today's task with its `type_<type>` label),

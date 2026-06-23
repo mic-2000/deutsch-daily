@@ -302,6 +302,7 @@ function renderDone(){
 <main class="container flow-body"><div class="flow-done">
   <div class="done-mark">✓</div>
   <h2>${T('today_done_title')}</h2>
+  <div class="done-day">${T('today_done_day', day)}</div>
   <p>${T('today_done_msg')}</p>
   ${stats}
   <div class="flow-actions"><a class="btn accent big" href="/planner">${T('today_done_to_planner')}</a></div>
@@ -331,11 +332,15 @@ function renderIntro(){
     const banner = planner.completed[dayOf()] ? `<div class="today-banner">${T('today_already_msg')}</div>` : '';
     main = `<main class="container">
       <section class="today-hero">
+        <div class="today-daynum">
+          <span class="today-daynum-big">${T('today_day_of', dayOf(), TOTAL_DAYS)}</span>
+          <span class="today-daynum-sub">${T('planner_week', d.week)} · ${esc(d.weekTheme)}</span>
+        </div>
         <div class="today-hero-top">
           <p class="today-lead" style="margin-top:0">${T('today_lead')}</p>
           <div class="today-badge">${T('today_minutes')}</div>
         </div>
-        <div class="today-day-tag"><strong>${esc(d.weekTheme)}</strong> · ${esc(d.grammar)}</div>
+        <div class="today-day-tag">${esc(d.grammar)}</div>
         ${banner}
         <div class="steps-label">${T('today_steps_label')}</div>
         <div class="steps-list">${list}</div>

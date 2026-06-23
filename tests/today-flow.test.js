@@ -33,6 +33,8 @@ test('intro renders the checklist + shared header with no raw keys', () => {
   assert.ok(html.length > 500);
   assert.match(html, /steps-list/);
   assert.match(html, /nav-tab/);
+  assert.match(html, /today-daynum/, 'a "Day N of …" indicator is shown on entry');
+  assert.match(html, /Day 1 of \d+/, 'the current day number is explicit');
   assert.doesNotMatch(html, /today_[a-z_]+/);
   assert.doesNotMatch(html, /type_[a-z]+/);
 });
@@ -73,6 +75,7 @@ test('the done step closes the day and advances currentDay', () => {
   assert.equal(t.planner.completed[before], true, 'today marked complete');
   assert.equal(t.planner.currentDay, before + 1, 'currentDay advanced');
   assert.match(t.app.innerHTML, /flow-done/);
+  assert.match(t.app.innerHTML, new RegExp('You completed Day ' + before), 'states which day was finished');
 });
 
 /* A localStorage that reports a saved Gemini key, so the AI panel renders (not the no-key nudge). */
