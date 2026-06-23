@@ -24,18 +24,24 @@ window.GeminiKey = (function(){
   function get(){ return (typeof getGeminiKey === 'function') ? getGeminiKey() : (localStorage.getItem('gemini_key') || ''); }
 
   /* Clean up the most common paste mistakes: surrounding quotes/whitespace, and extra text or a
-     full AI Studio URL pasted around the key — pull out the bare AIza… token when present. */
+     full AI Studio URL pasted around the key — pull out the bare key token when present. Prefix-
+     agnostic: works for AIza…, AQ.… and any future Google key format. */
   function normalize(raw){
     let s = String(raw == null ? '' : raw).trim();
     if(!s) return '';
     s = s.replace(/^['"`]+|['"`]+$/g, '').trim();
-    const m = s.match(/AIza[\w-]{20,}/);
-    return m ? m[0] : s;
+    if(/\s/.test(s)){
+      // Pasted with surrounding text/URL — grab the longest key-shaped token.
+      const tokens = s.match(/[A-Za-z0-9._-]{20,}/g);
+      if(tokens && tokens.length) return tokens.sort((a, b) => b.length - a.length)[0];
+    }
+    return s;
   }
 
-  /* Light format gate — catches obviously-wrong input before we spend a network round-trip. The
-     real check is validate(); keep this lenient to avoid blocking a slightly-off-length real key. */
-  function looksValid(key){ return /^AIza[\w-]{30,}$/.test(key || ''); }
+  /* Light format gate — catches obviously-wrong input (empty, too short, contains spaces) before we
+     spend a network round-trip. Prefix-agnostic on purpose: the real authority is validate(), so we
+     never reject a valid key just because of its prefix or exact length. */
+  function looksValid(key){ return /^[A-Za-z0-9._-]{20,}$/.test(key || ''); }
 
   /* Live check: a minimal generateContent ping (1-char prompt, maxOutputTokens:1). Uses its own
      fetch because geminiRequest() takes no generationConfig. The endpoint is already proven
