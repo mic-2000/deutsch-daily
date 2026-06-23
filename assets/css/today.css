@@ -58,12 +58,7 @@
 
 /* ---- AI step ---- */
 .ai-wrap { max-width: 720px; margin: 0 auto; }
-
-/* In the wizard, the question box is ~3 lines tall (still auto-grows for longer questions) and the
-   Send button stretches to the same height. Scoped to .flow-body so the planner chat is untouched. */
-.flow-body .ai-input-row { align-items: stretch; }
-.flow-body .ai-input { min-height: 84px; max-height: 220px; }
-.flow-body .ai-send { align-self: stretch; }
+/* (the 3-line question box + full-height Send button live in chat.css, shared with the planner) */
 .ai-head h2 { font-family: var(--serif); font-weight: 300; font-size: 28px; margin: 0 0 6px; }
 .ai-head p { color: var(--ink-soft); margin: 0 0 18px; font-size: 15px; }
 .ai-nokey { border: 1px solid var(--line); border-radius: 6px; background: var(--paper-3); padding: 22px; text-align: center; color: var(--ink-soft); }
