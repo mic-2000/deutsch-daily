@@ -32,6 +32,7 @@
 <script src="/assets/js/cloud-sync.js"></script>
 <script src="/assets/js/ai-config.js"></script>
 <script src="/assets/js/gemini.js"></script>
+<script src="/assets/js/gemini-key.js"></script>
 <script src="/assets/js/header.js"></script>
 </head>
 <body>
@@ -55,6 +56,7 @@ let state = {
   session: null,
   confirm: null,
   translating: false,
+  keyModal: false,   // shared "connect your AI tutor" modal (keyless translate CTA)
 };
 
 /* No CLOUD_FIELD: this page owns the separate `collections` table. cloud-sync.initApp tolerates a
@@ -297,9 +299,13 @@ async function translateMissing(){
       const arr = parseTranslations(reply, part.length);
       part.forEach((x, j) => { if (arr[j]) state.draft.rows[x.i].tr = arr[j]; });
     }
-  } catch(e){ showToast(e.message || T('collections_toast_translate_fail')); }
+  } catch(e){ showToast(GeminiKey.friendlyError(e)); }
   finally { state.translating = false; render(); }
 }
+/* Keyless: the translate chip opens the shared connect modal in-page instead of being hidden. */
+function openColKeyModal(){ state.keyModal = true; render(); }
+function closeColKeyModal(){ state.keyModal = false; render(); }
+function onColKeySaved(){ state.keyModal = false; render(); }
 function parseTranslations(reply, n){
   let t = String(reply).trim().replace(/^```(json)?/i, '').replace(/```$/, '').trim();
   try { const a = JSON.parse(t); if (Array.isArray(a)) return a.map(x => String(x == null ? '' : x).trim()); } catch(e){}
@@ -499,7 +505,9 @@ function renderEditor(){
     ${d.rows.length ? `
     <div class="col-table-bar">
       <span class="col-count num">${T('collections_words_count', d.rows.length)}</span>
-      ${getGeminiKey() ? `<button class="chip ${missing ? '' : 'col-dim'}" ${state.translating ? 'disabled' : ''} onclick="translateMissing()">${state.translating ? T('collections_translating') : T('collections_translate_ai')}</button>` : ''}
+      ${getGeminiKey()
+        ? `<button class="chip ${missing ? '' : 'col-dim'}" ${state.translating ? 'disabled' : ''} onclick="translateMissing()">${state.translating ? T('collections_translating') : T('collections_translate_ai')}</button>`
+        : `<button class="chip" onclick="openColKeyModal()">${T('collections_translate_ai')}</button>`}
     </div>
     <div class="col-rows" id="colRows">
       <div class="col-row col-row-head"><span>${T('collections_th_de')}</span><span>${T('collections_th_tr')}</span><span></span></div>
@@ -514,7 +522,7 @@ function renderEditor(){
     </div>
   </div>
 </main>`;
-  document.getElementById('app').innerHTML = html;
+  document.getElementById('app').innerHTML = html + (state.keyModal ? GeminiKey.renderModal({ withRemove: false, onClose: closeColKeyModal, onSaved: onColKeySaved }) : '');
 }
 
 /* ---- session views (ported from the vocab trainer) ---- */

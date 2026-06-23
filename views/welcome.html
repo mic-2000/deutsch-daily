@@ -32,6 +32,9 @@
 <script src="/assets/js/speech.js"></script>
 <script src="/assets/js/supabase.js"></script>
 <script src="/assets/js/cloud-sync.js"></script>
+<script src="/assets/js/ai-config.js"></script>
+<script src="/assets/js/gemini.js"></script>
+<script src="/assets/js/gemini-key.js"></script>
 <script src="/data/weeks.js"></script>
 <script src="/data/vocab.js"></script>
 <script src="/data/verbs.js"></script>
@@ -165,15 +168,30 @@ function finishLesson(){ phase = 'done'; persistAll(); render(); }
 function skipOnboarding(){ applyLevel(); phase = 'done'; lessonResult = null; persistAll({ skipped: true }); render(); }
 
 /* ---- success screen ---- */
+/* Optional, skippable: first introduction of the AI tutor. "Connect now" opens the shared key modal
+   in-page; "Skip for now" is the plain /today CTA. Progression is never gated on the key. */
+let onbKeyModal = false;
+function openOnbKeyModal(){ onbKeyModal = true; renderDone(); }
+function closeOnbKeyModal(){ onbKeyModal = false; renderDone(); }
+function onOnbKeySaved(){ onbKeyModal = false; renderDone(); }
 function renderDone(){
   const n = (lessonResult && lessonResult.total) || 0;
+  const hasKey = (typeof getGeminiKey === 'function') && !!getGeminiKey();
+  const aiCard = hasKey ? '' : `
+  <div class="onb-ai-card">
+    <h3>${T('onb_ai_title')}</h3>
+    <p>${T('onb_ai_desc')}</p>
+    <div class="flow-actions"><button class="btn accent" onclick="openOnbKeyModal()">${T('onb_ai_connect')}</button></div>
+  </div>`;
+  const modal = (!hasKey && onbKeyModal) ? GeminiKey.renderModal({ withRemove: false, onClose: closeOnbKeyModal, onSaved: onOnbKeySaved }) : '';
   document.getElementById('app').innerHTML = `
 <main class="container flow-body"><div class="flow-done">
   <div class="done-mark">✓</div>
   <h2>${T('onb_success_title')}</h2>
   <p>${n ? T('onb_success_msg', n) : T('onb_success_msg_skip')}</p>
-  <div class="flow-actions"><a class="btn accent big" href="/today">${T('onb_success_cta')}</a></div>
-</div></main>`;
+  ${aiCard}
+  <div class="flow-actions"><a class="btn accent big" href="/today">${hasKey ? T('onb_success_cta') : T('onb_ai_skip')}</a></div>
+</div></main>${modal}`;
   if (window.speechSynthesis) window.speechSynthesis.cancel();
 }
 
