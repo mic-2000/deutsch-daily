@@ -23,6 +23,10 @@ let currentUser = null;
 // Pending account-deletion timestamp (ISO) or null. Loaded on init and surfaced everywhere so the
 // user can still cancel within the 30-day recovery window (see schema.sql purge_deleted_accounts).
 let accountDeletionAt = null;
+// First-run onboarding answers loaded from the `onboarding` column ({ done, level, goal, minutes,
+// hardest, … } or {} ). Set by initApp; read by ai-config (goal/hardest → AI prompt) and /today
+// (minutes → session length). A brand-new user (NO progress row) is gated into /welcome by initApp.
+let userOnboarding = {};
 
 /* ==========================================================================
    OFFLINE OUTBOX — replay failed writes when back online.
@@ -187,25 +191,38 @@ async function initApp() {
   // Resolve language + progress from the cloud BEFORE the first render, so the page renders once
   // in the correct language (no flash) and only that one locale is fetched.
   let lang = getLang();
+  let isNewUser = false; // confirmed NO progress row (set only on a successful read — never on a network error)
   const hasField = (typeof CLOUD_FIELD !== 'undefined' && CLOUD_FIELD); // a table-only page (collections) has none
   try {
+    // maybeSingle() returns { data: null, error: null } when the row doesn't exist (no throw), which
+    // lets us tell a brand-new account (no row) apart from an offline read (error → catch).
     const { data, error } = await sb.from('progress')
-      .select((hasField ? CLOUD_FIELD + ', ' : '') + 'lang')
+      .select((hasField ? CLOUD_FIELD + ', ' : '') + 'lang, onboarding')
       .eq('user_id', session.user.id)
-      .single();
+      .maybeSingle();
     if (error) throw error;
+    isNewUser = !data;
+    userOnboarding = (data && data.onboarding) || {};
     if (hasField && typeof applyCloudData === 'function') {
       const payload = data && data[CLOUD_FIELD];
       if (payload && Object.keys(payload).length) applyCloudData(payload); // skip empty default ({}::jsonb)
     }
     if (data && data.lang && LANG_NAMES[data.lang]) lang = data.lang;
     if (data) _cacheProgress(hasField ? { [CLOUD_FIELD]: data[CLOUD_FIELD], lang: data.lang } : { lang: data.lang });
-  } catch(e) { // offline (or no record yet) — fall back to the last cached read
+  } catch(e) { // offline (or transient error) — fall back to the last cached read; do NOT gate
     const p = _ownCache().progress;
     if (p) {
       if (hasField && typeof applyCloudData === 'function' && p[CLOUD_FIELD] && Object.keys(p[CLOUD_FIELD]).length) applyCloudData(p[CLOUD_FIELD]);
       if (p.lang && LANG_NAMES[p.lang]) lang = p.lang;
     }
+  }
+
+  // First-run gate: a brand-new account (no progress row yet) is sent to the onboarding wizard.
+  // Keyed off row ABSENCE so existing users (who all have a row) are never gated, and an offline
+  // read (caught above, isNewUser stays false) never traps anyone. /welcome and /login are excluded.
+  if (isNewUser && !/welcome|login/.test(location.pathname)) {
+    location.href = '/welcome';
+    return;
   }
 
   // Load theme (separate query so a missing column can't break the main load)
@@ -263,6 +280,9 @@ async function saveVerbsToCloud(payload) { return _pushProgress({ verbs_data: pa
 // the vocab engine without owning vocab_data as its CLOUD_FIELD (it owns planner_data); the /vocab
 // page keeps writing vocab_data via saveToCloud + its CLOUD_FIELD.
 async function saveVocabToCloud(payload) { return _pushProgress({ vocab_data: payload }); }
+// Persist the onboarding answers + completion flag (written by the /welcome wizard). Writing the
+// row is also what lifts the first-run gate above (the row then exists on the next initApp).
+async function saveOnboardingToCloud(payload) { userOnboarding = payload || {}; return _pushProgress({ onboarding: payload }); }
 // Persist the user's Gemini key on their account (opt-in, planner only). Pass '' to clear it.
 async function saveGeminiKeyToCloud(key) { return _pushProgress({ gemini_key: key || null }); }
 // Stamp (ISO string) or clear (null) the account-deletion request. Server-side purge runs 30 days later.

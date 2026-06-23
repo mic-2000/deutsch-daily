@@ -92,6 +92,7 @@ deutsch-daily/
 ├── index.html          # PUBLIC LANDING page for guests (marketing + auth entry points). Root ( / ). §18
 ├── views/              # login + all authenticated app pages live here; served via pretty-URL rewrites
 │   ├── login.html       # LOGIN / REGISTER (email + Google OAuth).    ( /login ) §5
+│   ├── welcome.html     # First-run onboarding wizard (5 questions → mini-lesson). ( /welcome ) §20
 │   ├── today.html       # Daily-flow wizard (grammar→words→verbs→AI→done). ( /today ) §19
 │   ├── planner.html     # Daily planner + AI Lehrer chat.            ( /planner )
 │   ├── vocab.html       # Vocabulary trainer (thin host → VocabTrainer). ( /vocab )
@@ -99,7 +100,7 @@ deutsch-daily/
 │   ├── collections.html # User word-set trainer (import/edit/drill/AI translate). ( /collections ) §16
 │   └── settings.html    # Account: password / AI key / theme / lang / delete. ( /settings )
 ├── assets/
-│   ├── css/  base.css · components.css · planner.css · chat.css · vocab.css · verbs.css · auth.css · collections.css · landing.css · settings.css · today.css
+│   ├── css/  base.css · components.css · planner.css · chat.css · vocab.css · verbs.css · auth.css · collections.css · landing.css · settings.css · today.css · welcome.css
 │   ├── js/   i18n.js · theme.js · utils.js · supabase.js · cloud-sync.js · ai-config.js
 │   │         gemini.js · leitner.js · speech.js · header.js · pwa.js
 │   │         markdown.js · planner-data.js · vocab-trainer.js · verbs-trainer.js   # AI md + day model + trainer engines
@@ -330,8 +331,11 @@ getters:
   verb conjugation tables), per-task-type adaptation rules, a "this app" rule (don't recommend
   third-party apps like Anki/Quizlet for flashcards/SRS/articles — point to the built-in trainers),
   and an external-resource rule (only for unique material not in the app, always with a direct
-  markdown link, no invented URLs — rendered clickable by `markdown.js`).
-- `getAiSummaryPrompt()` — returns the weekly-summary system prompt (also per language).
+  markdown link, no invented URLs — rendered clickable by `markdown.js`). It also appends a short
+  localized line built from the global `userOnboarding` (goal + "hardest" → `AI_GOAL_PHRASES` /
+  `AI_HARDEST_PHRASES`), so lessons target the student's stated goal and weakest area (§20).
+- `getAiSummaryPrompt()` — returns the weekly-summary system prompt (also per language), with the
+  same `userOnboarding` goal/hardest suffix appended.
 - `getCollectionsTranslatePrompt()` — returns the batch-translation prompt (per language): translate
   a JSON array of German terms into the active UI language, returning ONLY a same-order JSON array.
 
@@ -406,16 +410,20 @@ mastery)` (partial upsert of just the `mastery` column — the per-answer hot pa
 collection upserts **merge per id** so a create + later mastery update collapse into one row.
 
 `cloud-sync.js` provides:
-- `currentUser` (global, set after auth).
+- `currentUser` (global, set after auth). `userOnboarding` (global) — the `onboarding` column,
+  loaded by `initApp`; read by `ai-config` (goal/hardest → AI prompt, §4) and `/today` (minutes →
+  session length, §20).
 - `initApp()` — `sb.auth.getSession()`. **No session →** store `location.href` in
   `localStorage['auth_redirect']` and redirect to `/login`. **Session →** set `currentUser`,
-  `SELECT <CLOUD_FIELD>, lang` from `progress`, apply the payload (only when non-empty — the `{}`
-  column default is skipped). It resolves the language (cloud value if valid, else the localStorage
-  default) **before** the first render, then `await setLang(lang, true)` loads that one locale,
-  syncs it into `localStorage`, and renders **once** — so there's no language flash and only the
-  chosen locale is fetched.
+  `SELECT <CLOUD_FIELD>, lang, onboarding` from `progress` (via **`.maybeSingle()`** so a missing row
+  is `data:null` rather than a throw), apply the payload (only when non-empty — the `{}` column
+  default is skipped). **First-run gate:** if there is **no progress row** (brand-new account) and the
+  page isn't `/welcome`/`/login`, redirect to `/welcome` and return (§20). Keying off row *absence*
+  grandfathers every existing user and never traps an offline read (which lands in the `catch`, where
+  the gate flag stays false). Otherwise it resolves the language **before** the first render, then
+  `await setLang(lang, true)` loads that one locale and renders **once** — no language flash.
 - `saveToCloud()` / `saveLangToCloud(code)` / `saveThemeToCloud(theme)` / `saveVerbsToCloud(payload)`
-  / `saveVocabToCloud(payload)` — all route through the internal `_pushProgress(fields)`, which
+  / `saveVocabToCloud(payload)` / `saveOnboardingToCloud(payload)` — all route through the internal `_pushProgress(fields)`, which
   `upsert`s `{ user_id, …fields, updated_at }` on the `progress` row (`onConflict: 'user_id'`). They
   write only their own column(s), so they compose without clobbering each other. `saveVocabToCloud`
   is used by the `/today` wizard, which drives the vocab engine without owning `vocab_data` as its
@@ -475,6 +483,7 @@ single table, `public.progress`, one row per user (confirmed schema):
 | `lang` | `text` | yes | `'en'::text` | `saveLangToCloud` | `'ru' \| 'ua' \| 'en'` |
 | `theme` | `text` | yes | — | `saveThemeToCloud` | `'light' \| 'dark'` |
 | `gemini_key` | `text` | yes | — | `saveGeminiKeyToCloud` (planner, opt-in) | the user's Gemini API key, or `null`. Written only when the user ticks "remember on my account"; cleared (→ `null`) when they untick or remove the key. See §8. |
+| `onboarding` | `jsonb` | yes | `'{}'::jsonb` | `saveOnboardingToCloud` (the `/welcome` wizard) | `{ done, skipped?, level, goal, minutes, hardest, at }`. Set once on first run; read into the `userOnboarding` global. See §20. |
 | `updated_at` | `timestamptz` | yes | `now()` | every upsert | ISO string |
 
 > `verbs_data` was added with `alter table public.progress add column if not exists verbs_data jsonb default '{}'::jsonb;`. RLS is row-level (per `user_id`), so it covers new columns automatically. **Cross-cutting progress is live:** verb `mastery` is keyed by the verb key (e.g. `gehen`), so a verb counts the same wherever it appears. `verbs.html` owns the column via its `CLOUD_FIELD`. `vocab.html` ALSO reads/writes it: `cloud-sync` loads it into a `verbStore` via the page's `applyVerbProgress(d)` hook, and any vocabulary word that resolves to a master-verb key (`verbKeyForWord` strips the `—` form and looks it up in `VERBS`, ~69 of the vocab entries) routes its mastery to `verbStore` and persists via `saveVerbsToCloud`. `sel` (the verb-trainer's saved training selection) round-trips through the same column.
@@ -1130,7 +1139,9 @@ runs `node --test tests/`; `npm run test:regression` runs the curated subset.
   and list/import render-smoke — see §16), and `today-flow.test.js` (the `/today` wizard — engines
   present as namespaces, intro/grammar render, flow advance grammar→vocab→verbs, the shared
   `verbs_data` mastery map is one object across both engines, and the done step closes the day +
-  advances `currentDay`; see §19). `ui-refactor.test.js` guards the move to `views/` +
+  advances `currentDay`; see §19), and `onboarding.test.js` (the `/welcome` wizard render-smoke + the
+  first-run gate: a missing progress row → redirect to `/welcome`; an existing row → no redirect;
+  `/welcome` never loops; `userOnboarding` is loaded — see §20). `ui-refactor.test.js` guards the move to `views/` +
   unified chrome: app pages live in `views/` with `index.html` alone at root, pages use
   root-absolute `/assets`/`/data`/`/locales` paths and load `header.js`, the inline theme snippet
   runs before the Supabase CDN (FOUC guard), no `*.html` inter-page links remain, `appHeader()`
@@ -1351,3 +1362,36 @@ a review banner on the intro but still lets the user run it again.
 **Styling** — `today.css` for the wizard chrome (intro checklist, step header with progress, grammar
 card, AI wrapper, done screen); the in-flow sessions reuse `vocab.css` / `verbs.css`. No new tokens
 (§11). Guarded by `tests/today-flow.test.js` + a `render-smoke` entry.
+
+---
+
+## 20. `welcome.html` — first-run onboarding (`/welcome`)
+
+A 3-minute onboarding that gives a brand-new user a personalized start and an instant first win.
+Five tap-only chip questions (sensible defaults pre-selected, so "Start" works with zero taps) → a
+~5-card **mini-lesson** (embedded trainer, **no AI key / network** — Leitner + Web Speech only) →
+a success screen → `/today`.
+
+**Gating.** New accounts have **no `progress` row**; `cloud-sync.initApp` detects that (via
+`.maybeSingle()`) and redirects to `/welcome` (every app page passes through `initApp`, so the funnel
+is caught everywhere). `/welcome` and `/login` are excluded → no loop. Keying off row *absence*
+grandfathers all existing users and never traps an offline read. Completing (or skipping) onboarding
+writes the row (`saveOnboardingToCloud`), so the gate never fires again. (See §4 / §5.)
+
+**The five questions → real effects:**
+- **Level** (A1/A2/B1) → `VocabTrainer.state.levels` + `planner_data.currentDay` set to the first day
+  of that phase (`WEEK_FOR_LEVEL = {A1:1, A2:9, B1:17}` → `DAYS.find(d=>d.week===W).day` = day 1/41/80).
+- **Language** → `setLang(code)` live (re-localizes the page; persists to `localStorage` + cloud).
+- **Minutes/day** → stored in `onboarding`; `/today` reads `userOnboarding.minutes` and caps each
+  session queue (`{5:6,10:12,15:18,'20+':25}`) in `startVocabStep`/`startVerbsStep`.
+- **Goal** + **Hardest** → stored; appended to the AI tutor + summary prompts via `ai-config`
+  (`AI_GOAL_PHRASES`/`AI_HARDEST_PHRASES`, read from the `userOnboarding` global).
+- **Hardest** also seeds default vocab `modes` and picks the mini-lesson's exercise: `verbs` →
+  `VerbsTrainer` triad; `articles` → article mode; otherwise flashcards. Queue sliced to ~5.
+
+**Persistence on finish/skip:** `saveOnboardingToCloud({done, level, goal, minutes, hardest, at})`,
+`saveToCloud()` (planner_data start day), `saveVocabToCloud(...)` (mini-lesson mastery is real
+practice), and `saveVerbsToCloud(...)` when a verb mini-lesson ran. The page is a thin host like
+`/today` (`CLOUD_FIELD='planner_data'`, shared `verbStore` wiring, embedded trainers); chrome in
+`welcome.css`, the success screen reuses `today.css` `.flow-done`. Strings are `onb_*` in all three
+locales. Guarded by `tests/onboarding.test.js`.

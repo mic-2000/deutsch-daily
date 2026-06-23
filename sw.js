@@ -20,7 +20,7 @@ const RUNTIME = 'dd-runtime-' + VERSION;
 
 /* Precached on install. Pretty URLs ('/planner' …) resolve through the vercel.json rewrites. */
 const SHELL_ASSETS = [
-  '/', '/login', '/today', '/planner', '/vocab', '/verbs', '/collections', '/settings', '/privacy', '/terms',
+  '/', '/login', '/welcome', '/today', '/planner', '/vocab', '/verbs', '/collections', '/settings', '/privacy', '/terms',
   '/manifest.webmanifest',
   '/assets/favicon.svg',
   '/assets/icons/icon-192.png',
@@ -31,7 +31,7 @@ const SHELL_ASSETS = [
   '/assets/css/landing.css',
   '/assets/css/chat.css', '/assets/css/collections.css', '/assets/css/planner.css',
   '/assets/css/verbs.css', '/assets/css/vocab.css', '/assets/css/settings.css',
-  '/assets/css/today.css',
+  '/assets/css/today.css', '/assets/css/welcome.css',
   '/assets/js/ai-config.js', '/assets/js/cloud-sync.js', '/assets/js/gemini.js',
   '/assets/js/header.js', '/assets/js/i18n.js', '/assets/js/leitner.js',
   '/assets/js/legal.js', '/assets/js/markdown.js', '/assets/js/planner-data.js',

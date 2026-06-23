@@ -181,11 +181,43 @@ const AI_TRANSLATE_PROMPTS = {
   en: 'You are a German-to-English translator. Input is a JSON array of German words or phrases. Return ONLY a JSON array of strings with English translations: same order, same length. No explanations, no markdown, no numbering. Translate nouns briefly, without the article. If there is no translation, use an empty string "".',
 };
 
+/* ---- Personalization from onboarding (the /welcome wizard) -------------- */
+/* The global `userOnboarding` (set by cloud-sync.initApp) carries the user's goal + "hardest" choice.
+   We append a short, localized line to the tutor / summary prompts so lessons target their goal and
+   their weakest area. Stored as enum keys → localized phrases. */
+const AI_GOAL_PHRASES = {
+  ru: { exam: 'сдать Goethe-Zertifikat B1', work: 'немецкий для работы и быта', travel: 'немецкий для путешествий', conversation: 'свободное общение на немецком' },
+  ua: { exam: 'скласти Goethe-Zertifikat B1', work: 'німецька для роботи та побуту', travel: 'німецька для подорожей', conversation: 'вільне спілкування німецькою' },
+  en: { exam: 'pass the Goethe-Zertifikat B1', work: 'German for work and daily life', travel: 'German for travel', conversation: 'fluent everyday conversation' },
+};
+const AI_HARDEST_PHRASES = {
+  ru: { articles: 'роды и артикли (der/die/das)', verbs: 'спряжение и формы глаголов', cases: 'падежи (Akkusativ/Dativ)', spelling: 'правописание', listening: 'аудирование' },
+  ua: { articles: 'роди й артиклі (der/die/das)', verbs: 'відмінювання та форми дієслів', cases: 'відмінки (Akkusativ/Dativ)', spelling: 'правопис', listening: 'аудіювання' },
+  en: { articles: 'noun gender & articles (der/die/das)', verbs: 'verb conjugation & forms', cases: 'cases (Akkusativ/Dativ)', spelling: 'spelling', listening: 'listening comprehension' },
+};
+const AI_ONB_LABELS = {
+  ru: { goal: (p) => `Личная цель ученика: ${p}.`, hardest: (p) => `Удели особое внимание тому, что даётся труднее всего: ${p}.` },
+  ua: { goal: (p) => `Особиста мета учня: ${p}.`, hardest: (p) => `Приділи особливу увагу тому, що дається найважче: ${p}.` },
+  en: { goal: (p) => `The student's personal goal: ${p}.`, hardest: (p) => `Pay special attention to what they find hardest: ${p}.` },
+};
+function onboardingSuffix(lang) {
+  const o = (typeof userOnboarding !== 'undefined' && userOnboarding) ? userOnboarding : {};
+  const goals = AI_GOAL_PHRASES[lang] || AI_GOAL_PHRASES.en;
+  const hard = AI_HARDEST_PHRASES[lang] || AI_HARDEST_PHRASES.en;
+  const L = AI_ONB_LABELS[lang] || AI_ONB_LABELS.en;
+  const lines = [];
+  if (o.goal && goals[o.goal]) lines.push(L.goal(goals[o.goal]));
+  if (o.hardest && hard[o.hardest]) lines.push(L.hardest(hard[o.hardest]));
+  return lines.length ? '\n\n' + lines.join(' ') : '';
+}
+
 function getAiSystemPrompt() {
-  return AI_SYSTEM_PROMPTS[getLang()] || AI_SYSTEM_PROMPTS.en;
+  const lang = getLang();
+  return (AI_SYSTEM_PROMPTS[lang] || AI_SYSTEM_PROMPTS.en) + onboardingSuffix(lang);
 }
 function getAiSummaryPrompt() {
-  return AI_SUMMARY_PROMPTS[getLang()] || AI_SUMMARY_PROMPTS.en;
+  const lang = getLang();
+  return (AI_SUMMARY_PROMPTS[lang] || AI_SUMMARY_PROMPTS.en) + onboardingSuffix(lang);
 }
 function getCollectionsTranslatePrompt() {
   return AI_TRANSLATE_PROMPTS[getLang()] || AI_TRANSLATE_PROMPTS.en;

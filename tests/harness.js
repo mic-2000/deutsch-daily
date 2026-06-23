@@ -166,6 +166,8 @@ function loadPage(opts) {
     saveLangToCloud: () => {},
     saveThemeToCloud: () => {},
     saveVerbsToCloud: () => {},
+    saveVocabToCloud: () => {},
+    saveOnboardingToCloud: () => {},
     loadLessonsFromCloud: async () => [],
     saveLessonToCloud: async () => {},
     deleteLessonFromCloud: async () => {},

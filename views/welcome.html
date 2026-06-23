@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="light dark">
+<script>try{document.documentElement.setAttribute('data-theme',localStorage.getItem('ui_theme')==='dark'?'dark':'light');}catch(e){}</script>
+<title>Deutsch · Willkommen</title>
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#F2EDE3">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Deutsch Daily">
+<link rel="apple-touch-icon" href="/assets/icons/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,300;1,9..144,400;1,9..144,500&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/css/base.css">
+<link rel="stylesheet" href="/assets/css/components.css">
+<link rel="stylesheet" href="/assets/css/vocab.css">
+<link rel="stylesheet" href="/assets/css/verbs.css">
+<link rel="stylesheet" href="/assets/css/today.css">
+<link rel="stylesheet" href="/assets/css/welcome.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="/assets/js/i18n.js"></script>
+<script src="/assets/js/theme.js"></script>
+<script src="/assets/js/utils.js"></script>
+<script src="/assets/js/pwa.js"></script>
+<script src="/assets/js/leitner.js"></script>
+<script src="/assets/js/speech.js"></script>
+<script src="/assets/js/supabase.js"></script>
+<script src="/assets/js/cloud-sync.js"></script>
+<script src="/data/weeks.js"></script>
+<script src="/data/vocab.js"></script>
+<script src="/data/verbs.js"></script>
+<script src="/assets/js/planner-data.js"></script>
+<script src="/assets/js/vocab-trainer.js"></script>
+<script src="/assets/js/verbs-trainer.js"></script>
+</head>
+<body>
+<div id="app"></div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ==========================================================================
+   /welcome — the first-run onboarding wizard. New accounts (no progress row) are routed here by
+   cloud-sync.initApp. Five quick tap-only questions personalize the app, then a ~5-card mini-lesson
+   (embedded trainer, NO AI key / network) gives an instant first success, and we go to /today.
+
+   Answers wired to real effects:
+     • level    → vocab_data.levels + planner_data.currentDay (start of the level's phase)
+     • language → setLang (UI + cloud)
+     • minutes  → /today session length (read from the onboarding column there)
+     • goal     → AI tutor system/summary prompt (ai-config reads the onboarding column)
+     • hardest  → default vocab modes + the mini-lesson's exercise type + AI prompt
+   ========================================================================== */
+
+/* planner_data is this page's CLOUD_FIELD (so we can write the starting currentDay). */
+let planner = { currentDay: 1, viewingDay: 1, completed: {} };
+const CLOUD_FIELD = 'planner_data';
+function getCloudPayload(){ return planner; }
+function applyCloudData(d){ if (d && typeof d === 'object') { planner = Object.assign({ currentDay: 1, viewingDay: 1, completed: {} }, d); if (!planner.completed) planner.completed = {}; } }
+
+/* Shared verbs_data store (for the verb mini-lesson), mirroring /today. */
+function wireSharedVerbStore(){ const m = (VerbsTrainer.state.mastery && typeof VerbsTrainer.state.mastery === 'object') ? VerbsTrainer.state.mastery : {}; VerbsTrainer.setMasteryStore(m); VocabTrainer.setVerbStore({ mastery: m }); }
+function applyVerbProgress(d){ VerbsTrainer.applyData(d && typeof d === 'object' ? d : { mastery: {} }); wireSharedVerbStore(); }
+
+function saveVocabNow(){ if (typeof saveVocabToCloud === 'function') saveVocabToCloud(VocabTrainer.serialize()); }
+function saveVerbsNow(){ if (typeof saveVerbsToCloud === 'function') saveVerbsToCloud(VerbsTrainer.serialize()); }
+VocabTrainer.init({ embedded: true, onSessionEnd: (r) => { lessonResult = r; finishLesson(); }, onSaveVocab: saveVocabNow, onSaveVerbs: saveVerbsNow });
+VerbsTrainer.init({ embedded: true, onSessionEnd: (r) => { lessonResult = r; finishLesson(); }, onSave: saveVerbsNow });
+
+/* ---- state (sensible defaults so "Start" works with zero taps) ---- */
+let onb = { level: 'A1', goal: 'exam', minutes: '15', hardest: 'articles' };
+let phase = 'questions';      // 'questions' | 'lesson' | 'done'
+let lessonResult = null;
+const Q = {
+  level:   ['A1', 'A2', 'B1'],
+  goal:    ['exam', 'work', 'travel', 'conversation'],
+  minutes: ['5', '10', '15', '20+'],
+  lang:    ['en', 'ua', 'ru'],
+  hardest: ['articles', 'verbs', 'cases', 'spelling', 'listening'],
+};
+const LANG_LABELS = { en: 'English', ua: 'Українська', ru: 'Русский' };
+const WEEK_FOR_LEVEL = { A1: 1, A2: 9, B1: 17 };
+
+function render(){
+  if (phase === 'lesson') return;     // the engine paints the session into #app
+  if (phase === 'done') { renderDone(); return; }
+  renderQuestions();
+}
+
+/* ---- questions screen ---- */
+function optLabel(group, v){
+  if (group === 'level') return v;
+  if (group === 'lang') return LANG_LABELS[v];
+  const prefix = group === 'minutes' ? 'min' : group;        // onb_min_5 / onb_goal_exam / onb_hardest_articles
+  return T('onb_' + prefix + '_' + v.replace('+', 'plus'));
+}
+function chip(group, v){
+  const sel = group === 'lang' ? (getLang() === v) : (onb[group] === v);
+  return `<button class="chip ${sel ? 'on' : ''}" onclick="pick('${group}','${v}')">${esc(optLabel(group, v))}</button>`;
+}
+function pick(group, v){
+  if (group === 'lang') { setLang(v); return; }   // setLang re-renders (and persists the language)
+  onb[group] = v; render();
+}
+function qGroup(titleKey, group){
+  return `<div class="onb-group"><div class="onb-q">${T(titleKey)}</div><div class="onb-chips">${Q[group].map(v => chip(group, v)).join('')}</div></div>`;
+}
+function renderQuestions(){
+  document.getElementById('app').innerHTML = `
+<main class="container welcome-wrap">
+  <div class="welcome-kicker">${T('onb_kicker')}</div>
+  <h1 class="welcome-title">${T('onb_title')}</h1>
+  <p class="welcome-lead">${T('onb_lead')}</p>
+  ${qGroup('onb_q_level', 'level')}
+  ${qGroup('onb_q_goal', 'goal')}
+  ${qGroup('onb_q_minutes', 'minutes')}
+  ${qGroup('onb_q_lang', 'lang')}
+  ${qGroup('onb_q_hardest', 'hardest')}
+  <div class="welcome-actions">
+    <button class="btn accent huge" onclick="startLesson()">${T('onb_start')}</button>
+    <button class="onb-skip" onclick="skipOnboarding()">${T('onb_skip')}</button>
+  </div>
+</main>`;
+}
+
+/* ---- apply answers + run the first mini-lesson ---- */
+function applyLevel(){
+  const week = WEEK_FOR_LEVEL[onb.level] || 1;
+  const firstDay = (DAYS.find(d => d.week === week) || DAYS[0]).day;
+  planner.currentDay = firstDay; planner.viewingDay = firstDay;
+  VocabTrainer.state.levels = { A1: onb.level === 'A1', A2: onb.level === 'A2', B1: onb.level === 'B1' };
+  // "hardest" seeds the default exercise modes (kept after onboarding).
+  const modes = { flashcard: true, article: onb.hardest === 'articles', spelling: onb.hardest === 'spelling', plural: false };
+  VocabTrainer.state.modes = modes;
+  return week;
+}
+function startLesson(){
+  const week = applyLevel();
+  phase = 'lesson';
+  if (onb.hardest === 'verbs') {
+    VerbsTrainer.startSession({ type: 'filter', filter: 'all' });
+    if (!VerbsTrainer.state.session) { finishLesson(); return; }
+    trim(VerbsTrainer, 5); VerbsTrainer.render();
+  } else {
+    VocabTrainer.startSession({ type: 'week', week });
+    if (!VocabTrainer.state.session) { finishLesson(); return; }
+    trim(VocabTrainer, 5); VocabTrainer.render();
+  }
+}
+function trim(engine, n){ const s = engine.state.session; if (s && s.queue) { s.queue = s.queue.slice(0, n); s.uniqueTotal = s.queue.length; } }
+
+function persistAll(extra){
+  const payload = Object.assign({ done: true, level: onb.level, goal: onb.goal, minutes: onb.minutes, hardest: onb.hardest, at: new Date().toISOString() }, extra || {});
+  if (typeof saveOnboardingToCloud === 'function') saveOnboardingToCloud(payload);
+  if (typeof saveToCloud === 'function') saveToCloud();        // planner_data (starting currentDay)
+  saveVocabNow();
+  if (onb.hardest === 'verbs') saveVerbsNow();
+}
+function finishLesson(){ phase = 'done'; persistAll(); render(); }
+function skipOnboarding(){ applyLevel(); phase = 'done'; lessonResult = null; persistAll({ skipped: true }); render(); }
+
+/* ---- success screen ---- */
+function renderDone(){
+  const n = (lessonResult && lessonResult.total) || 0;
+  document.getElementById('app').innerHTML = `
+<main class="container flow-body"><div class="flow-done">
+  <div class="done-mark">✓</div>
+  <h2>${T('onb_success_title')}</h2>
+  <p>${n ? T('onb_success_msg', n) : T('onb_success_msg_skip')}</p>
+  <div class="flow-actions"><a class="btn accent big" href="/today">${T('onb_success_cta')}</a></div>
+</div></main>`;
+  if (window.speechSynthesis) window.speechSynthesis.cancel();
+}
+
+/* ---- keyboard (route to the active mini-lesson engine) + init ---- */
+document.addEventListener('keydown', e => {
+  if (VocabTrainer.state.session) { VocabTrainer.handleKeydown(e); return; }
+  if (VerbsTrainer.state.session) { VerbsTrainer.handleKeydown(e); return; }
+});
+
+loadLocale(getLang()).then(() => { try { render(); } catch (_) {} });
+initApp();   // confirms the session; on /welcome the new-user gate is skipped, so it just renders us
+</script>
+</body>
+</html>

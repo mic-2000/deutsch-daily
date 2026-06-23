@@ -14,12 +14,14 @@ create table if not exists public.progress (
   theme        text,
   gemini_key   text,                          -- opt-in: user's Gemini API key, synced across devices
   deletion_requested_at timestamptz,          -- set when the user asks to delete their account; purged after 30 days
+  onboarding   jsonb       default '{}'::jsonb, -- first-run wizard answers + flag: { done, skipped?, level, goal, minutes, hardest, at }
   updated_at   timestamptz default now()
 );
 
 -- For existing databases (table already created without the column):
 alter table public.progress add column if not exists gemini_key text;
 alter table public.progress add column if not exists deletion_requested_at timestamptz;
+alter table public.progress add column if not exists onboarding jsonb default '{}'::jsonb;
 
 alter table public.progress enable row level security;
 

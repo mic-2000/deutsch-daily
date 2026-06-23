@@ -138,14 +138,22 @@ function renderStep(){
   else if (step === 'ai') { renderAi(); maybeSummarize(); }
   else renderDone();
 }
+/* Cap a session to the user's daily time budget (onboarding "minutes/day"); default = full 25. */
+function sessionCap(){
+  const m = (typeof userOnboarding !== 'undefined' && userOnboarding) ? userOnboarding.minutes : null;
+  return { 5: 6, 10: 12, 15: 18, '20+': 25 }[m] || 25;
+}
+function trimSession(engine){ const s = engine.state.session; if (s && s.queue) { s.queue = s.queue.slice(0, sessionCap()); s.uniqueTotal = s.queue.length; } }
 function startVocabStep(){
   VocabTrainer.startSession({ type: 'week', week: localizedToday().week });
-  if (!VocabTrainer.state.session) nextStep();   // (shouldn't happen — week scope always has cards)
+  if (!VocabTrainer.state.session) { nextStep(); return; }   // (shouldn't happen — week scope always has cards)
+  trimSession(VocabTrainer); VocabTrainer.render();
 }
 function startVerbsStep(){
   VerbsTrainer.startSession({ type: 'due' });                          // repetition first
   if (!VerbsTrainer.state.session) VerbsTrainer.startSession({ type: 'filter', filter: 'all' }); // else due + some new
-  if (!VerbsTrainer.state.session) nextStep();
+  if (!VerbsTrainer.state.session) { nextStep(); return; }
+  trimSession(VerbsTrainer); VerbsTrainer.render();
 }
 
 /* ---- shared in-flow header (progress) ---- */

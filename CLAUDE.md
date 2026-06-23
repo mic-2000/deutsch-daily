@@ -11,7 +11,15 @@ the authenticated pages live in `views/` and are served via `vercel.json` pretty
 `views/verbs.html` (`/verbs`) / `views/collections.html` (`/collections`). The app pages share one
 header via `assets/js/header.js` (`appHeader()`) and one `--page-max` width (the landing and login
 have their own chrome). In-page asset/data/locale paths are root-absolute (`/assets`, `/data`,
-`/locales`). (Details: ARCHITECTURE.md §1–§3, landing = §18, collections = §16, today = §19.)
+`/locales`). (Details: ARCHITECTURE.md §1–§3, landing = §18, collections = §16, today = §19,
+onboarding = §20.)
+
+**First-run onboarding:** brand-new accounts (no `progress` row) are gated by `cloud-sync.initApp`
+to `views/welcome.html` (`/welcome`) — 5 tap questions → a no-key mini-lesson → `/today`. The answers
+have real effects (level → start day + vocab levels; language → `setLang`; minutes → `/today` session
+size; goal/hardest → AI prompt via the `userOnboarding` global; hardest → default modes). Stored in
+the `progress.onboarding` jsonb column. Don't gate on anything but row *absence* (grandfathers
+existing users). (§20.)
 
 The vocab + verb **trainer engines are shared modules** (`assets/js/vocab-trainer.js` =
 `window.VocabTrainer`, `verbs-trainer.js` = `window.VerbsTrainer`). `/vocab` and `/verbs` are thin

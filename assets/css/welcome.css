@@ -1,0 +1,19 @@
+/* welcome.css — the first-run onboarding wizard (/welcome). Questions screen only; the in-flow
+   mini-lesson reuses vocab.css/verbs.css and the success screen reuses today.css (.flow-done). */
+
+.welcome-wrap { max-width: 640px; margin: 0 auto; padding: 6vh 0 56px; }
+.welcome-kicker { font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--accent); }
+.welcome-title { font-family: var(--serif); font-weight: 300; font-size: clamp(30px, 6vw, 46px); line-height: 1.05; margin: 8px 0 0; letter-spacing: -.01em; }
+.welcome-lead { color: var(--ink-soft); font-size: 16px; line-height: 1.6; margin: 14px 0 28px; max-width: 52ch; }
+
+.onb-group { margin-bottom: 22px; }
+.onb-q { font-size: 13px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-soft); margin-bottom: 10px; }
+.onb-chips { display: flex; flex-wrap: wrap; gap: 10px; }
+.onb-chips .chip { font-size: 14px; padding: 9px 16px; cursor: pointer; }
+
+.welcome-actions { margin-top: 30px; display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
+.onb-skip { background: none; border: none; cursor: pointer; color: var(--ink-soft); font-size: 13px; text-decoration: underline; text-underline-offset: 3px; }
+
+@media (max-width: 600px) {
+  .welcome-wrap { padding: 4vh 0 44px; }
+}
