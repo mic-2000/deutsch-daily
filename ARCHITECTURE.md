@@ -988,8 +988,10 @@ CSS files: `base.css` (tokens, reset, header/footer/info-box/toast/container + `
 `components.css` (`.user-bar-right`, nav-tabs, lang-switcher + the mobile nav-tabs horizontal-scroll
 strip and email-ellipsis rules), then page-specific `planner.css` / `vocab.css` / `verbs.css` /
 `collections.css` / `auth.css` / `landing.css` / `today.css` (the `/today` wizard chrome — intro
-checklist, step header, grammar card, done screen; the in-flow sessions reuse `vocab.css`/`verbs.css`). `chat.css` is loaded by `planner.html` **and** `today.html` and covers `.ai-messages`, `.ai-msg` (user + model variants), `.ai-input-row` (auto-growing
-`<textarea>`), `.ai-table`, the loading-dots animation, the key/summary modals, and the pinned
+checklist, step header, grammar card, done screen; the in-flow sessions reuse `vocab.css`/`verbs.css`). `chat.css` is loaded by `planner.html` **and** `today.html` and covers `.ai-messages`, `.ai-msg` (user + model variants), `.ai-input-row` (the `<textarea>` auto-grows
+to fit its content — incl. a paste — via the shared `aiGrowInput()` in `utils.js`, capped at `60vh`;
+the helper anchors the box's bottom edge so it visually expands *upward* and the Send button stays in
+view), `.ai-table`, the loading-dots animation, the key/summary modals, and the pinned
 `.ai-rule-wrap` "topic breakdown" block (shared by both AI views). `landing.css`
 (loaded only by `index.html`) reuses the `base.css` tokens + `components.css` switcher/toggle and adds
 the editorial hero, the section grids, and the decorative `lp*`-prefixed keyframe animations

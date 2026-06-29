@@ -244,7 +244,7 @@ function renderAiSection(d) {
   <div class="ai-input-row">
     <textarea class="ai-input" id="chatInput" rows="1" placeholder="${T('ai_input_hint')}"
       ${chatState.loading ? 'disabled' : ''}
-      oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'"
+      oninput="aiGrowInput(this)"
       onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChatMessage(${d.day});}"></textarea>
     <button class="ai-send" onclick="sendChatMessage(${d.day})" ${chatState.loading ? 'disabled' : ''}>${T('ai_send')}</button>
   </div>

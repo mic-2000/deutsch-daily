@@ -39,6 +39,20 @@ function diffChars(a, b){
   return { aHtml, bHtml };
 }
 
+/* Auto-grow an AI chat textarea to fit its content (called from oninput, so it also fires on paste),
+   capped at the CSS max-height. Then keep the box's bottom edge anchored in the viewport by scrolling
+   the page by the height delta, so the box visually expands UPWARD: the Send button stays put and a
+   whole pasted block is immediately visible instead of being clipped or pushing the button off-screen.
+   Shared by the planner chat (#chatInput) and the /today wizard (#aiInput). */
+function aiGrowInput(el){
+  if (!el) return;
+  const before = el.getBoundingClientRect().bottom;
+  el.style.height = 'auto';
+  el.style.height = el.scrollHeight + 'px';
+  const delta = el.getBoundingClientRect().bottom - before;
+  if (delta) window.scrollBy(0, delta);
+}
+
 /* In-page confirm staging (never the native confirm()). Pages stage a pending action on their
    own `state.confirm`, then supply their own confirmYes handler; these centralize the shape. */
 function stageConfirm(state, message, action){ state.confirm = { message, action }; }

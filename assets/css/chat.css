@@ -54,7 +54,11 @@
 [data-theme="dark"] .ai-msg.model { background: var(--paper-2); }
 
 /* input row */
-/* Question box is ~3 lines tall (still auto-grows for longer questions); the Send button stretches
+/* Question box is ~3 lines tall (min-height 84px) and auto-grows with its content via the shared
+   aiGrowInput() handler (height = scrollHeight), so a pasted block is fully visible without an inner
+   scrollbar. After it grows, the handler scrolls the box's bottom edge back to where it was, so the
+   box visually expands UPWARD and the Send button stays in view instead of being pushed off-screen.
+   Growth caps at 60vh — only a huge paste falls back to an inner scrollbar. The Send button stretches
    to the same height (align-items: stretch). Shared by the planner chat and the /today wizard. */
 .ai-input-row { display: flex; gap: 8px; align-items: stretch; }
 .ai-input {
@@ -62,8 +66,8 @@
   border: 1px solid var(--line);
   background: var(--paper); color: var(--ink);
   font-family: var(--sans); font-size: 14px;
-  resize: none; overflow-y: hidden; line-height: 1.5;
-  min-height: 84px; max-height: 220px; overflow-y: auto;
+  resize: none; line-height: 1.5;
+  min-height: 84px; max-height: 60vh; overflow-y: auto;
 }
 .ai-input:focus  { outline: none; border-color: var(--accent); }
 .ai-input:disabled { opacity: 0.45; }
