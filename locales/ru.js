@@ -4,10 +4,10 @@
 */
 window.LOCALE_RU = {
   ui: {
-    nav_today: '🚀 Сегодня',
-    nav_planner: '📅 Планнер',
-    nav_vocab: '🗂 Словарь',
-    nav_verbs: '📒 Глаголы',
+    nav_today: 'Начать урок',
+    nav_planner: 'Планнер',
+    nav_vocab: 'Словарь',
+    nav_verbs: 'Глаголы',
     logout: 'Выйти',
     // мастер дня (/today)
     today_title_cat: 'ОДИН ДЕНЬ',
@@ -437,7 +437,7 @@ window.LOCALE_RU = {
     settings_deletion_canceled: 'Удаление аккаунта отменено',
     settings_deletion_pending_toast: 'Аккаунт ожидает удаления — откройте «Настройки», чтобы отменить.',
     // collections (пользовательские наборы слов)
-    nav_collections: '🗃 Коллекции',
+    nav_collections: 'Коллекции',
     collections_title_cat: 'Deutsch · свои слова',
     collections_subtitle: 'Свои наборы слов · те же тренажёры, интервальное повторение',
     collections_new: '+ Новая коллекция',

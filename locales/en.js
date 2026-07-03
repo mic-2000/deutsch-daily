@@ -4,10 +4,10 @@
 window.LOCALE_EN = {
   ui: {
     // nav / shared
-    nav_today: '🚀 Today',
-    nav_planner: '📅 Planner',
-    nav_vocab: '🗂 Vocabulary',
-    nav_verbs: '📒 Verbs',
+    nav_today: 'Start lesson',
+    nav_planner: 'Planner',
+    nav_vocab: 'Vocabulary',
+    nav_verbs: 'Verbs',
     logout: 'Log out',
     // daily-flow wizard (/today)
     today_title_cat: 'ONE DAY',
@@ -441,7 +441,7 @@ window.LOCALE_EN = {
     settings_deletion_canceled: 'Account deletion canceled',
     settings_deletion_pending_toast: 'Your account is pending deletion — open Settings to cancel.',
     // collections (user-supplied word sets)
-    nav_collections: '🗃 Collections',
+    nav_collections: 'Collections',
     collections_title_cat: 'Deutsch · your own words',
     collections_subtitle: 'Your own word sets · same trainers, spaced repetition',
     collections_new: '+ New collection',

@@ -38,8 +38,8 @@ and a built-in AI tutor:
    cancel it any time in the window; `cloud-sync.initApp` loads the flag into the global
    `accountDeletionAt` and toasts a reminder on every page. Reached via the ⚙ link in the shared
    header (`appHeader`). Owns no `progress` column (omits `CLOUD_FIELD`, like collections).
-7. **Today** (`today.html`, `/today`) — a **daily-flow wizard** (the first nav tab; the recommended
-   starting point).
+7. **Today** (`today.html`, `/today`) — a **daily-flow wizard** (the header's primary CTA button —
+   "▶ Начать урок" / "Start lesson" — the recommended starting point).
    The user presses one "Learn" button and is walked through the whole study day in order —
    grammar → words → verbs → AI tutor → done — with no manual section-switching. It hosts the
    shared trainer engines in `embedded` mode and reuses the planner's day model. (See §19.)

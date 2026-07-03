@@ -3,10 +3,10 @@
 */
 window.LOCALE_UA = {
   ui: {
-    nav_today: '🚀 Сьогодні',
-    nav_planner: '📅 Планувальник',
-    nav_vocab: '🗂 Словник',
-    nav_verbs: '📒 Дієслова',
+    nav_today: 'Почати урок',
+    nav_planner: 'Планувальник',
+    nav_vocab: 'Словник',
+    nav_verbs: 'Дієслова',
     logout: 'Вийти',
     // майстер дня (/today)
     today_title_cat: 'ОДИН ДЕНЬ',
@@ -436,7 +436,7 @@ window.LOCALE_UA = {
     settings_deletion_canceled: 'Видалення акаунта скасовано',
     settings_deletion_pending_toast: 'Акаунт очікує видалення — відкрийте «Налаштування», щоб скасувати.',
     // collections (користувацькі набори слів)
-    nav_collections: '🗃 Колекції',
+    nav_collections: 'Колекції',
     collections_title_cat: 'Deutsch · власні слова',
     collections_subtitle: 'Власні набори слів · ті самі тренажери, інтервальне повторення',
     collections_new: '+ Нова колекція',

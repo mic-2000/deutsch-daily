@@ -1,15 +1,20 @@
-/* components.css — shared header chrome: user bar, nav tabs, language switcher. */
-.user-bar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; margin-top: 14px; }
-.user-bar-right { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
-.user-email { font-size: 12px; color: var(--ink-soft); }
-.btn-logout { font-size: 12px; color: var(--accent); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; background: none; border: none; font-family: inherit; }
-.btn-logout:hover { color: var(--accent-2); }
+/* components.css — shared header chrome: daily-lesson CTA, nav tabs, user controls. */
+.user-bar { display: flex; align-items: center; gap: 18px; margin-top: 16px; }
+.user-bar-right { display: flex; align-items: center; gap: 14px; margin-left: auto; }
+.btn-logout { color: var(--ink-soft); background: none; border: none; padding: 4px; cursor: pointer; display: inline-flex; align-items: center; transition: color 0.15s; }
+.btn-logout:hover { color: var(--ink); }
+.btn-logout svg { display: block; }
 
-.nav-tabs { display: flex; gap: 8px; }
-.nav-tab { font-size: 12px; padding: 5px 14px; border: 1px solid var(--line); color: var(--ink-soft); text-decoration: none; transition: all 0.15s; }
-.nav-tab:hover { border-color: var(--ink); color: var(--ink); }
-.nav-tab.active { border-color: var(--ink); background: var(--ink); color: var(--paper); }
-[data-theme="dark"] .nav-tab.active { background: var(--ink-soft); border-color: var(--ink-soft); }
+/* Primary CTA: jump straight into today's guided lesson from anywhere in the app. */
+.nav-cta { display: inline-flex; align-items: center; gap: 9px; padding: 12px 24px; border-radius: 8px; background: var(--accent); color: var(--paper); border: 1px solid var(--accent); font-size: 16px; font-weight: 600; text-decoration: none; white-space: nowrap; transition: background 0.15s, border-color 0.15s; }
+.nav-cta:hover { background: var(--accent-2); border-color: var(--accent-2); }
+.nav-cta-icon { font-size: 12px; }
+.nav-divider { width: 1px; height: 34px; background: var(--line); flex: 0 0 auto; }
+
+.nav-tabs { display: flex; align-items: center; gap: 26px; }
+.nav-tab { font-size: 16px; color: var(--ink-soft); text-decoration: none; padding: 4px 0; transition: color 0.15s; }
+.nav-tab:hover { color: var(--ink); }
+.nav-tab.active { color: var(--ink); font-weight: 600; }
 
 .lang-switcher { display: flex; gap: 4px; }
 .lang-btn { font-size: 11px; padding: 3px 8px; border: 1px solid var(--line); color: var(--ink-soft); background: none; font-family: inherit; cursor: pointer; letter-spacing: 0.05em; }
@@ -19,28 +24,30 @@
 
 .theme-toggle { font-size: 13px; line-height: 1; padding: 3px 9px; border: 1px solid var(--line); color: var(--ink-soft); background: none; font-family: inherit; cursor: pointer; }
 .theme-toggle:hover { border-color: var(--ink); color: var(--ink); }
-.settings-link { font-size: 17px; line-height: 1; padding: 4px 11px; border: 1px solid var(--line); color: var(--ink-soft); text-decoration: none; cursor: pointer; }
-.settings-link:hover { border-color: var(--ink); color: var(--ink); }
-.settings-link.active { border-color: var(--ink); background: var(--ink); color: var(--paper); }
-[data-theme="dark"] .settings-link.active { background: var(--ink-soft); border-color: var(--ink-soft); }
+.settings-link { font-size: 20px; line-height: 1; padding: 4px; color: var(--ink-soft); text-decoration: none; cursor: pointer; display: inline-flex; align-items: center; transition: color 0.15s; }
+.settings-link:hover { color: var(--ink); }
+.settings-link.active { color: var(--accent); }
 
-/* On phones the header stacks: nav tabs become a horizontal scroll strip and the
-   right-side controls drop onto their own full-width row so nothing overflows. */
+/* On phones the header stacks: the CTA + icon controls share the top row, and the
+   nav tabs wrap onto their own full-width horizontal scroll strip below. */
 @media (max-width: 600px) {
-  .user-bar { gap: 12px; margin-top: 16px; }
+  .user-bar { flex-wrap: wrap; gap: 12px; margin-top: 16px; }
+  .nav-cta { flex: 1 1 auto; justify-content: center; }
+  .nav-divider { display: none; }
+  .user-bar-right { order: 0; flex: 0 0 auto; margin-left: 0; gap: 12px; }
   .nav-tabs {
-    width: 100%;
+    order: 1;
+    flex: 1 1 100%;
     overflow-x: auto;
     flex-wrap: nowrap;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: none;
     padding-bottom: 2px;
+    gap: 20px;
   }
   .nav-tabs::-webkit-scrollbar { display: none; }
   .nav-tab { white-space: nowrap; flex: 0 0 auto; }
   .settings-link { flex: 0 0 auto; }
-  .user-bar-right { width: 100%; gap: 10px; }
-  .user-email { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .btn-logout { flex: 0 0 auto; }
 }
 

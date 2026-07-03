@@ -25,9 +25,18 @@ const NAV_ITEMS = [
   { key: 'collections', href: '/collections', label: 'nav_collections' },
 ];
 
+// The daily lesson ('today') is rendered as the header's primary CTA button, not a
+// plain nav tab — split so the remaining sections render as the text-link nav strip.
+const CTA_ITEM = NAV_ITEMS[0];
+const TAB_ITEMS = NAV_ITEMS.slice(1);
+
+// Feather "log-out" icon (inline so it themes via currentColor, no extra asset).
+const LOGOUT_ICON =
+  '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>';
+
 function appHeader(active, opts) {
   const o = opts || {};
-  const tabs = NAV_ITEMS.map(it =>
+  const tabs = TAB_ITEMS.map(it =>
     `<a class="nav-tab${it.key === active ? ' active' : ''}" href="${it.href}">${T(it.label)}</a>`
   ).join('');
   return `
@@ -36,11 +45,12 @@ function appHeader(active, opts) {
   <h1>${o.h1}</h1>
   <div class="subtitle">${T(o.subtitle)}</div>
   <div class="user-bar">
-    <div class="nav-tabs">${tabs}</div>
+    <a class="nav-cta" href="${CTA_ITEM.href}"><span class="nav-cta-icon" aria-hidden="true">▶</span>${T(CTA_ITEM.label)}</a>
+    <span class="nav-divider" aria-hidden="true"></span>
+    <nav class="nav-tabs">${tabs}</nav>
     <div class="user-bar-right">
       <a class="settings-link${active === 'settings' ? ' active' : ''}" href="/settings" title="${T('settings_title')}" aria-label="${T('settings_title')}">⚙</a>
-      <span class="user-email">${esc(currentUser ? currentUser.email : '')}</span>
-      <button class="btn-logout" onclick="logout()">${T('logout')}</button>
+      <button class="btn-logout" onclick="logout()" title="${T('logout')}" aria-label="${T('logout')}">${LOGOUT_ICON}</button>
     </div>
   </div>
 </div></header>`;
