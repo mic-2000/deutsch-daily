@@ -875,8 +875,6 @@ same track. Flashcards advance immediately; article/spelling/plural-choose/plura
 
 ### Progress portability
 - **Cloud** (Supabase) is the live store.
-- **Manual export/import** — `exportProgress()` downloads `serialize()` as a JSON Blob;
-  `importProgress()` reads a chosen file and calls `applyData()`.
 
 ### Reset
 `resetWord(week, idx)` / `resetAll()` go through `state.confirm` (in-page modal via

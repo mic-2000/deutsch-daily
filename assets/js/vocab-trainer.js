@@ -237,28 +237,6 @@ window.VocabTrainer = (function () {
 
   function save() { if (cfg.onSaveVocab) cfg.onSaveVocab(); else if (typeof saveToCloud === 'function') saveToCloud(); }
 
-  /* ---- Manual export / import (works in every browser) ---- */
-  function exportProgress() {
-    const blob = new Blob([JSON.stringify(serialize(), null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url; a.download = 'deutsch-fortschritt.json';
-    document.body.appendChild(a); a.click(); document.body.removeChild(a);
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
-    showToast(T('toast_file_saved'));
-  }
-  function importProgress() {
-    const inp = document.createElement('input');
-    inp.type = 'file'; inp.accept = 'application/json,.json';
-    inp.onchange = () => {
-      const file = inp.files && inp.files[0]; if (!file) return;
-      const reader = new FileReader();
-      reader.onload = () => { try { if (applyData(JSON.parse(reader.result))) showToast(T('toast_file_loaded')); } catch (e) { showToast(T('toast_file_read_err')); } };
-      reader.readAsText(file);
-    };
-    inp.click();
-  }
-
   /* ==========================================================================
      STATS
      ========================================================================== */
@@ -474,12 +452,6 @@ ${appHeader('vocab', { cat: 'vocab_title_cat', h1: 'Vokabel<em>trainer</em>', su
     ${modeChip('article', T('mode_article'))}
     ${modeChip('spelling', T('mode_spelling'))}
     ${modeChip('plural', T('mode_plural'))}
-  </div>
-
-  <div class="settings-bar">
-    <span class="settings-label">${T('settings_sync')}</span>
-    <button class="chip" onclick="VocabTrainer.exportProgress()">${T('settings_save_file')}</button>
-    <button class="chip" onclick="VocabTrainer.importProgress()">${T('settings_load_file')}</button>
   </div>
 
   <div class="settings-bar">
@@ -882,7 +854,7 @@ ${appFooter({ right: `<button onclick="VocabTrainer.resetAll()" style="font-size
     render, renderHome, startSession,
     answer, nextCard, revealFlash, submitSpelling, chooseArticle,
     revealPlural, choosePlural, submitPluralInput,
-    selectWeek, toggleMode, toggleLevel, exportProgress, importProgress,
+    selectWeek, toggleMode, toggleLevel,
     resetAll, resetWord, askConfirm, confirmYes, confirmNo, closeSession,
     speakWord, speakPlural, handleKeydown,
     serialize, applyData, applyVerbProgress, setVerbStore,

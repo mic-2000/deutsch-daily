@@ -37,6 +37,7 @@ test('[Phase 2] vocab.html renderSpelling/renderEnd contain no hardcoded Russian
 const DEAD_KEYS = [
   'settings_create_file', 'settings_open_file', 'settings_auto_on', 'settings_sync_hint',
   'toast_sync_created', 'toast_sync_opened', 'toast_sync_unavailable', 'toast_file_corrupt',
+  'settings_sync', 'settings_save_file', 'settings_load_file', 'toast_file_saved', 'toast_file_loaded',
 ];
 
 test('[Phase 4] orphaned locale keys are removed from all locales', () => {
