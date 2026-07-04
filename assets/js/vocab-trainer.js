@@ -94,9 +94,13 @@ window.VocabTrainer = (function () {
   function cardBox(week, idx) { return leitnerBoxOf(mRec(week, idx)); }
   function isMastered(week, idx) { return leitnerIsMastered(mRec(week, idx)); }
 
+  /* A miss soft-demotes two boxes instead of resetting to box 1, so a slip on a hard word doesn't
+     wipe all its progress. Shared by the word and plural tracks (collections keeps the default reset). */
+  const LEITNER_OPTS = { wrongPolicy: 'soft' };
+
   function updateCard(week, idx, correct) {
     const c = getCard(week, idx);
-    leitnerApply(c, correct);
+    leitnerApply(c, correct, LEITNER_OPTS);
     const vk = vkOf(week, idx);
     if (vk) { verbStore.mastery[vk] = c; saveVerbStore(); }
     else { state.mastery[key(week, idx)] = c; save(); }
@@ -114,7 +118,7 @@ window.VocabTrainer = (function () {
   function plIsMastered(week, idx) { return leitnerIsMastered(plRec(week, idx)); }
   function updatePlural(week, idx, correct) {
     const c = plCard(week, idx);
-    leitnerApply(c, correct);
+    leitnerApply(c, correct, LEITNER_OPTS);
     state.pluralMastery[key(week, idx)] = c;
     save();
   }
@@ -342,8 +346,12 @@ window.VocabTrainer = (function () {
     const card = s.queue[s.pos];
     track('word_review', { mode: card.mode, correct });
     if (card.firstTry === null) { card.firstTry = correct; if (correct) s.uniqueRight++; }
-    if (card.kind === 'plural') updatePlural(card.week, card.idx, correct);
-    else updateCard(card.week, card.idx, correct);
+    /* Grade the Leitner record only on the card's first appearance; a re-queued card is an
+       in-session reinforcement, not a fresh review, so it must not grade the same card twice. */
+    if (!card.requeued) {
+      if (card.kind === 'plural') updatePlural(card.week, card.idx, correct);
+      else updateCard(card.week, card.idx, correct);
+    }
     if (!correct && !card.requeued) {
       s.queue.push({ ...card, mode: card.kind === 'plural' ? 'pl_flash' : 'flashcard', requeued: true });
     }

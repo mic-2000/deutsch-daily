@@ -371,8 +371,12 @@ Card shape: `{ box:0..5, due:ms, right:count, wrong:count, seen:count }`.
 - `leitnerIsSeen(card)` → `card.seen > 0`.
 - `leitnerIsMastered(card)` → `card.box >= 5`.
 - `leitnerBoxOf(card)` → `card.box`.
-- `leitnerApply(card, correct)` — mutates the card:
-  - `seen++`; correct → `box = min(5, box+1)`; wrong → `box = 1`.
+- `leitnerApply(card, correct, opts)` — mutates the card:
+  - `seen++`; correct → `box = min(5, box+1)`.
+  - wrong → configurable via `opts.wrongPolicy`: `'reset'` (default) → `box = 1`;
+    `'soft'` → `box = max(1, box-2)` (a miss drops two boxes instead of wiping all progress).
+    The trainers (vocab/plural/verbs) pass `{ wrongPolicy: 'soft' }`; **collections keeps the
+    default reset** (omits `opts`).
   - `due = now + BOX_INTERVAL[box]` where `BOX_INTERVAL = {1:1d, 2:2d, 3:4d, 4:8d, 5:16d}`.
 
 ### `speech.js` — Web Speech API wrapper (German TTS)
@@ -872,8 +876,10 @@ the three singular modes).
 
 Queue is shuffled and capped at **25 cards**. `answer(correct)` → `updateCard` (or `updatePlural`
 for plural cards). A wrong card is re-queued **once** at the end as an easier reveal card of the
-same track. Flashcards advance immediately; article/spelling/plural-choose/plural-input wait for
-"Next". `uniqueRight / uniqueTotal` → first-try score on end screen.
+same track. The re-queued clone (`requeued: true`) is **not graded again** — grading happens only
+on the card's first appearance, so a wrong-then-right card is not double-counted. Flashcards advance
+immediately; article/spelling/plural-choose/plural-input wait for "Next". `uniqueRight /
+uniqueTotal` → first-try score on end screen.
 
 ### Progress portability
 - **Cloud** (Supabase) is the live store.
@@ -955,8 +961,9 @@ random person (ich/du/er/wir/ihr/sie) and reveals the full six-person paradigm o
 
 Non-`selected` sessions are shuffled and capped at **20 cards**; `selected` at **40**.
 
-Wrong answer → re-queued once as easy `triad` (`requeued: true`). `uniqueRight / uniqueTotal`
-drive the end-screen score.
+Wrong answer → re-queued once as easy `triad` (`requeued: true`); the re-queued clone is **not
+graded again** (grading is first-appearance only). `uniqueRight / uniqueTotal` drive the end-screen
+score.
 
 ### Render & keyboard
 - `render()` → `renderSession()` if active, else home (filter chips, selection bar, verb list with
@@ -1111,6 +1118,12 @@ worth doing. Ordered roughly by impact.
 8. **Sections felt like different sites** — mismatched container widths (planner 820 vs others 920)
    and four duplicated header blocks. Fix: one `--page-max: 920px` token + a single `appHeader()`
    builder in `header.js` (§4, §11). Don't reintroduce per-page width/header overrides.
+9. **Re-queued cards were graded twice.** After a wrong first answer a card is re-queued once as an
+   easier reveal; `answer()` called `updateCard`/`updatePlural` unconditionally, so answering the
+   re-queue re-ran `leitnerApply` (a second `seen++` and, if correct, a box bump — a wrong-then-right
+   card ended at box 2 instead of the demoted box). Fix: grade only when `!card.requeued`, in all
+   four `answer()` paths (vocab words + plurals, verbs, collections). Guarded by
+   `tests/requeue.test.js`.
 
 ---
 

@@ -21,12 +21,18 @@ function leitnerIsMastered(card) { return leitnerBoxOf(card) >= MAX_BOX; }
 
 /* Record one answer on the card (mutates and returns it):
  *   correct → box = min(MAX_BOX, box + 1)   (new 0→1, one box per correct)
- *   wrong   → box = 1                        (a miss sends it back to box 1)
- * then reschedule due = now + interval(box). */
-function leitnerApply(card, correct) {
+ *   wrong   → depends on opts.wrongPolicy:
+ *               'reset' (default) → box = 1              (a miss sends it back to box 1)
+ *               'soft'            → box = max(1, box-2)  (a miss drops two boxes, floored at 1)
+ * then reschedule due = now + interval(box).
+ * The default preserves the historical reset behaviour, so callers that omit opts (e.g.
+ * collections) are unaffected; the trainers opt into 'soft' so partial progress on a hard
+ * card isn't fully wiped by a single slip. */
+function leitnerApply(card, correct, opts) {
+  const wrongPolicy = (opts && opts.wrongPolicy) || 'reset';
   card.seen++;
   if (correct) { card.right++; card.box = Math.min(MAX_BOX, card.box + 1); }
-  else { card.wrong++; card.box = 1; }
+  else { card.wrong++; card.box = wrongPolicy === 'soft' ? Math.max(1, card.box - 2) : 1; }
   card.due = Date.now() + BOX_INTERVAL[card.box];
   return card;
 }

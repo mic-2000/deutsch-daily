@@ -79,14 +79,14 @@ test('updatePlural writes to pluralMastery and leaves the meaning track untouche
   assert.equal(v.state.mastery[k], undefined, 'meaning track must stay empty');
 });
 
-test('plural box advances to mastery on 5 correct, resets to 1 on a miss', () => {
+test('plural box advances to mastery on 5 correct, soft-demotes two boxes on a miss', () => {
   const v = fresh();
   const { week, idx } = firstPluralSlot(v);
   for (let i = 0; i < 5; i++) v.updatePlural(week, idx, true);
   assert.equal(v.plBox(week, idx), 5);
   assert.equal(v.plIsMastered(week, idx), true);
-  v.updatePlural(week, idx, false);
-  assert.equal(v.plBox(week, idx), 1);
+  v.updatePlural(week, idx, false);              // soft demotion: 5 → 3 (not a full reset to 1)
+  assert.equal(v.plBox(week, idx), 3);
   assert.equal(v.plIsMastered(week, idx), false);
 });
 

@@ -48,9 +48,12 @@ window.VerbsTrainer = (function () {
   function isSeen(k) { return leitnerIsSeen(state.mastery[k]); }
   function cardBox(k) { return leitnerBoxOf(state.mastery[k]); }
   function isMastered(k) { return leitnerIsMastered(state.mastery[k]); }
+  /* A miss soft-demotes two boxes instead of resetting to box 1, so a slip on a hard verb doesn't
+     wipe all its progress. See assets/js/leitner.js. */
+  const LEITNER_OPTS = { wrongPolicy: 'soft' };
   function updateCard(k, correct) {
     const c = getCard(k);
-    leitnerApply(c, correct);
+    leitnerApply(c, correct, LEITNER_OPTS);
     state.mastery[k] = c; save();
   }
 
@@ -186,7 +189,8 @@ window.VerbsTrainer = (function () {
     const s = state.session; if (!s) return;
     const card = s.queue[s.pos];
     if (card.firstTry === null) { card.firstTry = correct; if (correct) s.uniqueRight++; }
-    updateCard(card.key, correct);
+    /* Grade only on the card's first appearance — a re-queued card must not grade twice. */
+    if (!card.requeued) updateCard(card.key, correct);
     if (!correct && !card.requeued) { s.queue.push({ ...card, mode: 'triad', clozeField: null, requeued: true, firstTry: card.firstTry }); }
     if (card.mode === 'triad') { nextCard(); return; }
     s.lastCorrect = correct; s.answered = true; s.revealed = true; render();

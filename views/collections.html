@@ -175,7 +175,7 @@ function answer(correct){
   const s = state.session; if (!s) return;
   const card = s.queue[s.pos];
   if (card.firstTry === null){ card.firstTry = correct; if (correct) s.uniqueRight++; }
-  updateCard(s.col, card.wid, correct);
+  if (!card.requeued) updateCard(s.col, card.wid, correct); // grade once; a re-queued card must not grade twice
   if (!correct && !card.requeued) s.queue.push({ ...card, mode:'flashcard', requeued:true });
   if (card.mode === 'flashcard'){ nextCard(); return; }
   s.lastCorrect = correct; s.answered = true; s.revealed = true; render();

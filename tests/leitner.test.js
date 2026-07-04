@@ -6,7 +6,10 @@
  * Behaviour locked here (incl. ARCHITECTURE.md §13 already-fixed bugs):
  *   - new word (no record) is always due; isMastered === false
  *   - correct  → box = min(5, box+1)   (first correct is 0→1, NOT 0→2  — §13 bug #4)
- *   - wrong    → box = 1               (a miss sends it back to box 1)
+ *   - wrong    → configurable via leitnerApply(card, correct, { wrongPolicy }):
+ *                 'reset' (default) → box = 1              (a miss sends it back to box 1)
+ *                 'soft'            → box = max(1, box-2)  (a miss drops two boxes)
+ *                 the trainers (vocab/plural/verbs) opt into 'soft'; collections keeps 'reset'.
  *   - due = now + BOX_INTERVAL[box]
  */
 const test = require('node:test');
@@ -21,7 +24,7 @@ function freshVerbs() {
   return loadPage({
     page: 'verbs.html',
     extraFiles: ['locales/en.js'],
-    exports: ['updateCard', 'isDue', 'isSeen', 'cardBox', 'isMastered', 'getCard', 'BOX_INTERVAL', 'MAX_BOX', 'state'],
+    exports: ['updateCard', 'isDue', 'isSeen', 'cardBox', 'isMastered', 'getCard', 'BOX_INTERVAL', 'MAX_BOX', 'state', 'leitnerApply', 'leitnerBlank'],
   });
 }
 
@@ -54,14 +57,54 @@ test('consecutive correct answers advance one box each, capped at MAX_BOX', () =
   assert.equal(v.isMastered('gehen'), true);
 });
 
-test('a wrong answer resets the box to 1', () => {
+test('verbs trainer soft-demotes: a wrong answer drops two boxes (floored at 1)', () => {
   const v = freshVerbs();
-  v.updateCard('gehen', true);
-  v.updateCard('gehen', true); // box 2
+  for (let i = 0; i < 4; i++) v.updateCard('gehen', true); // box 4
+  assert.equal(v.cardBox('gehen'), 4);
+  v.updateCard('gehen', false);                            // soft: 4 → 2
   assert.equal(v.cardBox('gehen'), 2);
-  v.updateCard('gehen', false);
-  assert.equal(v.cardBox('gehen'), 1);
   assert.equal(v.state.mastery['gehen'].wrong, 1);
+});
+
+/* ---------------- configurable wrong-answer policy (leitnerApply opts) ---------------- */
+test('leitnerApply default policy resets the box to 1 on a miss', () => {
+  const v = freshVerbs();
+  const card = v.leitnerBlank();
+  for (let i = 0; i < 4; i++) v.leitnerApply(card, true); // box 4
+  assert.equal(card.box, 4);
+  v.leitnerApply(card, false);                            // no opts → 'reset'
+  assert.equal(card.box, 1);
+});
+
+test("leitnerApply { wrongPolicy: 'reset' } resets the box to 1 from any box", () => {
+  const v = freshVerbs();
+  const card = v.leitnerBlank();
+  for (let i = 0; i < 5; i++) v.leitnerApply(card, true); // box 5 (mastered)
+  v.leitnerApply(card, false, { wrongPolicy: 'reset' });
+  assert.equal(card.box, 1);
+});
+
+test("leitnerApply { wrongPolicy: 'soft' } drops two boxes, floored at 1", () => {
+  const v = freshVerbs();
+  const atBox = (n) => { const c = v.leitnerBlank(); for (let i = 0; i < n; i++) v.leitnerApply(c, true); return c; };
+  const cases = [[5, 3], [4, 2], [3, 1], [2, 1], [1, 1]]; // [startBox, boxAfterMiss]
+  for (const [start, after] of cases) {
+    const c = atBox(start);
+    assert.equal(c.box, start, `precondition: card at box ${start}`);
+    v.leitnerApply(c, false, { wrongPolicy: 'soft' });
+    assert.equal(c.box, after, `soft demotion ${start} → ${after}`);
+  }
+});
+
+test('soft demotion still counts the miss and reschedules due to the new box interval', () => {
+  const v = freshVerbs();
+  const card = v.leitnerBlank();
+  for (let i = 0; i < 4; i++) v.leitnerApply(card, true); // box 4
+  const before = Date.now();
+  v.leitnerApply(card, false, { wrongPolicy: 'soft' });   // box 4 → 2
+  assert.equal(card.box, 2);
+  assert.equal(card.wrong, 1);
+  assert.ok(card.due >= before + 2 * DAY && card.due <= Date.now() + 2 * DAY + 50, 'due = now + interval(box 2)');
 });
 
 test('due date is set to now + interval of the new box', () => {
