@@ -38,6 +38,7 @@
 <script src="/data/weeks.js"></script>
 <script src="/data/vocab.js"></script>
 <script src="/data/verbs.js"></script>
+<script src="/assets/js/course-consts.js"></script>
 <script src="/assets/js/planner-data.js"></script>
 <script src="/assets/js/vocab-trainer.js"></script>
 <script src="/assets/js/verbs-trainer.js"></script>
@@ -87,7 +88,7 @@ const Q = {
   hardest: ['articles', 'verbs', 'cases', 'spelling', 'listening'],
 };
 const LANG_LABELS = { en: 'English', ua: 'Українська', ru: 'Русский' };
-const WEEK_FOR_LEVEL = { A1: 1, A2: 9, B1: 17 };
+// WEEK_FOR_LEVEL lives in course-consts.js (single source of truth for course shape).
 
 function render(){
   if (phase === 'lesson') return;     // the engine paints the session into #app

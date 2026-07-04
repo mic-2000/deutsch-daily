@@ -58,6 +58,11 @@ The curriculum runs 24 weeks in 3 phases:
 - **Phase 3 (weeks 17–24), B1:** full adjective declension, passive voice, Konjunktiv II,
   Relativsätze, indirect speech, verbs with prepositions + exam-format practice.
 
+These phase boundaries live in one dependency-free module, **`assets/js/course-consts.js`**
+(`COURSE_VERSION = 1`, `TOTAL_WEEKS = 24`, `BAND_WEEKS`, `WEEK_FOR_LEVEL`, `levelOfWeek(week)`) — the
+single source of truth for the course's shape, kept independent from `weeks.js` so the vocab/verbs
+trainer pages (which don't load the curriculum) can still map a week to its CEFR band.
+
 UI languages: **RU / UA / EN**. Learning content is German with a translation in the active UI
 language.
 
@@ -108,7 +113,7 @@ deutsch-daily/
 │   ├── css/  base.css · components.css · planner.css · chat.css · vocab.css · verbs.css · auth.css · collections.css · landing.css · settings.css · today.css · welcome.css
 │   ├── js/   i18n.js · theme.js · utils.js · supabase.js · cloud-sync.js · ai-config.js
 │   │         gemini.js · leitner.js · speech.js · header.js · pwa.js
-│   │         markdown.js · planner-data.js · vocab-trainer.js · verbs-trainer.js   # AI md + day model + trainer engines
+│   │         markdown.js · course-consts.js · planner-data.js · vocab-trainer.js · verbs-trainer.js   # AI md + course shape + day model + trainer engines
 │   ├── favicon.svg · icon.svg · icon-maskable.svg     # icon sources (PNGs rendered into icons/)
 │   └── icons/  icon-192.png · icon-512.png · maskable-512.png · apple-touch-icon.png
 ├── data/   weeks.js (WEEKS) · vocab.js (VOCAB) · verbs.js (VERBS — master verb dictionary)
@@ -172,6 +177,7 @@ Supabase CDN
 → header.js                        (appHeader)
 → data/vocab.js                    (VOCAB)
 → data/verbs.js                    (VERBS)
+→ course-consts.js                 (COURSE_VERSION, BAND_WEEKS, WEEK_FOR_LEVEL, levelOfWeek — needed by vocab-trainer)
 → vocab-trainer.js                 (window.VocabTrainer — the whole vocab engine)
 → inline page <script>             (thin host: CLOUD_FIELD + delegates render/keyboard to VocabTrainer)
 ```
@@ -194,6 +200,7 @@ Supabase CDN
 → i18n.js → theme.js → utils.js → pwa.js → leitner.js → speech.js → supabase.js → cloud-sync.js
 → ai-config.js → gemini.js → markdown.js → header.js
 → data/weeks.js → data/vocab.js → data/verbs.js
+→ course-consts.js                 (COURSE_VERSION, BAND_WEEKS, WEEK_FOR_LEVEL, levelOfWeek)
 → planner-data.js                  (DAYS, TOTAL_DAYS, getLocalizedDay)
 → vocab-trainer.js → verbs-trainer.js
 → inline page <script>             (flow controller; CLOUD_FIELD='planner_data'; initApp().then(afterInit))
@@ -1404,7 +1411,7 @@ writes the row (`saveOnboardingToCloud`), so the gate never fires again. (See §
 
 **The five questions → real effects:**
 - **Level** (A1/A2/B1) → `VocabTrainer.state.levels` + `planner_data.currentDay` set to the first day
-  of that phase (`WEEK_FOR_LEVEL = {A1:1, A2:9, B1:17}` → `DAYS.find(d=>d.week===W).day` = day 1/41/80).
+  of that phase (`WEEK_FOR_LEVEL = {A1:1, A2:9, B1:17}`, now sourced from `course-consts.js` → `DAYS.find(d=>d.week===W).day` = day 1/41/80).
 - **Language** → `setLang(code)` live (re-localizes the page; persists to `localStorage` + cloud).
 - **Minutes/day** → stored in `onboarding`; `/today` reads `userOnboarding.minutes` and caps each
   session queue (`{5:6,10:12,15:18,'20+':25}`) in `startVocabStep`/`startVerbsStep`.

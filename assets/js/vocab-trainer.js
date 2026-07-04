@@ -215,7 +215,7 @@ window.VocabTrainer = (function () {
     confirm: null,
   };
 
-  function levelOfWeek(w) { w = +w; return w <= 8 ? 'A1' : w <= 16 ? 'A2' : 'B1'; }
+  // levelOfWeek / BAND_WEEKS come from course-consts.js (loaded before this module on every host page).
   function activeLevels() { return Object.keys(state.levels).filter(l => state.levels[l]); }
   function weeksForLevels(levels) { return Object.keys(VOCAB).filter(w => levels.includes(levelOfWeek(w))); }
   function levelWordCount(levels) { let n = 0; for (const w in VOCAB) { if (levels.includes(levelOfWeek(w))) n += VOCAB[w].words.length; } return n; }
