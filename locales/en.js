@@ -5,7 +5,7 @@ window.LOCALE_EN = {
   ui: {
     // nav / shared
     nav_today: 'Start lesson',
-    nav_planner: 'Planner',
+    nav_planner: 'Curriculum',
     nav_vocab: 'Vocabulary',
     nav_verbs: 'Verbs',
     logout: 'Log out',

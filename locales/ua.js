@@ -4,7 +4,7 @@
 window.LOCALE_UA = {
   ui: {
     nav_today: 'Почати урок',
-    nav_planner: 'Планувальник',
+    nav_planner: 'Програма',
     nav_vocab: 'Словник',
     nav_verbs: 'Дієслова',
     logout: 'Вийти',

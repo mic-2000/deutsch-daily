@@ -5,7 +5,7 @@
 window.LOCALE_RU = {
   ui: {
     nav_today: 'Начать урок',
-    nav_planner: 'Планнер',
+    nav_planner: 'Программа',
     nav_vocab: 'Словарь',
     nav_verbs: 'Глаголы',
     logout: 'Выйти',
