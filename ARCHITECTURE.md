@@ -19,7 +19,8 @@ and a built-in AI tutor:
    mixed together (the fourth, **plural**, is an opt-in second Leitner track for nouns), Leitner
    spaced repetition, and text-to-speech.
 3. **Verb trainer** (`/verbs`) — drills 306 irregular verbs (three Stammformen) in cloze,
-   triad-flashcard, and table modes; mastery is shared with the vocabulary page.
+   triad-flashcard, table, and **Präsens-conjugation** modes; a **modal-verb filter** isolates the
+   six Modalverben; mastery is shared with the vocabulary page.
 4. **AI Lehrer chat** — the planner has a built-in Gemini chat per study day. The user clicks
    "Start lesson" and the day plan is sent automatically as the opening message; subsequent
    turns are a live chat with a tutor persona. Conversation history is persisted per-day in
@@ -676,9 +677,10 @@ const VERBS = {
   three languages (306 each: RU/UA/EN).
 - **Source of truth.** Previously generated from a CSV; the CSV and its generator were removed, so
   `data/verbs.js` (forms) + `locales/*.verbs` (glosses) are now hand-maintained.
-- `verbs.html` drills verbs from `VERBS` in three modes (triad-flashcard, cloze, table). Mastery
-  is stored in `verbs_data` (shared column, keyed by verb key). The vocab trainer also writes verb
-  mastery into `verbs_data` for words that resolve to a verb key via `verbKeyForWord`.
+- `verbs.html` drills verbs from `VERBS` in four modes (triad-flashcard, cloze, table, and Präsens
+  conjugation). Mastery is stored in `verbs_data` (shared column, keyed by verb key). The vocab
+  trainer also writes verb mastery into `verbs_data` for words that resolve to a verb key via
+  `verbKeyForWord`.
 
 ---
 
@@ -900,8 +902,8 @@ same track. Flashcards advance immediately; article/spelling/plural-choose/plura
 ```js
 let state = {
   mastery: {},    // { verbKey: {box,due,right,wrong,seen} } — shared with vocab via verbs_data
-  modes: { triad:true, cloze:true, table:true },
-  filter: 'all',  // 'all' | 'sein' | 'sep' | 'refl'
+  modes: { triad:true, conjug:true, cloze:true, table:true },
+  filter: 'all',  // 'all' | 'modal' | 'sein' | 'sep' | 'refl'
   sel: {},        // { verbKey: true } — hand-picked training selection
   session: null,
   confirm: null
@@ -918,9 +920,13 @@ const CLOUD_FIELD = 'verbs_data';
 `pp`, `aux` (`haben`|`sein`), optional `praes` (irregular present), `sep` (separable), `refl`.
 Translations from `locales/<lang>.verbs[key]` via `verbGloss(key)`.
 
-### Three card modes
-Mode availability: reflexive verbs (`refl: true`) support only **triad**; non-reflexive support all.
-Pedagogical selection based on box: box 0–1 → triad; box 2–3 → cloze; box 4+ → table.
+### Four card modes
+Mode availability: reflexive verbs (`refl: true`) support only **triad**; the **conjug** (Präsens
+conjugation) mode is offered for plain verbs only (not separable / reflexive / multi-word keys); all
+other non-reflexive verbs support every mode. Pedagogical selection walks the box: box 0 → triad,
+then conjug → cloze → table as the card climbs the Leitner boxes. The **conjug** mode asks one
+random person (ich/du/er/wir/ihr/sie) and reveals the full six-person paradigm on answer;
+`conjugatePresent(key)` generates it from the infinitive + `praes` (verified in `tests/verb-present.test.js`).
 
 - **triad** — Prompt: infinitiv; user recalls Präteritum + Partizip II (with auxiliary). Read-aloud,
   `Space`/`Enter` to reveal. Self-grade "knew it / didn't".

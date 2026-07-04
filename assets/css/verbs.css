@@ -32,8 +32,17 @@
 
 /* session mode badge variants (vocab.css styles the base) */
 .session-mode-badge.triad { background: var(--gold); }
+.session-mode-badge.conjug { background: var(--green); }
 .session-mode-badge.cloze { background: var(--accent); }
 .session-mode-badge.table { background: var(--ink); }
+
+/* present-tense conjugation card */
+.conj-line { font-family: var(--serif); font-size: 30px; line-height: 1.6; margin: 8px 0 16px; }
+.conj-pron-big { color: var(--ink-soft); margin-right: 6px; }
+.conj-table { display: grid; grid-template-columns: auto auto; gap: 3px 16px; justify-content: center; margin: 14px 0 4px; text-align: left; }
+.conj-table .conj-pron { color: var(--ink-soft); font-size: 15px; }
+.conj-table .conj-form { font-size: 15px; }
+.conj-table .conj-form.hl { font-weight: 700; color: var(--green); }
 
 /* cloze line */
 .cloze-line { font-family: var(--serif); font-size: 30px; line-height: 1.6; margin: 8px 0 18px; }

@@ -57,7 +57,7 @@ window.VerbsTrainer = (function () {
   /* ==========================================================================
      STATE + CLOUD
      ========================================================================== */
-  let state = { mastery: {}, modes: { triad: true, cloze: true, table: true }, filter: 'all', sel: {}, session: null, confirm: null };
+  let state = { mastery: {}, modes: { triad: true, conjug: true, cloze: true, table: true }, filter: 'all', sel: {}, session: null, confirm: null };
   function serialize() { return { app: 'deutsch-verbtrainer', version: 1, savedAt: new Date().toISOString(), modes: state.modes, sel: state.sel, mastery: state.mastery }; }
   function applyData(d) { if (!d || typeof d !== 'object') return; if (d.mastery && typeof d.mastery === 'object') state.mastery = d.mastery; if (d.modes) state.modes = Object.assign(state.modes, d.modes); if (d.sel && typeof d.sel === 'object') state.sel = d.sel; }
   function setMasteryStore(map) { if (map && typeof map === 'object') state.mastery = map; }   // /today: share verbs_data.mastery with VocabTrainer
@@ -78,30 +78,75 @@ window.VerbsTrainer = (function () {
   /* ==========================================================================
      MODES
      ========================================================================== */
-  function availableModes(key) { const e = VERBS[key]; const m = ['triad']; if (!e.refl) { m.push('cloze', 'table'); } return m; }
+  function availableModes(key) { const e = VERBS[key]; const m = ['triad']; if (!e.refl && !e.sep && !key.includes(' ')) m.push('conjug'); if (!e.refl) { m.push('cloze', 'table'); } return m; }
   function pickMode(key) {
-    const avail = availableModes(key).filter(m => state.modes[m]);
+    const order = ['triad', 'conjug', 'cloze', 'table'];
+    const avail = order.filter(m => availableModes(key).includes(m) && state.modes[m]);
     if (!avail.length) return 'triad';
     const box = cardBox(key);
-    const want = box >= 4 ? 'table' : box >= 2 ? 'cloze' : 'triad';
-    if (avail.includes(want)) return want;
-    return avail.includes('triad') ? 'triad' : avail[0];
+    return avail[Math.min(box, avail.length - 1)];
   }
   function makeCard(key) {
     const mode = pickMode(key);
     const clozeField = (mode === 'cloze') ? (Math.random() < 0.5 ? 'praet' : 'pp') : null;
-    return { key, mode, clozeField, requeued: false, firstTry: null, val: '', aux: null };
+    const person = (mode === 'conjug') ? PERSONS[Math.floor(Math.random() * PERSONS.length)] : null;
+    return { key, mode, clozeField, person, requeued: false, firstTry: null, val: '', aux: null };
   }
 
   /* ==========================================================================
      FILTER + STATS
      ========================================================================== */
+  // The six core modal verbs (Modalverben). Kept as a set here rather than a flag in the
+  // generated data/verbs.js so learners can drill just this group (curriculum week 3).
+  const MODAL_VERBS = new Set(['können', 'dürfen', 'müssen', 'sollen', 'wollen', 'mögen']);
   function filterKeys(filter) {
     const all = Object.keys(VERBS);
     if (filter === 'sein') return all.filter(k => VERBS[k].aux === 'sein');
     if (filter === 'sep') return all.filter(k => VERBS[k].sep);
     if (filter === 'refl') return all.filter(k => VERBS[k].refl);
+    if (filter === 'modal') return all.filter(k => MODAL_VERBS.has(k));
     return all;
+  }
+
+  /* ==========================================================================
+     PRÄSENS CONJUGATION (person endings + stem change)
+     Generates the six present-tense forms for a plain (non-separable, non-reflexive)
+     verb from data/verbs.js. `praes` (present 3rd-sg) drives the du/er stem change;
+     modal + "wissen" (Präteritopräsentia) and the wildly irregular sein/werden are special.
+     ========================================================================== */
+  const PERSONS = ['ich', 'du', 'er', 'wir', 'ihr', 'sie'];
+  const PRON_LABEL = { ich: 'ich', du: 'du', er: 'er/sie/es', wir: 'wir', ihr: 'ihr', sie: 'sie/Sie' };
+  const PRETERITO_PRESENT = new Set([...MODAL_VERBS, 'wissen']);
+  const IRREGULAR_PRES = {
+    'sein': { ich: 'bin', du: 'bist', er: 'ist', wir: 'sind', ihr: 'seid', sie: 'sind' },
+    'werden': { ich: 'werde', du: 'wirst', er: 'wird', wir: 'werden', ihr: 'werdet', sie: 'werden' },
+  };
+  function conjugatePresent(key) {
+    if (IRREGULAR_PRES[key]) return { ...IRREGULAR_PRES[key] };
+    const e = VERBS[key] || {};
+    const inf = key;
+    const stem = inf.endsWith('en') ? inf.slice(0, -2) : inf.endsWith('n') ? inf.slice(0, -1) : inf;
+    const sib = /[sßxz]$/.test(stem);                                  // s/ß/x/z → du drops the -s of -st
+    const needsE = /[dt]$/.test(stem) || /[^aeiouäöülrmnh][mn]$/.test(stem); // arbeiten→arbeitest, atmen→atmest (but not können/wohnen)
+    const ihr = stem + (sib ? 't' : needsE ? 'et' : 't');
+    if (PRETERITO_PRESENT.has(inf)) {
+      const sg = e.praes || stem;                                     // ich = er, no ending (kann, mag, weiß)
+      const sibSg = /[sßxz]$/.test(sg);
+      return { ich: sg, du: sg + (sibSg ? 't' : 'st'), er: sg, wir: inf, ihr, sie: inf };
+    }
+    const regEr = stem + (sib ? 't' : needsE ? 'et' : 't');
+    const strong = e.praes && e.praes !== regEr;                      // real stem change (not just a stored regular form)
+    let du, er;
+    if (strong) {
+      const endsT = /t$/.test(stem);
+      const vStem = endsT ? e.praes : e.praes.replace(/t$/, '');       // vowel-changed singular stem (fähr, gib, hält, läd)
+      du = vStem + (sib ? 't' : 'st');
+      er = endsT ? vStem : vStem + 't';
+    } else {
+      du = stem + (sib ? 't' : needsE ? 'est' : 'st');
+      er = stem + (sib ? 't' : needsE ? 'et' : 't');
+    }
+    return { ich: stem + 'e', du, er, wir: inf, ihr, sie: inf };
   }
   function stats() {
     const now = Date.now(); const all = Object.keys(VERBS);
@@ -174,6 +219,14 @@ window.VerbsTrainer = (function () {
     const correct = normalize(card.val) === normalize(target);
     answer(correct);
   }
+  function submitConjug() {
+    const s = state.session; if (!s || s.answered) return;
+    const card = s.queue[s.pos]; const inp = document.getElementById('vInput');
+    card.val = inp ? inp.value : '';
+    const target = conjugatePresent(card.key)[card.person];
+    const correct = normalize(card.val) === normalize(target);
+    answer(correct);
+  }
   function submitTable() {
     const s = state.session; if (!s || s.answered) return;
     const card = s.queue[s.pos]; const e = VERBS[card.key];
@@ -221,6 +274,7 @@ ${appHeader('verbs', { cat: 'vocab_title_cat', h1: 'Unregelmäßige <em>Verben</
   <div class="settings-bar">
     <span class="settings-label">${T('settings_modes')}</span>
     ${modeChip('triad', T('mode_triad'))}
+    ${modeChip('conjug', T('mode_conjug'))}
     ${modeChip('cloze', T('mode_cloze'))}
     ${modeChip('table', T('mode_table'))}
   </div>
@@ -228,6 +282,7 @@ ${appHeader('verbs', { cat: 'vocab_title_cat', h1: 'Unregelmäßige <em>Verben</
   <div class="settings-bar">
     <span class="settings-label">${T('filter_label')}</span>
     ${filterChip('all', T('filter_all'))}
+    ${filterChip('modal', T('filter_modal'))}
     ${filterChip('sein', 'sein')}
     ${filterChip('sep', T('filter_sep'))}
     ${filterChip('refl', T('filter_refl'))}
@@ -320,8 +375,8 @@ ${appFooter({ right: `<button onclick="VerbsTrainer.resetAll()" style="font-size
     if (s.pos >= s.queue.length) { renderEnd(); return; }
     const card = s.queue[s.pos];
     const progress = (s.pos / s.queue.length) * 100;
-    const modeLabel = { triad: T('mode_triad'), cloze: T('mode_cloze'), table: T('mode_table') }[card.mode];
-    let body = card.mode === 'triad' ? renderTriad(card, s) : card.mode === 'cloze' ? renderCloze(card, s) : renderTable(card, s);
+    const modeLabel = { triad: T('mode_triad'), conjug: T('mode_conjug'), cloze: T('mode_cloze'), table: T('mode_table') }[card.mode];
+    let body = card.mode === 'triad' ? renderTriad(card, s) : card.mode === 'conjug' ? renderConjug(card, s) : card.mode === 'cloze' ? renderCloze(card, s) : renderTable(card, s);
 
     appEl().innerHTML = `
 <div class="session-bg">
@@ -334,8 +389,8 @@ ${appFooter({ right: `<button onclick="VerbsTrainer.resetAll()" style="font-size
   </div>
   <div class="session-body"><div class="card">${body}</div></div>
 </div>`;
-    if ((card.mode === 'cloze' || card.mode === 'table') && !s.answered) {
-      setTimeout(() => { const inp = document.getElementById(card.mode === 'cloze' ? 'vInput' : 'praetIn'); if (inp) inp.focus(); }, 30);
+    if ((card.mode === 'cloze' || card.mode === 'conjug' || card.mode === 'table') && !s.answered) {
+      setTimeout(() => { const inp = document.getElementById(card.mode === 'table' ? 'praetIn' : 'vInput'); if (inp) inp.focus(); }, 30);
     }
   }
 
@@ -390,6 +445,41 @@ ${appFooter({ right: `<button onclick="VerbsTrainer.resetAll()" style="font-size
       <div class="kbd-hint">${T('article_hint_next')}</div>
     ` : `
       <div class="card-actions"><button class="reveal-btn" onclick="VerbsTrainer.submitCloze()">${T('spelling_check')}</button></div>
+      <div class="kbd-hint">ä=ae, ö=oe, ü=ue, ß=ss · Enter</div>
+    `}`;
+  }
+
+  function renderConjug(card, s) {
+    const forms = conjugatePresent(card.key);
+    const person = card.person;
+    const target = forms[person];
+    const slot = s.answered
+      ? `<span class="cloze-slot ${s.lastCorrect?'ok':'bad'}">${esc(target)}</span>`
+      : `<input class="spell-input cloze-input" id="vInput" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="…" onkeydown="if(event.key==='Enter'){event.preventDefault();VerbsTrainer.submitConjug();}">`;
+    let feedback = '';
+    if (s.answered && !s.lastCorrect) {
+      const d = diffChars((card.val || '').trim(), target);
+      feedback = `<div class="spell-compare">
+      <div class="cmp-row"><span class="cmp-label">${T('spelling_your')}</span><span class="cmp-val">${(card.val||'').trim()?d.aHtml:('<span class="spell-empty">'+T('spelling_empty')+'</span>')}</span></div>
+      <div class="cmp-row"><span class="cmp-label">${T('spelling_right_ans')}</span><span class="cmp-val">${d.bHtml}</span></div>
+    </div>`;
+    }
+    const table = PERSONS.map(p =>
+      `<span class="conj-pron">${esc(PRON_LABEL[p])}</span><span class="conj-form${p===person?' hl':''}">${esc(forms[p])}</span>`
+    ).join('');
+    return `
+    <div class="card-prompt-label">${T('verb_conjugate')} · Präsens</div>
+    <div class="card-word" style="font-size:30px">${esc(card.key)}</div>
+    <div class="card-sub" style="margin-bottom:16px">${esc(verbGloss(card.key))}</div>
+    <div class="conj-line"><span class="conj-pron-big">${esc(PRON_LABEL[person])}</span> ${slot}</div>
+    ${s.answered ? `
+      ${s.lastCorrect?`<div class="feedback ok">${T('spelling_correct')}</div>`:feedback}
+      <div class="conj-table">${table}</div>
+      <button class="audio-btn" id="cardAudio" onclick="VerbsTrainer.speakVerb(${jk(card.key)},this)" style="margin-top:8px">🔊</button>
+      <div class="card-actions"><button class="next-btn" onclick="VerbsTrainer.nextCard()">${T('article_next')}</button></div>
+      <div class="kbd-hint">${T('article_hint_next')}</div>
+    ` : `
+      <div class="card-actions"><button class="reveal-btn" onclick="VerbsTrainer.submitConjug()">${T('spelling_check')}</button></div>
       <div class="kbd-hint">ä=ae, ö=oe, ü=ue, ß=ss · Enter</div>
     `}`;
   }
@@ -465,14 +555,14 @@ ${appFooter({ right: `<button onclick="VerbsTrainer.resetAll()" style="font-size
   return {
     init,
     render, renderHome, startSession,
-    answer, nextCard, revealTriad, submitCloze, submitTable, chooseAux, closeSession,
+    answer, nextCard, revealTriad, submitCloze, submitConjug, submitTable, chooseAux, closeSession,
     toggleMode, setFilter, toggleSelect, selectAllFiltered, clearSelection,
     resetAll, resetVerb, askConfirm, confirmYes, confirmNo,
     speakVerb, handleKeydown,
     serialize, applyData, setMasteryStore,
     /* introspection (used by tests + the /today host) */
     verbGloss, triadHtml, auxHtml, jk, selCount,
-    availableModes, pickMode, makeCard, filterKeys, stats,
+    availableModes, pickMode, makeCard, filterKeys, stats, conjugatePresent,
     updateCard, getCard, isDue, isSeen, cardBox, isMastered,
     get state() { return state; },
   };
