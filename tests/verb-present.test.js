@@ -29,11 +29,17 @@ const EXPECTED = {
   // t/d-stem → epenthetic -e- in du/er/ihr
   arbeiten: { ich: 'arbeite', du: 'arbeitest', er: 'arbeitet', wir: 'arbeiten', ihr: 'arbeitet', sie: 'arbeiten' },
   finden: { ich: 'finde', du: 'findest', er: 'findet', wir: 'finden', ihr: 'findet', sie: 'finden' },
+  // consonant + n/m stem → epenthetic -e- (incl. -chnen, but NOT silent-h wohnen)
+  zeichnen: { ich: 'zeichne', du: 'zeichnest', er: 'zeichnet', wir: 'zeichnen', ihr: 'zeichnet', sie: 'zeichnen' },
+  wohnen: { ich: 'wohne', du: 'wohnst', er: 'wohnt', wir: 'wohnen', ihr: 'wohnt', sie: 'wohnen' },
   // sibilant stem → du drops the -s of -st
   heißen: { ich: 'heiße', du: 'heißt', er: 'heißt', wir: 'heißen', ihr: 'heißt', sie: 'heißen' },
   tanzen: { ich: 'tanze', du: 'tanzt', er: 'tanzt', wir: 'tanzen', ihr: 'tanzt', sie: 'tanzen' },
   // -ern infinitive
   wandern: { ich: 'wandere', du: 'wanderst', er: 'wandert', wir: 'wandern', ihr: 'wandert', sie: 'wandern' },
+  // -eln infinitive → the -el- drops its e in ich (ich sammle, not sammele)
+  sammeln: { ich: 'sammle', du: 'sammelst', er: 'sammelt', wir: 'sammeln', ihr: 'sammelt', sie: 'sammeln' },
+  wechseln: { ich: 'wechsle', du: 'wechselst', er: 'wechselt', wir: 'wechseln', ihr: 'wechselt', sie: 'wechseln' },
   // -n infinitive (tun)
   tun: { ich: 'tue', du: 'tust', er: 'tut', wir: 'tun', ihr: 'tut', sie: 'tun' },
   // strong: a→ä

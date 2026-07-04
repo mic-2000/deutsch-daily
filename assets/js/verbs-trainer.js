@@ -126,8 +126,10 @@ window.VerbsTrainer = (function () {
     const e = VERBS[key] || {};
     const inf = key;
     const stem = inf.endsWith('en') ? inf.slice(0, -2) : inf.endsWith('n') ? inf.slice(0, -1) : inf;
+    const eln = /eln$/.test(inf);                                      // sammeln, handeln → ich sammle (the -el- drops its e)
     const sib = /[sßxz]$/.test(stem);                                  // s/ß/x/z → du drops the -s of -st
-    const needsE = /[dt]$/.test(stem) || /[^aeiouäöülrmnh][mn]$/.test(stem); // arbeiten→arbeitest, atmen→atmest (but not können/wohnen)
+    const needsE = /[dt]$/.test(stem) || /[^aeiouäöülrmnh][mn]$/.test(stem) || /ch[mn]$/.test(stem); // arbeiten→arbeitest, atmen→atmest, zeichnen→zeichnest (but not können/wohnen/lernen)
+    const ich = eln ? stem.slice(0, -2) + 'le' : stem + 'e';           // sammel-→sammle, wander-→wandere, mach-→mache
     const ihr = stem + (sib ? 't' : needsE ? 'et' : 't');
     if (PRETERITO_PRESENT.has(inf)) {
       const sg = e.praes || stem;                                     // ich = er, no ending (kann, mag, weiß)
@@ -146,7 +148,7 @@ window.VerbsTrainer = (function () {
       du = stem + (sib ? 't' : needsE ? 'est' : 'st');
       er = stem + (sib ? 't' : needsE ? 'et' : 't');
     }
-    return { ich: stem + 'e', du, er, wir: inf, ihr, sie: inf };
+    return { ich, du, er, wir: inf, ihr, sie: inf };
   }
   function stats() {
     const now = Date.now(); const all = Object.keys(VERBS);
