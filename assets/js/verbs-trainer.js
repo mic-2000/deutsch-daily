@@ -329,7 +329,7 @@ ${appHeader('verbs', { cat: 'vocab_title_cat', h1: 'Unregelmäßige <em>Verben</
   <div class="info-box">${T('verbs_info')}</div>
 </main>
 
-${appFooter({ right: `<button onclick="VerbsTrainer.resetAll()" style="font-size:12px;color:var(--ink-soft);text-decoration:underline;text-underline-offset:3px;background:none;border:none;cursor:pointer">${T('reset_all')}</button>` })}`;
+${appFooter()}`;
 
     if(state.confirm){
       html += `

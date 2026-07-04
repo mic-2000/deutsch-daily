@@ -398,7 +398,7 @@ window.LOCALE_EN = {
     toast_offline_saved: 'Offline — saved on this device, will sync when you\'re back online',
     toast_sync_restored: 'Back online — progress synced',
     toast_no_speech: 'Speech not supported in this browser',
-    confirm_reset_all: 'Reset all word progress? All boxes will be cleared.',
+    confirm_reset_all: 'Reset all word and verb progress? Every box will be cleared.',
     confirm_reset_word: 'Reset progress for this word?',
     // settings (/settings)
     settings_title: 'Settings',
@@ -421,6 +421,9 @@ window.LOCALE_EN = {
     settings_sec_appearance: 'Appearance',
     settings_theme_label: 'Theme',
     settings_lang_label: 'Language',
+    settings_sec_progress: 'Progress',
+    settings_reset_desc: 'Reset all word and verb progress — every Leitner box is cleared. Your lessons and plan days are kept.',
+    settings_reset_btn: 'Reset',
     settings_sec_danger: 'Danger zone',
     settings_delete_account: 'Delete account',
     settings_delete_desc: 'Request deletion of your account and all your data. You have 30 days to change your mind — sign in and cancel before then. After 30 days everything is permanently removed.',

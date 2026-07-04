@@ -394,7 +394,7 @@ window.LOCALE_RU = {
     toast_offline_saved: 'Нет сети — сохранено на устройстве, синхронизируется при подключении',
     toast_sync_restored: 'Связь восстановлена — прогресс синхронизирован',
     toast_no_speech: 'Озвучка не поддерживается в этом браузере',
-    confirm_reset_all: 'Сбросить весь прогресс по словам? Все коробки обнулятся.',
+    confirm_reset_all: 'Сбросить весь прогресс по словам и глаголам? Все коробки обнулятся.',
     confirm_reset_word: 'Сбросить прогресс этого слова?',
     // settings (/settings)
     settings_title: 'Настройки',
@@ -417,6 +417,9 @@ window.LOCALE_RU = {
     settings_sec_appearance: 'Оформление',
     settings_theme_label: 'Тема',
     settings_lang_label: 'Язык',
+    settings_sec_progress: 'Прогресс',
+    settings_reset_desc: 'Сбросить весь прогресс по словам и глаголам — все коробки Leitner обнулятся. Уроки и дни плана сохранятся.',
+    settings_reset_btn: 'Сбросить',
     settings_sec_danger: 'Опасная зона',
     settings_delete_account: 'Удалить аккаунт',
     settings_delete_desc: 'Запросить удаление аккаунта и всех данных. У вас есть 30 дней, чтобы передумать — войдите и отмените. Через 30 дней всё удаляется безвозвратно.',

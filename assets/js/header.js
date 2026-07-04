@@ -11,7 +11,7 @@
    appFooter({ text, showEmail, right })
      text      — T() key for the footer note (defaults to 'vocab_footer')
      showEmail — append the signed-in email after the note (planner)
-     right     — raw HTML for the right-hand slot (e.g. a "reset all" button or a tagline)
+     right     — raw HTML for the right-hand slot (e.g. a tagline)
 
    Depends on globals from the shared modules: T (i18n.js), esc (utils.js),
    currentUser / logout (cloud-sync.js). Language + theme switching now live on

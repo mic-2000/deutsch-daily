@@ -110,7 +110,28 @@ function confirmYes(){
     const ts = new Date().toISOString();
     if(typeof saveDeletionRequestToCloud === 'function') saveDeletionRequestToCloud(ts);
     render(); showToast(T('settings_delete_requested'));
+  } else if(a && a.type === 'reset'){
+    render(); doResetProgress();
   } else render();
+}
+
+/* ---------- reset all learning progress (words + verbs) ---------- */
+function askReset(){ stageConfirm(state, T('confirm_reset_all'), { type:'reset' }); render(); }
+async function doResetProgress(){
+  try {
+    let vocab = { mastery:{}, pluralMastery:{} };
+    let verbs = { mastery:{} };
+    try {
+      const { data } = await sb.from('progress').select('vocab_data, verbs_data').eq('user_id', currentUser.id).single();
+      if(data){
+        vocab = Object.assign({}, data.vocab_data, { mastery:{}, pluralMastery:{} });
+        verbs = Object.assign({}, data.verbs_data, { mastery:{} });
+      }
+    } catch(_){}   // offline / no row yet → fall back to blank stores (still resets)
+    if(typeof saveVocabToCloud === 'function') await saveVocabToCloud(vocab);
+    if(typeof saveVerbsToCloud === 'function') await saveVerbsToCloud(verbs);
+    showToast(T('toast_progress_reset'));
+  } catch(e){ showToast(T('auth_err_connection')); }
 }
 
 /* ---------- date helpers ---------- */
@@ -188,6 +209,12 @@ function render(){
       </div>
     </section>
 
+    <section class="set-card">
+      <h2>${T('settings_sec_progress')}</h2>
+      <div class="set-card-desc">${T('settings_reset_desc')}</div>
+      <div class="set-actions"><button class="btn danger" onclick="askReset()">${T('reset_all')}</button></div>
+    </section>
+
     <section class="set-card danger">
       <h2>${T('settings_sec_danger')}</h2>
       ${pending ? `
@@ -207,13 +234,14 @@ ${appFooter()}`;
 
 function confirmHtml(){
   if(!state.confirm) return '';
+  const isReset = !!(state.confirm.action && state.confirm.action.type === 'reset');
   return `
 <div class="confirm-bg" onclick="if(event.target===this)confirmNo()">
   <div class="confirm-box">
     <div class="confirm-msg">${esc(state.confirm.message)}</div>
     <div class="confirm-actions">
       <button class="btn" onclick="confirmNo()">${T('confirm_no')}</button>
-      <button class="btn danger" onclick="confirmYes()">${T('settings_delete_btn')}</button>
+      <button class="btn danger" onclick="confirmYes()">${isReset ? T('settings_reset_btn') : T('settings_delete_btn')}</button>
     </div>
   </div>
 </div>`;

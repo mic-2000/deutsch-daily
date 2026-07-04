@@ -34,7 +34,9 @@ and a built-in AI tutor:
 6. **Settings** (`settings.html`, `/settings`) — authenticated account page: change password
    (re-authenticates with the current password via `sb.auth.signInWithPassword`, then
    `sb.auth.updateUser`), add/remove the Gemini AI key (reuses the planner's `gemini_key` /
-   `gemini_key_sync` logic), switch theme + UI language, and request **account deletion** with a
+   `gemini_key_sync` logic), switch theme + UI language, **reset all learning progress** (words +
+   verbs, via `doResetProgress` — clears the `vocab_data`/`verbs_data` mastery maps in the cloud),
+   and request **account deletion** with a
    30-day recovery window. Deletion stamps `progress.deletion_requested_at`; a `SECURITY DEFINER`
    `purge_deleted_accounts()` SQL function (scheduled via pg_cron, see `schema.sql`) hard-deletes
    the user's rows + `auth.users` entry after 30 days. The client only sets/clears the flag and can
@@ -280,9 +282,9 @@ The single source of truth for the header + nav, so all four sections render an 
   `renderLangSwitcher` (i18n), `renderThemeToggle` (theme, guarded by `typeof`), `esc` (utils),
   `currentUser` / `logout` (cloud-sync).
 - `appFooter({ text, showEmail, right })` — the matching shared **footer** for the four app pages
-  (note text via `T()`, GitHub + Privacy + Terms links, and an optional `right` slot for a tagline or
-  a "reset all" button). planner passes `planner_footer` + `showEmail`; vocab/verbs pass the reset
-  button; collections calls it bare. Privacy/Terms point to the `/privacy` `/terms` pages.
+  (note text via `T()`, GitHub + Privacy + Terms links, and an optional `right` slot for a tagline).
+  planner passes `planner_footer` + `showEmail` + a `«Schritt für Schritt»` tagline; vocab/verbs and
+  collections call it bare. Privacy/Terms point to the `/privacy` `/terms` pages.
 
 ### `planner-data.js` — curriculum day model (planner + today)
 The flattening of `WEEKS` into `DAYS` (one task = one day), `TOTAL_DAYS`, and `getLocalizedDay(d)`
@@ -877,8 +879,11 @@ same track. Flashcards advance immediately; article/spelling/plural-choose/plura
 - **Cloud** (Supabase) is the live store.
 
 ### Reset
-`resetWord(week, idx)` / `resetAll()` go through `state.confirm` (in-page modal via
-`stageConfirm` / `clearConfirm` from `utils.js`), never the native `confirm()`.
+`resetWord(week, idx)` (single word) goes through `state.confirm` (in-page modal via
+`stageConfirm` / `clearConfirm` from `utils.js`), never the native `confirm()`. The engine still
+exposes `resetAll()`, but the **global "reset all progress"** action now lives on the **Settings**
+page (`doResetProgress`), which clears the `vocab_data`/`verbs_data` mastery maps in the cloud
+directly; the trainer footers no longer carry a reset button.
 
 ### Render & keyboard
 - `render()` → `renderSession()` if active, else home screen (stats, due banner, week tabs, word
@@ -957,7 +962,7 @@ drive the end-screen score.
 - `render()` → `renderSession()` if active, else home (filter chips, selection bar, verb list with
   box bars + audio). Sub-renderers: `renderTriad` / `renderCloze` / `renderTable` / `renderEnd`.
 - Keyboard: triad `Space` reveal / `1`/`2` grade; cloze + table `Enter` submit / next; `Esc` exits.
-- Confirm modal for `resetAll()` via `state.confirm`.
+- Confirm modal via `state.confirm` (per-item reset); the global "reset all progress" lives on Settings.
 
 ---
 

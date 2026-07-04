@@ -505,7 +505,7 @@ ${appHeader('vocab', { cat: 'vocab_title_cat', h1: 'Vokabel<em>trainer</em>', su
   <div class="info-box">${T('vocab_info')}</div>
 </main>
 
-${appFooter({ right: `<button onclick="VocabTrainer.resetAll()" style="font-size:12px;color:var(--ink-soft);text-decoration:underline;text-underline-offset:3px;background:none;border:none;cursor:pointer">${T('reset_all')}</button>` })}`;
+${appFooter()}`;
 
     if (state.confirm) {
       html += `
