@@ -390,8 +390,7 @@ function renderDayCard(d, isDone) {
 
     <div class="day-actions">
       ${getGeminiKey()
-        ? `<button class="btn ai-start" onclick="focusLesson(${d.day})">${T('ai_start_lesson')}</button>
-      <button class="btn copy small" id="copyBtn" onclick="copyPlan(${d.day})">${T('planner_copy_short')}</button>`
+        ? `<button class="btn ai-start" onclick="focusLesson(${d.day})">${T('ai_start_lesson')}</button>`
         : `<button class="btn copy" id="copyBtn" onclick="copyPlan(${d.day})">${T('planner_copy')}</button>`}
       <button class="btn done ${isDone ? 'is-done' : ''}" onclick="toggleDone(${d.day})">${isDone ? T('planner_undo') : T('planner_done')}</button>
     </div>

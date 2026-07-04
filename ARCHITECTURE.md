@@ -14,7 +14,8 @@ over a ~6-month, 24-week plan. The system has three built-in trainers, a user-co
 and a built-in AI tutor:
 
 1. **Planner** (`/planner`) — one study day = one main task (118 days total).
-   Contains a **built-in AI tutor chat** (Gemini) and a clipboard-copy button for the day plan.
+   Contains a **built-in AI tutor chat** (Gemini). When no Gemini key is set, the day card instead
+   shows a clipboard-copy button for the day plan (fallback for pasting into an external chat).
 2. **Vocabulary trainer** (`/vocab`) — 504 words across 24 weekly sets, four exercise modes
    mixed together (the fourth, **plural**, is an opt-in second Leitner track for nouns), Leitner
    spaced repetition, and text-to-speech.
@@ -703,7 +704,9 @@ focus, today's task with its type label, the daily vocab habit, and a closing in
 All fragments come from `T('planner_clip_*', ...)`.
 
 `copyPlan(day)` uses `navigator.clipboard.writeText` with a fallback to a hidden `<textarea>` +
-`document.execCommand('copy')` (`fallbackCopy`). On success it flashes the button to "copied".
+`document.execCommand('copy')` (`fallbackCopy`). On success it flashes the button to "copied" (when
+the button is present — with a Gemini key set the copy button is hidden, but the `c` shortcut still
+copies).
 
 The same `buildPlanText(d)` output is also used as the **first user message** sent to Gemini when
 `startAILesson(day)` is called — clipboard copy and AI chat both derive from the same source.

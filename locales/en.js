@@ -272,7 +272,6 @@ window.LOCALE_EN = {
     planner_daily_also: 'Also daily',
     planner_vocab_habit: (week, vocab) => `Vocabulary: quiz on week ${week} words (${vocab}) — 10–15 min in trainer`,
     planner_copy: '⧉ Copy today\'s plan',
-    planner_copy_short: '⧉ Copy plan',
     planner_copied: '✓ Copied!',
     planner_done: '✓ Done, next',
     planner_undo: '↺ Undo',
