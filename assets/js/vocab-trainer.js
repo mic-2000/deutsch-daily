@@ -325,6 +325,29 @@ window.VocabTrainer = (function () {
         for (const w of weeks) { VOCAB[w].words.forEach((_, i) => list.push(makeCard(+w, i))); }
         if (usePlural) list = list.concat(allPluralCards(weeks));
       }
+    } else if (scope.type === 'daily') {
+      /* /today's daily-review scope for the guided flow. Every DUE card from the weeks reached so
+         far — INCLUDING mastered-but-due cards, so long-interval words still resurface (unlike
+         'review-all', which drops the mastered) — plus a capped set of NEW words from the current
+         week only. `scope.week` = the day's curriculum week (clamped to the available range). */
+      const maxWeek = Math.max(...Object.keys(VOCAB).map(Number));
+      const curWeek = Math.max(1, Math.min(+scope.week || 1, maxWeek));
+      const reached = [];
+      for (let w = 1; w <= curWeek; w++) if (VOCAB[w]) reached.push(w);
+      const due = [], neu = [];
+      for (const w of reached) {
+        const words = VOCAB[w].words;
+        for (let i = 0; i < words.length; i++) {
+          if (isSeen(w, i)) { if (isDue(w, i, now)) due.push([w, i]); }   // due backlog, mastered-but-due included
+          else if (w === curWeek) neu.push([w, i]);                      // new words only from the current week
+        }
+      }
+      list = due.map(([w, i]) => makeCard(w, i)).concat(neu.slice(0, 12).map(([w, i]) => makeCard(w, i)));
+      if (usePlural) list = list.concat(collectPluralCards(reached, now, 8));
+      if (list.length === 0) {
+        VOCAB[curWeek].words.forEach((_, i) => list.push(makeCard(curWeek, i)));
+        if (usePlural) list = list.concat(allPluralCards([curWeek]));
+      }
     } else {
       for (const w in VOCAB) {
         const words = VOCAB[w].words;

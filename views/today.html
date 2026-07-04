@@ -146,8 +146,9 @@ function sessionCap(){
 }
 function trimSession(engine){ const s = engine.state.session; if (s && s.queue) { s.queue = s.queue.slice(0, sessionCap()); s.uniqueTotal = s.queue.length; } }
 function startVocabStep(){
-  VocabTrainer.startSession({ type: 'week', week: localizedToday().week });
-  if (!VocabTrainer.state.session) { nextStep(); return; }   // (shouldn't happen — week scope always has cards)
+  // Daily review: due backlog from every reached week (incl. mastered-but-due) + new words from today's week.
+  VocabTrainer.startSession({ type: 'daily', week: localizedToday().week });
+  if (!VocabTrainer.state.session) { nextStep(); return; }   // (shouldn't happen — daily scope falls back to the week)
   trimSession(VocabTrainer); VocabTrainer.render();
 }
 function startVerbsStep(){

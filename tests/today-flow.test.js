@@ -45,6 +45,7 @@ test('startFlow shows the grammar card, then nextStep opens a vocab session', ()
   assert.match(t.app.innerHTML, /grammar-card/, 'grammar step first');
   t.nextStep();
   assert.ok(t.VocabTrainer.state.session, 'vocab session started');
+  assert.equal(t.VocabTrainer.state.session.scope.type, 'daily', 'the daily-review scope drives /today');
   assert.match(t.app.innerHTML, /session-bg/, 'vocab session painted');
 });
 

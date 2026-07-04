@@ -873,6 +873,7 @@ the three singular modes).
 | `'week'` | Due words of the chosen week + up to 12 new; if none due/new, the whole week |
 | `'levels'` | Due/new words across the selected CEFR levels; up to 20 new per multi-level run |
 | `'review-all'` | All weeks: `seen>0 && !mastered && due<=now` |
+| `'daily'` | **`/today`'s guided daily review.** Every due card from weeks `1..scope.week` — **including mastered-but-due** (so long-interval words resurface, unlike `'review-all'`) — plus up to 12 new words from the current week only; `scope.week` is clamped to the real week range, and it falls back to the current week's cards if empty |
 
 Queue is shuffled and capped at **25 cards**. `answer(correct)` → `updateCard` (or `updatePlural`
 for plural cards). A wrong card is re-queued **once** at the end as an easier reveal card of the
@@ -1323,8 +1324,9 @@ the done screen states **"You completed Day N"** (`today_done_day`).
    `today_ai_breakdown_req`: rule + examples + tables + a "what to memorize" checklist for EACH item).
    The panel reuses the shared `renderAiPanel()` / `ai` state, so the conversation carries over to the
    AI step. "Continue →" advances (the breakdown does not change the flow order).
-2. **vocab** — `VocabTrainer.startSession({ type:'week', week })` for the current week (due words +
-   up to 12 new; articles `der/die/das` ride along as a mode).
+2. **vocab** — `VocabTrainer.startSession({ type:'daily', week })` — the day's daily review: the due
+   backlog from every week reached so far (mastered-but-due included) + up to 12 new words from the
+   current week (articles `der/die/das` ride along as a mode).
 3. **verbs** — `VerbsTrainer.startSession({ type:'due' })` (repetition first); falls back to
    `{ type:'filter', filter:'all' }` (due + some new) when nothing is due.
 4. **ai** — an in-flow chat (reuses `gemini.js` / `ai-config.js` / `markdown.js` / `chat.css`),
