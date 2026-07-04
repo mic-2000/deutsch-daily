@@ -61,7 +61,7 @@ model (`DAYS` / `TOTAL_DAYS` / `getLocalizedDay`) is `assets/js/planner-data.js`
   (§11)
 - **Bump the vocab `version`/`KEY` only on an incompatible format change — and write a migration.**
   (§9)
-- **Preserve the defensive patterns:** clipboard fallback, `onvoiceschanged` listener, in-page
+- **Preserve the defensive patterns:** `onvoiceschanged` listener, in-page
   confirm modal (never native `confirm()`), and never swallow handler errors (surface via
   `showToast`). (§12)
 - **PWA shell:** the app is installable — `manifest.webmanifest` + `sw.js` (root) + `assets/js/pwa.js`

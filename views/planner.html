@@ -54,13 +54,13 @@
    ========================================================================== */
 let lessonsCache = {};   // { day: [ {role,text}, ... ] }
 let summaryCache = {};   // { week: [ {role,text}, ... ] }
-let chatState = { loading: false, showKeyModal: false, summaryWeek: null };
+let chatState = { loading: false, showKeyModal: false, summaryWeek: null, pendingLessonDay: null };
 
 /* getGeminiKey() + geminiRequest() live in assets/js/gemini.js. Key storage, validation, the
    connect modal and the save/remove path live in assets/js/gemini-key.js (window.GeminiKey) —
    shared with settings/today/welcome/collections. */
 function openKeyModal()  { chatState.showKeyModal = true;  render(); }
-function closeKeyModal() { chatState.showKeyModal = false; render(); }
+function closeKeyModal() { chatState.showKeyModal = false; chatState.pendingLessonDay = null; render(); }
 function clearChat(day) {
   delete lessonsCache[day];
   deleteLessonFromCloud(day);
@@ -170,7 +170,15 @@ function scrollChatToBottom() {
 /* escHtml / inlineMd / renderMdTable / renderMd live in assets/js/markdown.js (shared with /today). */
 
 function renderKeyModal() {
-  return GeminiKey.renderModal({ withRemove: true, onClose: closeKeyModal, onSaved: closeKeyModal });
+  return GeminiKey.renderModal({ withRemove: true, onClose: closeKeyModal, onSaved: onKeySaved });
+}
+function onKeySaved(r) {
+  chatState.showKeyModal = false;
+  const day = chatState.pendingLessonDay;
+  chatState.pendingLessonDay = null;
+  if (r && r.removed) { render(); return; }
+  if (day != null) { startAILesson(day); return; }   // start the lesson the user just tried to open
+  render();
 }
 
 function renderSummaryModal() {
@@ -192,13 +200,9 @@ function renderSummaryModal() {
 }
 
 function renderAiSection(d) {
-  if (!getGeminiKey()) {
-    return `<div class="ai-section ai-no-key-row">
-  <span class="ai-no-key-text">${T('ai_no_key')}</span>
-  <button class="ai-key-link" onclick="openKeyModal()">${T('ai_setup_key')}</button>
-</div>`;
-  }
+  if (!getGeminiKey()) return '';
   const msgs = getDayMessages(d.day);
+  if (msgs.length === 0) return '';   // the day card's "Start lesson" button drives the first turn
   const weekDone = isWeekComplete(d.week);
   const summaryBtn = weekDone
     ? (summaryHasReply(d.week)
@@ -209,17 +213,9 @@ function renderAiSection(d) {
     <span class="ai-chat-title">AI Lehrer · ${T('planner_week', d.week)}</span>
     <div class="ai-chat-actions">
       ${summaryBtn}
-      ${msgs.length ? `<button class="ai-link-btn" onclick="clearChat(${d.day})">${T('ai_clear')}</button>` : ''}
-      <button class="ai-link-btn ai-settings-btn" onclick="openKeyModal()">⚙</button>
+      <button class="ai-link-btn" onclick="clearChat(${d.day})">${T('ai_clear')}</button>
     </div>
   </div>`;
-
-  if (msgs.length === 0) {
-    return `<div class="ai-section">
-  ${header}
-  <button class="btn done" onclick="startAILesson(${d.day})">${T('ai_start_lesson')}</button>
-</div>`;
-  }
   // The pinned first reply (the day's explanation) is shown highlighted at the top; seed prompts are
   // hidden; everything else is the follow-up chat. Old lessons (no flags) all fall through to chat.
   const pinned = msgs.filter(m => m.role === 'model' && m.pinned);
@@ -285,32 +281,10 @@ ${T('planner_clip_prompt')}`;
 }
 
 function focusLesson(day) {
+  if (!getGeminiKey()) { chatState.pendingLessonDay = day; openKeyModal(); return; }
   if (getDayMessages(day).length === 0) { startAILesson(day); return; }
   const el = document.getElementById('chatMessages');
   if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-}
-
-function copyPlan(day) {
-  const d = getLocalizedDay(DAYS[day - 1]);
-  const text = buildPlanText(d);
-  const onOk = () => {
-    showToast(T('planner_toast_copied'));
-    const btn = document.getElementById('copyBtn');
-    if (btn) { btn.classList.add('copied'); btn.textContent = T('planner_copied'); setTimeout(render, 1400); }
-  };
-  if (navigator.clipboard && navigator.clipboard.writeText) {
-    navigator.clipboard.writeText(text).then(onOk).catch(() => fallbackCopy(text, onOk));
-  } else {
-    fallbackCopy(text, onOk);
-  }
-}
-function fallbackCopy(text, onOk) {
-  const ta = document.createElement('textarea');
-  ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
-  document.body.appendChild(ta); ta.focus(); ta.select();
-  try { document.execCommand('copy'); onOk(); }
-  catch(e) { showToast(T('planner_toast_copy_fail')); }
-  document.body.removeChild(ta);
 }
 
 /* ==========================================================================
@@ -389,9 +363,7 @@ function renderDayCard(d, isDone) {
     </div>
 
     <div class="day-actions">
-      ${getGeminiKey()
-        ? `<button class="btn ai-start" onclick="focusLesson(${d.day})">${T('ai_start_lesson')}</button>`
-        : `<button class="btn copy" id="copyBtn" onclick="copyPlan(${d.day})">${T('planner_copy')}</button>`}
+      <button class="btn ai-start" onclick="focusLesson(${d.day})">${T('ai_start_lesson')}</button>
       <button class="btn done ${isDone ? 'is-done' : ''}" onclick="toggleDone(${d.day})">${isDone ? T('planner_undo') : T('planner_done')}</button>
     </div>
   </div>`;
@@ -459,7 +431,6 @@ document.addEventListener('keydown', e => {
   if (chatState.showKeyModal || chatState.summaryWeek !== null) return;
   if (e.key === 'ArrowLeft') goDay(state.viewingDay - 1);
   else if (e.key === 'ArrowRight') goDay(state.viewingDay + 1);
-  else if (e.key === 'c' || e.key === 'C' || e.key === 'с' || e.key === 'С') copyPlan(state.viewingDay);
 });
 
 // Paint the shell right away in the saved language (locale is a fast static file) so the

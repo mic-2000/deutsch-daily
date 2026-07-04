@@ -14,8 +14,9 @@ over a ~6-month, 24-week plan. The system has three built-in trainers, a user-co
 and a built-in AI tutor:
 
 1. **Planner** (`/planner`) — one study day = one main task (118 days total).
-   Contains a **built-in AI tutor chat** (Gemini). When no Gemini key is set, the day card instead
-   shows a clipboard-copy button for the day plan (fallback for pasting into an external chat).
+   Contains a **built-in AI tutor chat** (Gemini). The day card's primary action is always
+   "Start lesson with AI"; with no key set it opens the key modal first and auto-starts the lesson
+   once a key is saved.
 2. **Vocabulary trainer** (`/vocab`) — 504 words across 24 weekly sets, four exercise modes
    mixed together (the fourth, **plural**, is an opt-in second Leitner track for nouns), Leitner
    spaced repetition, and text-to-speech.
@@ -698,18 +699,11 @@ const CLOUD_FIELD = 'planner_data';
 - `save()` → `saveToCloud()`. There is no localStorage copy of progress; the cloud row is the
   source of truth (loaded by `initApp` via `applyCloudData`).
 
-### Clipboard text
+### Day-plan text (AI seed)
 `buildPlanText(d)` assembles the localized day plan (header with day/week, week theme, grammar
 focus, today's task with its type label, the daily vocab habit, and a closing instruction).
-All fragments come from `T('planner_clip_*', ...)`.
-
-`copyPlan(day)` uses `navigator.clipboard.writeText` with a fallback to a hidden `<textarea>` +
-`document.execCommand('copy')` (`fallbackCopy`). On success it flashes the button to "copied" (when
-the button is present — with a Gemini key set the copy button is hidden, but the `c` shortcut still
-copies).
-
-The same `buildPlanText(d)` output is also used as the **first user message** sent to Gemini when
-`startAILesson(day)` is called — clipboard copy and AI chat both derive from the same source.
+All fragments come from `T('planner_clip_*', ...)`. It is used only as the **first user message**
+sent to Gemini when `startAILesson(day)` is called — there is no clipboard-copy feature anymore.
 
 ### AI Lehrer chat
 
@@ -717,7 +711,7 @@ The same `buildPlanText(d)` output is also used as the **first user message** se
 ```js
 let lessonsCache = {};  // { day: [{role, text}, …] }  — live in-memory copy of lessons table
 let summaryCache = {};  // { week: [{role, text}, …] } — weekly summaries (day = -week in DB)
-let chatState = { loading: false, showKeyModal: false, summaryWeek: null };
+let chatState = { loading: false, showKeyModal: false, summaryWeek: null, pendingLessonDay: null };
 ```
 
 **API key:** stored in `localStorage['gemini_key']` (user-provided). `getGeminiKey()` reads it;
@@ -768,9 +762,12 @@ Inline-only renderer used for model messages. Handles: headings (`#`–`####`), 
 `div`), and paragraphs. Inline: `**bold**`, `*italic*`, `` `code` ``, safe links. All content is
 HTML-escaped before inline markup is applied.
 
-**UI functions:** `renderAiSection(d)` renders either a "no key" nudge, a "Start lesson" button
-(empty cache), or the full chat view (messages + input row). `renderKeyModal()` and
-`renderSummaryModal()` append overlays inside the `#app` markup.
+**UI functions:** `renderAiSection(d)` renders the full chat view (pinned explanation + messages +
+input row) once the day has lesson messages; it returns nothing when there's no key or an empty
+cache (the day card's "Start lesson with AI" button drives the first turn — for a keyless user it
+opens `renderKeyModal()`, whose `onKeySaved` auto-starts the pending lesson via
+`chatState.pendingLessonDay`). `renderKeyModal()` and `renderSummaryModal()` append overlays inside
+the `#app` markup.
 
 ### Actions & render
 - `goDay(n)`, `goToCurrent()`, `jumpWeek(weekNum)` — navigation (clamped to `[1, TOTAL_DAYS]`).
@@ -1011,8 +1008,6 @@ the editorial hero, the section grids, and the decorative `lp*`-prefixed keyfram
 The app targets an **HTTPS browser session** (Vercel + Supabase). The following defensive patterns
 still matter and should be preserved:
 
-- **Clipboard fallback** — `navigator.clipboard` may be unavailable / require a secure context;
-  keep the hidden-`<textarea>` + `execCommand('copy')` fallback (`fallbackCopy`).
 - **Speech voices load async** — `getVoices()` is often empty on first call; keep the
   `onvoiceschanged` listener.
 - **In-page confirm modal** — keep using `state.confirm`, not the native `confirm()`.
