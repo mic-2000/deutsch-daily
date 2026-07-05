@@ -1,0 +1,110 @@
+/* Week 7 — My day; separable verbs (A1, phase A1.2).
+   Curriculum source: private/curriculum-redesign-2026-07.md §6 days 31–35 (theme now BEFORE Perfekt).
+   Vocab: daily-routine nouns + time adverbs (der Morgen/Abend/zuerst/dann reused from old v1 W5,
+   das Frühstück from old v1 W2, oft from old v1 W3; rest new). */
+module.exports = {
+  n: 7,
+  phase: 'A1.2',
+  level: 'A1',
+  theme:      { en: 'My day; separable verbs', ru: 'Мой день; отделяемые глаголы', ua: 'Мій день; відокремлювані дієслова' },
+  grammar:    { en: 'Separable verbs, separable vs. inseparable, connectors zuerst/dann/danach/schließlich',
+                ru: 'Отделяемые глаголы, отделяемые vs. неотделяемые, коннекторы zuerst/dann/danach/schließlich',
+                ua: 'Відокремлювані дієслова, відокремлювані vs. невідокремлювані, конектори zuerst/dann/danach/schließlich' },
+  vocabTheme: { en: 'daily routine', ru: 'распорядок дня', ua: 'розпорядок дня' },
+
+  vocab: [
+    { de: 'der Tag',        en: 'day',              ru: 'день',                     ua: 'день' },
+    { de: 'der Morgen',     en: 'morning',          ru: 'утро',                     ua: 'ранок' },
+    { de: 'der Vormittag',  en: 'morning / before noon', ru: 'первая половина дня',  ua: 'перша половина дня' },
+    { de: 'der Mittag',     en: 'noon',             ru: 'полдень',                  ua: 'полудень' },
+    { de: 'der Nachmittag', en: 'afternoon',        ru: 'вторая половина дня',      ua: 'друга половина дня' },
+    { de: 'der Abend',      en: 'evening',          ru: 'вечер',                    ua: 'вечір' },
+    { de: 'die Nacht',      en: 'night',            ru: 'ночь',                     ua: 'ніч' },
+    { de: 'der Wecker',     en: 'alarm clock',      ru: 'будильник',                ua: 'будильник' },
+    { de: 'das Frühstück',  en: 'breakfast',        ru: 'завтрак',                  ua: 'сніданок' },
+    { de: 'die Dusche',     en: 'shower',           ru: 'душ',                      ua: 'душ' },
+    { de: 'die Arbeit',     en: 'work',             ru: 'работа',                   ua: 'робота' },
+    { de: 'zuerst',         en: 'first',            ru: 'сначала',                  ua: 'спочатку' },
+    { de: 'dann',           en: 'then',             ru: 'потом',                    ua: 'потім' },
+    { de: 'danach',         en: 'afterwards',       ru: 'после этого',              ua: 'після цього' },
+    { de: 'schließlich',    en: 'finally',          ru: 'наконец',                  ua: 'нарешті' },
+    { de: 'früh',           en: 'early',            ru: 'рано',                     ua: 'рано' },
+    { de: 'spät',           en: 'late',             ru: 'поздно',                   ua: 'пізно' },
+    { de: 'immer',          en: 'always',           ru: 'всегда',                   ua: 'завжди' },
+    { de: 'oft',            en: 'often',            ru: 'часто',                    ua: 'часто' },
+    { de: 'manchmal',       en: 'sometimes',        ru: 'иногда',                   ua: 'іноді' },
+  ],
+
+  verbFocus: ['aufstehen', 'anrufen', 'einkaufen', 'fernsehen', 'aufräumen', 'duschen',
+              'mitbringen', 'mitkommen', 'anfangen', 'aufhören', 'aufmachen', 'zumachen', 'zuhören', 'abholen'],
+  receptiveVerbs: ['aufräumen', 'duschen', 'mitbringen', 'mitkommen', 'anfangen', 'aufhören', 'aufmachen', 'zumachen', 'zuhören'],
+
+  tasks: [
+    { type: 'grammar', grammarFocus: 'Trennbare Verben', drill: 'trennbare-verben',
+      text: { en: 'Learn separable verbs — the prefix moves to the end of the clause (aufstehen → ich stehe auf).',
+              ru: 'Выучите отделяемые глаголы — приставка уходит в конец предложения (aufstehen → ich stehe auf).',
+              ua: 'Вивчіть відокремлювані дієслова — префікс іде в кінець речення (aufstehen → ich stehe auf).' } },
+    { type: 'grammar', grammarFocus: 'Trennbar vs. untrennbar', drill: 'trennbar-untrennbar',
+      text: { en: 'More separable verbs, plus the inseparable prefixes be-/ver-/er- (these never split off).',
+              ru: 'Ещё отделяемые глаголы и неотделяемые приставки be-/ver-/er- (они никогда не отделяются).',
+              ua: 'Ще відокремлювані дієслова та невідокремлювані префікси be-/ver-/er- (вони ніколи не відокремлюються).' } },
+    { type: 'grammar', grammarFocus: 'Konnektoren zuerst/dann/danach/schließlich', drill: 'konnektoren-abfolge',
+      text: { en: 'Sequence your day with zuerst, dann, danach and schließlich (the verb stays in position 2).',
+              ru: 'Выстройте день по порядку с zuerst, dann, danach и schließlich (глагол остаётся на 2-м месте).',
+              ua: 'Побудуйте день по порядку з zuerst, dann, danach і schließlich (дієслово лишається на 2-му місці).' } },
+    { type: 'write',
+      text: { en: 'Write "Mein Tag" — 8–10 sentences about your daily routine.',
+              ru: 'Напишите «Mein Tag» — 8–10 предложений о своём распорядке дня.',
+              ua: 'Напишіть «Mein Tag» — 8–10 речень про свій розпорядок дня.' },
+      checklist: [
+        { en: 'Use at least five separable verbs.', ru: 'Используйте минимум пять отделяемых глаголов.', ua: 'Використайте щонайменше п’ять відокремлюваних дієслів.' },
+        { en: 'Link the steps with zuerst, dann and danach.', ru: 'Свяжите шаги с zuerst, dann и danach.', ua: 'Зв’яжіть кроки з zuerst, dann і danach.' },
+        { en: 'Mention at least one time of day (am Morgen, am Abend).', ru: 'Упомяните хотя бы одно время суток (am Morgen, am Abend).', ua: 'Згадайте хоча б один час доби (am Morgen, am Abend).' },
+      ] },
+    { type: 'review', drill: 'trennbare-verben',
+      text: { en: 'Review week 7 and do a time dictation: write down the times you hear.',
+              ru: 'Повторите неделю 7 и сделайте диктант времени: запишите время, которое слышите.',
+              ua: 'Повторіть тиждень 7 і зробіть диктант часу: запишіть час, який чуєте.' } },
+  ],
+
+  canDo: [
+    { en: 'I can talk about my daily routine with separable verbs.', ru: 'Я могу рассказать о своём распорядке дня с отделяемыми глаголами.', ua: 'Я можу розповісти про свій розпорядок дня з відокремлюваними дієсловами.' },
+    { en: 'I can tell separable and inseparable verbs apart.', ru: 'Я могу отличить отделяемые и неотделяемые глаголы.', ua: 'Я можу відрізнити відокремлювані та невідокремлювані дієслова.' },
+    { en: 'I can put events in order with zuerst, dann, danach and schließlich.', ru: 'Я могу расставить события по порядку с zuerst, dann, danach и schließlich.', ua: 'Я можу розставити події по порядку з zuerst, dann, danach і schließlich.' },
+    { en: 'I can write a short text about my day.', ru: 'Я могу написать короткий текст о своём дне.', ua: 'Я можу написати короткий текст про свій день.' },
+    { en: 'I can review the week and write down times I hear.', ru: 'Я могу повторить неделю и записать время на слух.', ua: 'Я можу повторити тиждень і записати час на слух.' },
+  ],
+
+  drills: {
+    'trennbare-verben': {
+      level: 'A1',
+      concept: { en: 'Separable verbs — prefix at the end', ru: 'Отделяемые глаголы — приставка в конце', ua: 'Відокремлювані дієслова — префікс у кінці' },
+      prompt:  { en: 'Put the separable verb in the correct form.', ru: 'Поставьте отделяемый глагол в правильную форму.', ua: 'Поставте відокремлюване дієслово в правильну форму.' },
+      items: [
+        { type: 'cloze',  de: 'Ich stehe um sieben Uhr ___. (aufstehen)', answer: 'auf' },
+        { type: 'cloze',  de: 'Am Abend sehe ich ___. (fernsehen)', answer: 'fern' },
+        { type: 'order',  answer: ['Ich', 'kaufe', 'am', 'Morgen', 'ein'] },
+      ],
+    },
+    'trennbar-untrennbar': {
+      level: 'A1',
+      concept: { en: 'Separable vs. inseparable prefixes', ru: 'Отделяемые vs. неотделяемые приставки', ua: 'Відокремлювані vs. невідокремлювані префікси' },
+      prompt:  { en: 'Decide whether the prefix separates.', ru: 'Определите, отделяется ли приставка.', ua: 'Визначте, чи відокремлюється префікс.' },
+      items: [
+        { type: 'choice', de: '___ du deine Freunde mit? (mitbringen)', answer: 'Bringst', options: ['Bringst', 'Mitbringst', 'Bringmitst'] },
+        { type: 'cloze',  de: 'Ich fange die Arbeit um neun ___. (anfangen)', answer: 'an' },
+        { type: 'choice', de: 'Er ___ das Buch. (verstehen — untrennbar)', answer: 'versteht', options: ['steht ver', 'versteht', 'ver steht'] },
+      ],
+    },
+    'konnektoren-abfolge': {
+      level: 'A1',
+      concept: { en: 'Sequence connectors and verb position 2', ru: 'Коннекторы последовательности и глагол на 2-м месте', ua: 'Конектори послідовності та дієслово на 2-му місці' },
+      prompt:  { en: 'Choose the connector or build the sentence.', ru: 'Выберите коннектор или соберите предложение.', ua: 'Виберіть конектор або складіть речення.' },
+      items: [
+        { type: 'choice', de: '___ stehe ich auf, dann dusche ich.', answer: 'Zuerst', options: ['Zuerst', 'Schließlich', 'Danach'] },
+        { type: 'cloze',  de: 'Zuerst frühstücke ich, ___ gehe ich zur Arbeit. (then)', answer: 'dann' },
+        { type: 'order',  answer: ['Danach', 'trinke', 'ich', 'einen', 'Kaffee'] },
+      ],
+    },
+  },
+};

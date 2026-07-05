@@ -1,0 +1,115 @@
+/* Week 9 — Transport; two-way prepositions (A1, phase A1.2).
+   Curriculum source: private/curriculum-redesign-2026-07.md §6 days 41–45.
+   Vocab: transport + travel nouns reused from old v1 W6 (data/vocab.js[6] + locales; the verbs from
+   that set live in verbFocus), plus new travel/route nouns. */
+module.exports = {
+  n: 9,
+  phase: 'A1.2',
+  level: 'A1',
+  theme:      { en: 'Transport; two-way prepositions', ru: 'Транспорт; Wechselpräpositionen', ua: 'Транспорт; Wechselpräpositionen' },
+  grammar:    { en: 'Wechselpräpositionen: Wo?+Dativ / Wohin?+Akkusativ + the other six; stellen/legen vs. stehen/liegen',
+                ru: 'Wechselpräpositionen: Wo?+Dativ / Wohin?+Akkusativ + остальные шесть; stellen/legen vs. stehen/liegen',
+                ua: 'Wechselpräpositionen: Wo?+Dativ / Wohin?+Akkusativ + решта шість; stellen/legen vs. stehen/liegen' },
+  vocabTheme: { en: 'transport, travel', ru: 'транспорт, путешествия', ua: 'транспорт, подорожі' },
+
+  vocab: [
+    { de: 'das Auto',         en: 'car',            ru: 'машина',      ua: 'машина' },
+    { de: 'der Bus',          en: 'bus',            ru: 'автобус',     ua: 'автобус' },
+    { de: 'die U-Bahn',       en: 'underground',    ru: 'метро',       ua: 'метро' },
+    { de: 'die S-Bahn',       en: 'suburban train', ru: 'электричка',  ua: 'приміська електричка' },
+    { de: 'die Straßenbahn',  en: 'tram',           ru: 'трамвай',     ua: 'трамвай' },
+    { de: 'das Fahrrad',      en: 'bicycle',        ru: 'велосипед',   ua: 'велосипед' },
+    { de: 'der Zug',          en: 'train',          ru: 'поезд',       ua: 'поїзд' },
+    { de: 'das Flugzeug',     en: 'airplane',       ru: 'самолёт',     ua: 'літак' },
+    { de: 'das Taxi',         en: 'taxi',           ru: 'такси',       ua: 'таксі' },
+    { de: 'die Haltestelle',  en: 'stop',           ru: 'остановка',   ua: 'зупинка' },
+    { de: 'der Bahnhof',      en: 'train station',  ru: 'вокзал',      ua: 'залізничний вокзал' },
+    { de: 'der Flughafen',    en: 'airport',        ru: 'аэропорт',    ua: 'аеропорт' },
+    { de: 'die Fahrkarte',    en: 'ticket',         ru: 'билет',       ua: 'квиток' },
+    { de: 'die Reise',        en: 'trip',           ru: 'путешествие', ua: 'подорож' },
+    { de: 'der Urlaub',       en: 'vacation',       ru: 'отпуск',      ua: 'відпустка' },
+    { de: 'das Hotel',        en: 'hotel',          ru: 'отель',       ua: 'готель' },
+    { de: 'der Koffer',       en: 'suitcase',       ru: 'чемодан',     ua: 'валіза' },
+    { de: 'der Rucksack',     en: 'backpack',       ru: 'рюкзак',      ua: 'рюкзак' },
+    { de: 'der Weg',          en: 'way / path',     ru: 'путь',        ua: 'шлях' },
+    { de: 'die Fahrt',        en: 'ride / journey', ru: 'поездка',     ua: 'поїздка' },
+    { de: 'der Fahrplan',     en: 'timetable',      ru: 'расписание',  ua: 'розклад' },
+    { de: 'der Ausgang',      en: 'exit',           ru: 'выход',       ua: 'вихід' },
+    { de: 'der Eingang',      en: 'entrance',       ru: 'вход',        ua: 'вхід' },
+    { de: 'unterwegs',        en: 'on the way',     ru: 'в пути',      ua: 'у дорозі' },
+    { de: 'pünktlich',        en: 'punctual / on time', ru: 'вовремя', ua: 'вчасно' },
+    { de: 'die Verspätung',   en: 'delay',          ru: 'опоздание',   ua: 'запізнення' },
+  ],
+
+  verbFocus: ['einsteigen', 'aussteigen', 'umsteigen', 'abfahren', 'ankommen',
+              'stellen', 'legen', 'stehen', 'liegen', 'hängen'],
+
+  tasks: [
+    { type: 'grammar', grammarFocus: 'Wechselpräpositionen: Wo? + Dativ', drill: 'wechselpraep-wo',
+      text: { en: 'Two-way prepositions with Wo? (location, no movement) take the Dativ: in/an/auf + dem/der.',
+              ru: 'Предлоги двойного управления с Wo? (место, без движения) требуют Dativ: in/an/auf + dem/der.',
+              ua: 'Прийменники подвійного керування з Wo? (місце, без руху) вимагають Dativ: in/an/auf + dem/der.' } },
+    { type: 'grammar', grammarFocus: 'Wechselpräpositionen: Wohin? + Akkusativ', drill: 'wechselpraep-wohin',
+      text: { en: 'The same prepositions with Wohin? (direction, movement) take the Akkusativ: in/an/auf + den/die/das.',
+              ru: 'Те же предлоги с Wohin? (направление, движение) требуют Akkusativ: in/an/auf + den/die/das.',
+              ua: 'Ті самі прийменники з Wohin? (напрямок, рух) вимагають Akkusativ: in/an/auf + den/die/das.' } },
+    { type: 'grammar', grammarFocus: 'Die übrigen sechs Wechselpräpositionen', drill: 'wechselpraep-sechs',
+      text: { en: 'Learn the other six: hinter/neben/über/unter/vor/zwischen, and the contractions im/am/ins.',
+              ru: 'Выучите остальные шесть: hinter/neben/über/unter/vor/zwischen и слияния im/am/ins.',
+              ua: 'Вивчіть решту шість: hinter/neben/über/unter/vor/zwischen та злиття im/am/ins.' } },
+    { type: 'write', grammarFocus: 'stellen/legen vs. stehen/liegen',
+      text: { en: 'Warm up stellen/legen (Wohin?+Akk) vs. stehen/liegen (Wo?+Dativ), then write 8 sentences about your way to work, including "ich bin … gefahren".',
+              ru: 'Разомнитесь на stellen/legen (Wohin?+Akk) vs. stehen/liegen (Wo?+Dativ), затем напишите 8 предложений о дороге на работу, включая «ich bin … gefahren».',
+              ua: 'Розімніться на stellen/legen (Wohin?+Akk) vs. stehen/liegen (Wo?+Dativ), потім напишіть 8 речень про дорогу на роботу, включно з «ich bin … gefahren».' },
+      checklist: [
+        { en: 'Use both a Wo?-sentence and a Wohin?-sentence.', ru: 'Используйте предложение с Wo? и предложение с Wohin?.', ua: 'Використайте речення з Wo? і речення з Wohin?.' },
+        { en: 'Include at least three means of transport.', ru: 'Включите минимум три вида транспорта.', ua: 'Включіть щонайменше три види транспорту.' },
+        { en: 'Use one Perfekt sentence with sein (ich bin … gefahren).', ru: 'Используйте одно предложение Perfekt с sein (ich bin … gefahren).', ua: 'Використайте одне речення Perfekt із sein (ich bin … gefahren).' },
+      ] },
+    { type: 'review', drill: 'wechselpraep-wohin',
+      text: { en: 'Review week 9 with the strong-verb audio triad, then take a dictation of routes and times.',
+              ru: 'Повторите неделю 9 с аудио-триадой сильных глаголов, затем запишите под диктовку маршруты и время.',
+              ua: 'Повторіть тиждень 9 з аудіо-тріадою сильних дієслів, потім запишіть під диктовку маршрути й час.' } },
+  ],
+
+  canDo: [
+    { en: 'I can say where something is with Wo? + Dativ.', ru: 'Я могу сказать, где что-то находится, с Wo? + Dativ.', ua: 'Я можу сказати, де щось знаходиться, з Wo? + Dativ.' },
+    { en: 'I can say where something is going with Wohin? + Akkusativ.', ru: 'Я могу сказать, куда что-то движется, с Wohin? + Akkusativ.', ua: 'Я можу сказати, куди щось рухається, з Wohin? + Akkusativ.' },
+    { en: 'I can use all nine two-way prepositions.', ru: 'Я могу использовать все девять предлогов двойного управления.', ua: 'Я можу використовувати всі дев’ять прийменників подвійного керування.' },
+    { en: 'I can describe my way to work with transport words.', ru: 'Я могу описать дорогу на работу со словами о транспорте.', ua: 'Я можу описати дорогу на роботу зі словами про транспорт.' },
+    { en: 'I can review transport words and understand routes I hear.', ru: 'Я могу повторить слова о транспорте и понять маршруты на слух.', ua: 'Я можу повторити слова про транспорт і зрозуміти маршрути на слух.' },
+  ],
+
+  drills: {
+    'wechselpraep-wo': {
+      level: 'A1',
+      concept: { en: 'Two-way prepositions with Wo? → Dativ', ru: 'Предлоги двойного управления с Wo? → Dativ', ua: 'Прийменники подвійного керування з Wo? → Dativ' },
+      prompt:  { en: 'Fill in the Dativ (Wo?).', ru: 'Вставьте Dativ (Wo?).', ua: 'Вставте Dativ (Wo?).' },
+      items: [
+        { type: 'cloze',  de: 'Das Auto steht ___ Bahnhof. (an + dem)', answer: 'am' },
+        { type: 'choice', de: 'Der Koffer ist ___ Zug. (in)', answer: 'im', options: ['im', 'in den', 'ins'] },
+        { type: 'cloze',  de: 'Die Fahrkarte liegt ___ Tisch. (auf + dem)', answer: 'auf dem' },
+      ],
+    },
+    'wechselpraep-wohin': {
+      level: 'A1',
+      concept: { en: 'Two-way prepositions with Wohin? → Akkusativ', ru: 'Предлоги двойного управления с Wohin? → Akkusativ', ua: 'Прийменники подвійного керування з Wohin? → Akkusativ' },
+      prompt:  { en: 'Fill in the Akkusativ (Wohin?).', ru: 'Вставьте Akkusativ (Wohin?).', ua: 'Вставте Akkusativ (Wohin?).' },
+      items: [
+        { type: 'choice', de: 'Ich steige ___ Bus ein. (in)', answer: 'in den', options: ['in dem', 'in den', 'im'] },
+        { type: 'cloze',  de: 'Er legt die Fahrkarte ___ Tisch. (auf + den)', answer: 'auf den' },
+        { type: 'order',  answer: ['Ich', 'fahre', 'in', 'die', 'Stadt'] },
+      ],
+    },
+    'wechselpraep-sechs': {
+      level: 'A1',
+      concept: { en: 'The other six two-way prepositions', ru: 'Остальные шесть предлогов двойного управления', ua: 'Решта шість прийменників подвійного керування' },
+      prompt:  { en: 'Choose the right preposition.', ru: 'Выберите правильный предлог.', ua: 'Виберіть правильний прийменник.' },
+      items: [
+        { type: 'choice', de: 'Das Fahrrad steht ___ dem Haus. (behind)', answer: 'hinter', options: ['hinter', 'über', 'zwischen'] },
+        { type: 'cloze',  de: 'Die Lampe hängt ___ dem Tisch. (over)', answer: 'über' },
+        { type: 'choice', de: 'Der Bus hält ___ der Bank und der Post. (between)', answer: 'zwischen', options: ['neben', 'zwischen', 'vor'] },
+      ],
+    },
+  },
+};

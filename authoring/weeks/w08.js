@@ -1,0 +1,112 @@
+/* Week 8 — Perfekt (A1, phase A1.2).
+   Curriculum source: private/curriculum-redesign-2026-07.md §6 days 36–40.
+   Vocab: 25 Infinitiv–Partizip II pairs reused verbatim from old v1 W5 (data/vocab.js[5] + locales). */
+module.exports = {
+  n: 8,
+  phase: 'A1.2',
+  level: 'A1',
+  theme:      { en: 'Perfekt', ru: 'Перфект (Perfekt)', ua: 'Перфект (Perfekt)' },
+  grammar:    { en: 'Partizip II (3 models), prefixes (-ge- infix, be-/ver-/er-), haben vs. sein',
+                ru: 'Partizip II (3 модели), приставки (инфикс -ge-, be-/ver-/er-), haben vs. sein',
+                ua: 'Partizip II (3 моделі), префікси (інфікс -ge-, be-/ver-/er-), haben vs. sein' },
+  vocabTheme: { en: 'Infinitive–Partizip II pairs', ru: 'пары Infinitiv–Partizip II', ua: 'пари Infinitiv–Partizip II' },
+
+  vocab: [
+    { de: 'aufstehen — aufgestanden',    en: 'to get up',       ru: 'вставать',      ua: 'вставати' },
+    { de: 'frühstücken — gefrühstückt',  en: 'to have breakfast', ru: 'завтракать',  ua: 'снідати' },
+    { de: 'arbeiten — gearbeitet',       en: 'to work',         ru: 'работать',      ua: 'працювати' },
+    { de: 'essen — gegessen',            en: 'to eat',          ru: 'есть',          ua: 'їсти' },
+    { de: 'trinken — getrunken',         en: 'to drink',        ru: 'пить',          ua: 'пити' },
+    { de: 'lernen — gelernt',            en: 'to learn',        ru: 'учить',         ua: 'вчити' },
+    { de: 'lesen — gelesen',             en: 'to read',         ru: 'читать',        ua: 'читати' },
+    { de: 'schreiben — geschrieben',     en: 'to write',        ru: 'писать',        ua: 'писати' },
+    { de: 'sprechen — gesprochen',       en: 'to speak',        ru: 'говорить',      ua: 'говорити' },
+    { de: 'fahren — gefahren (sein)',    en: 'to drive / travel', ru: 'ехать',       ua: 'їхати' },
+    { de: 'fliegen — geflogen (sein)',   en: 'to fly',          ru: 'лететь',        ua: 'летіти' },
+    { de: 'laufen — gelaufen (sein)',    en: 'to run',          ru: 'бежать',        ua: 'бігти' },
+    { de: 'kommen — gekommen (sein)',    en: 'to come',         ru: 'приходить',     ua: 'приходити' },
+    { de: 'gehen — gegangen (sein)',     en: 'to go',           ru: 'идти',          ua: 'іти' },
+    { de: 'bleiben — geblieben (sein)',  en: 'to stay',         ru: 'оставаться',    ua: 'залишатися' },
+    { de: 'sein — gewesen (sein)',       en: 'to be',           ru: 'быть',          ua: 'бути' },
+    { de: 'werden — geworden (sein)',    en: 'to become',       ru: 'становиться',   ua: 'ставати' },
+    { de: 'machen — gemacht',            en: 'to do / make',    ru: 'делать',        ua: 'робити' },
+    { de: 'sehen — gesehen',             en: 'to see',          ru: 'видеть',        ua: 'бачити' },
+    { de: 'finden — gefunden',           en: 'to find',         ru: 'находить',      ua: 'знаходити' },
+    { de: 'geben — gegeben',             en: 'to give',         ru: 'давать',        ua: 'давати' },
+    { de: 'nehmen — genommen',           en: 'to take',         ru: 'брать',         ua: 'брати' },
+    { de: 'verstehen — verstanden',      en: 'to understand',   ru: 'понимать',      ua: 'розуміти' },
+    { de: 'wissen — gewusst',            en: 'to know',         ru: 'знать',         ua: 'знати' },
+    { de: 'denken — gedacht',            en: 'to think',        ru: 'думать',        ua: 'думати' },
+  ],
+
+  verbFocus: ['fahren', 'gehen', 'kommen', 'bleiben', 'laufen', 'fliegen', 'sein', 'werden'],
+
+  tasks: [
+    { type: 'grammar', grammarFocus: 'Partizip II — 3 Modelle', drill: 'partizip-modelle',
+      text: { en: 'Learn the three Partizip II patterns: ge-…-t (weak), ge-…-en (strong), -ieren without ge-.',
+              ru: 'Выучите три модели Partizip II: ge-…-t (слабые), ge-…-en (сильные), -ieren без ge-.',
+              ua: 'Вивчіть три моделі Partizip II: ge-…-t (слабкі), ge-…-en (сильні), -ieren без ge-.' } },
+    { type: 'grammar', grammarFocus: 'Partizip II mit Präfixen', drill: 'partizip-praefixe',
+      text: { en: 'Partizip II with prefixes: separable verbs take -ge- as an infix (aufgestanden); be-/ver-/er- take no ge-.',
+              ru: 'Partizip II с приставками: отделяемые берут инфикс -ge- (aufgestanden); be-/ver-/er- без ge-.',
+              ua: 'Partizip II з префіксами: відокремлювані беруть інфікс -ge- (aufgestanden); be-/ver-/er- без ge-.' } },
+    { type: 'grammar', grammarFocus: 'haben vs. sein im Perfekt', drill: 'perfekt-haben-sein',
+      text: { en: 'Choose the auxiliary: verbs of motion, change of state, and bleiben/sein use sein; most others use haben.',
+              ru: 'Выберите вспомогательный глагол: движение, смена состояния и bleiben/sein — sein; большинство остальных — haben.',
+              ua: 'Виберіть допоміжне дієслово: рух, зміна стану та bleiben/sein — sein; більшість інших — haben.' } },
+    { type: 'write',
+      text: { en: 'Write "Mein Wochenende" — 50–60 words in the Perfekt.',
+              ru: 'Напишите «Mein Wochenende» — 50–60 слов в Perfekt.',
+              ua: 'Напишіть «Mein Wochenende» — 50–60 слів у Perfekt.' },
+      checklist: [
+        { en: 'Use the Perfekt in every sentence.', ru: 'Используйте Perfekt в каждом предложении.', ua: 'Використайте Perfekt у кожному реченні.' },
+        { en: 'Use at least one sein-verb (bin … gefahren/gegangen).', ru: 'Используйте хотя бы один глагол с sein (bin … gefahren/gegangen).', ua: 'Використайте хоча б одне дієслово з sein (bin … gefahren/gegangen).' },
+        { en: 'Place the Partizip II at the end of the clause.', ru: 'Ставьте Partizip II в конец предложения.', ua: 'Ставте Partizip II у кінець речення.' },
+      ] },
+    { type: 'review', drill: 'perfekt-haben-sein',
+      text: { en: 'Review week 8 with an audio triad of strong verbs, then say 5–8 sentences about what you did yesterday.',
+              ru: 'Повторите неделю 8 с аудио-триадой сильных глаголов, затем скажите 5–8 предложений о том, что вы делали вчера.',
+              ua: 'Повторіть тиждень 8 з аудіо-тріадою сильних дієслів, потім скажіть 5–8 речень про те, що ви робили вчора.' } },
+  ],
+
+  canDo: [
+    { en: 'I can form the Partizip II of weak and strong verbs.', ru: 'Я могу образовать Partizip II слабых и сильных глаголов.', ua: 'Я можу утворити Partizip II слабких і сильних дієслів.' },
+    { en: 'I can form the Partizip II of verbs with prefixes.', ru: 'Я могу образовать Partizip II глаголов с приставками.', ua: 'Я можу утворити Partizip II дієслів з префіксами.' },
+    { en: 'I can choose between haben and sein in the Perfekt.', ru: 'Я могу выбрать между haben и sein в Perfekt.', ua: 'Я можу вибрати між haben і sein у Perfekt.' },
+    { en: 'I can write about my weekend in the Perfekt.', ru: 'Я могу написать о своих выходных в Perfekt.', ua: 'Я можу написати про свої вихідні в Perfekt.' },
+    { en: 'I can say out loud what I did yesterday.', ru: 'Я могу сказать вслух, что делал вчера.', ua: 'Я можу сказати вголос, що робив учора.' },
+  ],
+
+  drills: {
+    'partizip-modelle': {
+      level: 'A1',
+      concept: { en: 'Forming the Partizip II (three patterns)', ru: 'Образование Partizip II (три модели)', ua: 'Утворення Partizip II (три моделі)' },
+      prompt:  { en: 'Form the Partizip II.', ru: 'Образуйте Partizip II.', ua: 'Утворіть Partizip II.' },
+      items: [
+        { type: 'cloze',  de: 'Ich habe Fußball ___. (spielen)', answer: 'gespielt' },
+        { type: 'cloze',  de: 'Wir haben einen Film ___. (sehen)', answer: 'gesehen' },
+        { type: 'choice', de: 'Er hat an der Uni ___. (studieren)', answer: 'studiert', options: ['gestudiert', 'studiert', 'studeirt'] },
+      ],
+    },
+    'partizip-praefixe': {
+      level: 'A1',
+      concept: { en: 'Partizip II with separable and inseparable prefixes', ru: 'Partizip II с отделяемыми и неотделяемыми приставками', ua: 'Partizip II з відокремлюваними та невідокремлюваними префіксами' },
+      prompt:  { en: 'Form the Partizip II.', ru: 'Образуйте Partizip II.', ua: 'Утворіть Partizip II.' },
+      items: [
+        { type: 'cloze',  de: 'Ich bin um sieben Uhr ___. (aufstehen)', answer: 'aufgestanden' },
+        { type: 'choice', de: 'Ich habe die Regel ___. (verstehen)', answer: 'verstanden', options: ['geverstanden', 'verstanden', 'verstehen'] },
+        { type: 'cloze',  de: 'Wir haben im Supermarkt ___. (einkaufen)', answer: 'eingekauft' },
+      ],
+    },
+    'perfekt-haben-sein': {
+      level: 'A1',
+      concept: { en: 'Choosing haben or sein in the Perfekt', ru: 'Выбор haben или sein в Perfekt', ua: 'Вибір haben або sein у Perfekt' },
+      prompt:  { en: 'Choose or fill in the correct auxiliary.', ru: 'Выберите или вставьте правильный вспомогательный глагол.', ua: 'Виберіть або вставте правильне допоміжне дієслово.' },
+      items: [
+        { type: 'choice', de: 'Ich ___ nach Berlin gefahren.', answer: 'bin', options: ['habe', 'bin', 'ist'] },
+        { type: 'cloze',  de: 'Wir ___ zu Hause geblieben. (sein)', answer: 'sind' },
+        { type: 'choice', de: 'Sie ___ einen Kuchen gegessen. (3. Sg.)', answer: 'hat', options: ['ist', 'hat', 'sind'] },
+      ],
+    },
+  },
+};

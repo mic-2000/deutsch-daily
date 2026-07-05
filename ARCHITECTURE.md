@@ -117,7 +117,11 @@ deutsch-daily/
 │   ├── favicon.svg · icon.svg · icon-maskable.svg     # icon sources (PNGs rendered into icons/)
 │   └── icons/  icon-192.png · icon-512.png · maskable-512.png · apple-touch-icon.png
 ├── data/   weeks.js (WEEKS) · vocab.js (VOCAB) · verbs.js (VERBS — master verb dictionary)
+│   └── v2/   GENERATED Course-v2 data (weeks/vocab/grammar-drills/dialogues/manifest) — not yet wired. §21
 ├── locales/  ru.js · ua.js · en.js   (window.LOCALE_RU / _UA / _EN = { ui, vocab, verbs, weeks })
+│   └── v2/   GENERATED Course-v2 locale overlays (en/ru/ua) — not yet wired. §21
+├── authoring/  Course-v2 single-source content (course.js · verb-bands.js · weeks/w01..w36.js) + README. §21
+├── scripts/  gen-course.js (authoring → data/v2 + locales/v2) · band-verbs.js (verb bands). §21
 ├── manifest.webmanifest · sw.js     # installable PWA: web manifest + offline service worker (§17)
 ├── build.js · package.json · vercel.json
 ├── ARCHITECTURE.md · CLAUDE.md · README.md · LICENSE
@@ -615,7 +619,7 @@ user actually selects.
   `VOCAB[week].words`. Read by `getTranslation(week, idx)`.
 - **`verbs`** — `{ <verbKey>: "translation" }`, keyed by the **same key as `VERBS`** in
   `data/verbs.js` (Infinitiv, reflexive → `"sich <inf>"`) — NOT index-matched. This is the
-  translation source for the verb dictionary. All three locales carry the full set (306 each):
+  translation source for the verb dictionary. All three locales carry the full set (≈343 each):
   RU is the original curated glosses, EN/UA were authored to match.
 - **`weeks`** — `{ <weekNumber>: { theme, grammar, vocab, tasks: [...] } }`, **index-matched** to
   `WEEKS[n].tasks`. Overlaid onto the base curriculum by `getLocalizedDay(d)` in the planner.
@@ -678,16 +682,22 @@ const VOCAB = {
 
 ```js
 const VERBS = {
-  "gehen":     { praet:"ging",   pp:"gegangen",  aux:"sein" },
-  "essen":     { praet:"aß",     pp:"gegessen",  aux:"haben", praes:"isst" },
-  "abfahren":  { praet:"fuhr ab",pp:"abgefahren",aux:"sein",  praes:"fährt ab", sep:true },
-  "sich ansehen": { praet:"sah sich an", pp:"sich angesehen", aux:"haben", praes:"sieht an", sep:true, refl:true },
-  // … ≈306 verbs
+  "gehen":     { band:"A1", praet:"ging",   pp:"gegangen",  aux:"sein" },
+  "essen":     { band:"A1", praet:"aß",     pp:"gegessen",  aux:"haben", praes:"isst" },
+  "abfahren":  { band:"A1", praet:"fuhr ab",pp:"abgefahren",aux:"sein",  praes:"fährt ab", sep:true },
+  "sich ansehen": { band:"A2", praet:"sah sich an", pp:"sich angesehen", aux:"haben", praes:"sieht an", sep:true, refl:true },
+  // … ≈343 verbs
 };
 ```
-- A language-neutral **forms** dictionary (≈306 A1–B1 verbs). Key = Infinitiv; reflexive verbs are
-  keyed `"sich <inf>"`. `praet` = Präteritum, `pp` = Partizip II (no auxiliary), `aux` = perfect
-  auxiliary (`haben`|`sein`); optional `praes` (irregular present), `sep` (separable), `refl`.
+- A language-neutral **forms** dictionary (≈343 A1–B1 verbs). Key = Infinitiv; reflexive verbs are
+  keyed `"sich <inf>"`. `band` = CEFR level at which the verb may be introduced as *new* (A1|A2|B1;
+  already-seen due cards stay reviewable above band). `praet` = Präteritum, `pp` = Partizip II (no
+  auxiliary), `aux` = perfect auxiliary (`haben`|`sein`); optional `praes` (irregular present),
+  `sep` (separable), `refl`.
+- **`band` is generated, not hand-typed.** `scripts/band-verbs.js` writes it into every entry (line
+  by line, idempotent): the minimum of the CEFR level of the earliest Course-v2 week whose
+  `verbFocus` introduces the verb and a hand map (`authoring/verb-bands.js`). Re-run it after adding
+  a verb. (See §21.)
 - **Translations are NOT here** — they live in `locales/*.verbs[key]` (§6), fully populated in all
   three languages (306 each: RU/UA/EN).
 - **Source of truth.** Previously generated from a CSV; the CSV and its generator were removed, so
@@ -1444,3 +1454,34 @@ practice), and `saveVerbsToCloud(...)` when a verb mini-lesson ran. The page is 
 `/today` (`CLOUD_FIELD='planner_data'`, shared `verbStore` wiring, embedded trainers); chrome in
 `welcome.css`, the success screen reuses `today.css` `.flow-done`. Strings are `onb_*` in all three
 locales. Guarded by `tests/onboarding.test.js`.
+
+---
+
+## 21. Course v2 authoring pipeline (`authoring/` → generated `data/v2` + `locales/v2`)
+
+The redesigned 36-week / 180-day course (`COURSE_VERSION 2`, see
+`private/curriculum-redesign-2026-07-v2.md`) is authored from a **single trilingual source** and
+compiled, not hand-maintained across parallel files. **Nothing here is wired into the app yet** — the
+live course is still the 24-week v1 (`course-consts.js` `COURSE_VERSION 1`, §3). These are the
+artifacts the v2 cutover (a later step) will swap into `data/` and merge into `locales/`.
+
+**Why a generator.** The runtime contract is index-matched parallel arrays (`VOCAB[w].words[i]` ↔
+`locale.vocab[w][i]`, week tasks ↔ locale tasks) — the exact thing `tests/data-align.test.js`
+guards. Authoring each word/task/drill/dialogue **once** as a `{de,en,ru,ua}` object and generating
+the parallel arrays makes alignment structural instead of hand-tended.
+
+- **`authoring/`** — the source of truth. `README.md` documents the week-file schema; `course.js`
+  holds course meta (version, `BAND_WEEKS {A1:[1,12],A2:[13,24],B1:[25,36]}`, phases); `weeks/w01..w36.js`
+  are one CommonJS module per week (theme/grammar/vocab/verbFocus/5 tasks/5 canDo/keyed drills/one
+  dialogue, every string co-locating all four languages); `verb-bands.js` is the hand CEFR map.
+- **`scripts/gen-course.js`** (`npm run gen:course`, `gen:check`) — validates the authoring
+  invariants and emits `data/v2/{weeks,vocab,grammar-drills,dialogues,manifest}.js` (German + base
+  English) and `locales/v2/{en,ru,ua}.js` (index-matched overlays + keyed `drills`/`dialogues`). It
+  reports any `verbFocus` key missing from `VERBS`. Generated files carry a DO-NOT-EDIT banner.
+- **`scripts/band-verbs.js`** — writes the `band` field into every `data/verbs.js` entry (§7).
+- **`tests/course-v2-align.test.js`** — Gate 4: 36 weeks / 180 days / 5 tasks, drill + verbFocus
+  resolution, band validity, "review points back", "verbFocus never above band", and full
+  vocab/task/canDo/drill/dialogue locale alignment on the generated output.
+
+Editing rule: change `authoring/`, then `npm run gen:course` (and `band-verbs.js` if verbs changed);
+never hand-edit `data/v2/*` or `locales/v2/*`.

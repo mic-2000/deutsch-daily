@@ -46,6 +46,13 @@ model (`DAYS` / `TOTAL_DAYS` / `getLocalizedDay`) is `assets/js/planner-data.js`
   German base in `data/` **and** the same index in all three `locales/*.{vocab,weeks}`. Verb forms
   live in `data/verbs.js` (`VERBS`); verb glosses live in `locales/*.verbs[key]`, keyed by the same
   verb key (not index-matched). (§6–§7)
+- **Course v2 is generated, not hand-edited.** `data/v2/*` and `locales/v2/*` are emitted by
+  `scripts/gen-course.js` from the single source in `authoring/` — never edit them directly. Change
+  `authoring/weeks/wNN.js` (each string co-locates `de/en/ru/ua`, so alignment is structural), then
+  `npm run gen:course`. Every `data/verbs.js` entry carries a `band` (A1/A2/B1) written by
+  `scripts/band-verbs.js` — after adding a verb, run it (never hand-type `band`). These artifacts are
+  **not wired into the app yet** (live course is still v1); the Gate-4 test
+  `tests/course-v2-align.test.js` guards them. (§21)
 - **Cloud is the source of truth.** Before calling `initApp()`, a page must define `render()` and —
   if it owns a `progress` column — `CLOUD_FIELD`, `getCloudPayload()`, `applyCloudData(d)`. A page
   with its **own table** (`collections.html` → `collections`) omits `CLOUD_FIELD` and loads via its
