@@ -493,7 +493,7 @@ single table, `public.progress`, one row per user (confirmed schema):
 | Column | Type | Null | Default | Written by | Payload shape |
 | --- | --- | --- | --- | --- | --- |
 | `user_id` | `uuid` | NO | — | upserts (conflict key) | `session.user.id` — PK, FK → `auth.users(id)` |
-| `planner_data` | `jsonb` | yes | `'{}'::jsonb` | planner `getCloudPayload()` | `{ currentDay, viewingDay, completed }` |
+| `planner_data` | `jsonb` | yes | `'{}'::jsonb` | planner / today / welcome `getCloudPayload()` | `{ currentDay, viewingDay, completed }` — the three keys this app owns. Any other keys (e.g. `/today`'s `dayStats`/`grammarReview`, a future `courseVersion`) are **passed through untouched** by every page that saves the column, so they survive a round trip. |
 | `vocab_data` | `jsonb` | yes | `'{}'::jsonb` | vocab `getCloudPayload()` → `serialize()` | `{ app, version:2, savedAt, selectedWeek, modes, levels, mastery, pluralMastery }` |
 | `verbs_data` | `jsonb` | yes | `'{}'::jsonb` | verbs `getCloudPayload()` **and** vocab `saveVerbStore()` | `{ app, version, savedAt, modes, sel, mastery }` — `mastery` keyed by **verb key**; `sel` = saved training selection |
 | `lang` | `text` | yes | `'en'::text` | `saveLangToCloud` | `'ru' \| 'ua' \| 'en'` |
@@ -711,6 +711,11 @@ const CLOUD_FIELD = 'planner_data';
 - `completed` — `{ dayNumber: true }`.
 - `save()` → `saveToCloud()`. There is no localStorage copy of progress; the cloud row is the
   source of truth (loaded by `initApp` via `applyCloudData`).
+- `getCloudPayload()` returns the whole `state` object and `applyCloudData` merges the loaded row
+  into it (`Object.assign`), so **unknown `planner_data` keys are preserved** — keys written by
+  `/today` (`dayStats`, `grammarReview`) or a future course version pass through untouched instead
+  of being dropped when the planner re-saves. This page normalizes only `currentDay`/`viewingDay`/
+  `completed`; it owns nothing else in the column.
 
 ### Day-plan text (AI seed)
 `buildPlanText(d)` assembles the localized day plan (header with day/week, week theme, grammar
