@@ -53,6 +53,8 @@ window.LOCALE_EN = {
     today_done_title: 'Day complete!',
     today_done_day: (n) => `You completed Day ${n}`,
     today_done_msg: "Nice work — today's grammar, words and verbs are done.",
+    today_done_partial_title: 'Almost there',
+    today_done_partial_msg: "You left a step unfinished, so this day isn't checked off yet — run it again to complete it.",
     today_done_to_planner: 'Open the planner',
     today_restart_day: 'Run the day again',
     today_already_title: 'Today is already done',

@@ -67,6 +67,7 @@
 /* ---- done step ---- */
 .flow-done { max-width: 540px; margin: 8vh auto 0; text-align: center; }
 .flow-done .done-mark { font-size: 52px; line-height: 1; color: var(--green); }
+.flow-done .done-mark.partial { color: var(--ink-soft); }
 .flow-done h2 { font-family: var(--serif); font-weight: 300; font-size: 38px; margin: 14px 0 4px; }
 .flow-done .done-day { font-size: 17px; font-weight: 600; color: var(--accent); margin: 0 0 12px; }
 .flow-done p { color: var(--ink-soft); font-size: 16px; line-height: 1.6; margin: 0 0 24px; }

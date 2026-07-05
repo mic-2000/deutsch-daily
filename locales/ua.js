@@ -52,6 +52,8 @@ window.LOCALE_UA = {
     today_done_title: 'День пройдено!',
     today_done_day: (n) => `Ви завершили День ${n}`,
     today_done_msg: 'Чудова робота — граматику, слова й дієслова на сьогодні зроблено.',
+    today_done_partial_title: 'Майже готово',
+    today_done_partial_msg: 'Один із кроків залишився незавершеним, тож день ще не зараховано — пройдіть його знову, щоб завершити.',
     today_done_to_planner: 'Відкрити планувальник',
     today_restart_day: 'Пройти день знову',
     today_already_title: 'Сьогоднішній день уже пройдено',

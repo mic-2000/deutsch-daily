@@ -53,6 +53,8 @@ window.LOCALE_RU = {
     today_done_title: 'День пройден!',
     today_done_day: (n) => `Вы закончили День ${n}`,
     today_done_msg: 'Отлично — грамматика, слова и глаголы на сегодня сделаны.',
+    today_done_partial_title: 'Почти готово',
+    today_done_partial_msg: 'Один из шагов остался незавершённым, поэтому день ещё не засчитан — пройдите его заново, чтобы закончить.',
     today_done_to_planner: 'Открыть планнер',
     today_restart_day: 'Пройти день заново',
     today_already_title: 'Сегодняшний день уже пройден',

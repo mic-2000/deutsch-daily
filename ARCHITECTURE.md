@@ -1329,7 +1329,17 @@ model (`planner-data.js` — `getLocalizedDay(DAYS[currentDay-1])`). The intro s
 **"Day N of TOTAL · Week W · theme"** indicator (`today_day_of`) so it's clear which day you're on;
 the done screen states **"You completed Day N"** (`today_done_day`).
 
-**Steps** (`STEPS = ['grammar','vocab','verbs','ai','done']`):
+**Steps** — the flow is **descriptor-driven**: `buildSteps(day, onboarding)` returns an ordered list of
+step descriptors, each `{ id, required, enabled, run(), isComplete() }`, and `.filter`s out the
+disabled ones (`flow.steps`). `id` doubles as the locale-key stem (`today_step_<id>` / `_sub`); `run()`
+paints/starts the block; `isComplete()` (backed by `flow.results`) is read at the done step. Today it
+returns the current five blocks (grammar · vocab · verbs · ai · done), all `enabled`; the descriptor
+shape is what lets later phases add review/listen/produce and tariff gating by extending `buildSteps()`
+alone. `nextStep`/`flowHeader`/the intro checklist all iterate `flow.steps` (the intro builds a preview
+list for the current day). Completion model: **AI is `required:false`** (never blocks the day); a trainer
+session worked to its end screen (`onSessionEnd`'s `summary.completed`, set from `s.pos >= s.queue.length`
+in `closeSession`) — or auto-skipped on an empty queue — marks its block complete; **closing a trainer
+early leaves its block incomplete**.
 1. **grammar** — the day card (week theme · grammar focus · today's task with its `type_<type>` label),
    rendered by the page. A **"Break it down with AI"** button (`explainDay`) expands the AI chat panel
    right under the card and auto-sends a point-by-point breakdown request (`dayBreakdownText` →
@@ -1349,10 +1359,13 @@ the done screen states **"You completed Day N"** (`today_done_day`).
    generated once and persisted, so revisiting the day (or no key) doesn't regenerate. Below the
    pinned blocks, the same `ai` thread (`renderAiPanel()`) lets the student ask follow-ups. If no key,
    it nudges to `/settings` and offers **Skip**.
-5. **done** — marks `planner_data.completed[day] = true`, advances `currentDay` (when finishing the
-   current day), persists via `saveToCloud`, and shows the completion screen with a small
-   no-AI **day stats** block (words / verbs first-try score from `flow.vocabResult`/`flow.verbResult`)
-   → "Open the planner".
+5. **done** — gated on `dayComplete()` (every enabled `required` descriptor `isComplete()`): when the day
+   is complete it marks `planner_data.completed[day] = true`, advances `currentDay` (when finishing the
+   current day), persists via `saveToCloud`, and shows the completion screen ("You completed Day N") with a
+   small no-AI **day stats** block (words / verbs first-try score from `flow.vocabResult`/`flow.verbResult`)
+   → "Open the planner". If a required trainer was closed early the day is **not** checked off: it shows an
+   "almost there" partial screen (`today_done_partial_*`) that doesn't advance `currentDay`, with **Run the
+   day again**.
 
 **Pinned blocks + follow-up chat (shared with the planner).** A lesson's `messages` carry optional
 flags: `seed:true` (the hidden prompt that elicits a pinned reply — the breakdown request / day-plan /

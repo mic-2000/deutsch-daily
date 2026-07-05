@@ -8,7 +8,9 @@
  *   • starting the flow shows the grammar card, then advances into a vocab session;
  *   • the two engines share ONE verbs_data mastery map (verb progress counts once);
  *   • finishing a vocab session advances to the verb session (embedded onSessionEnd);
- *   • the done step closes the day and advances currentDay.
+ *   • the flow is descriptor-driven (buildSteps → id/required/enabled/run/isComplete);
+ *   • the done step closes the day ONLY when every required block is complete, and advances
+ *     currentDay — closing a required trainer early leaves the day unchecked.
  */
 const test = require('node:test');
 const assert = require('node:assert/strict');
@@ -68,15 +70,54 @@ test('finishing the vocab session advances to the verb session', () => {
   assert.ok(t.VerbsTrainer.state.session, 'verb session started after vocab finished');
 });
 
-test('the done step closes the day and advances currentDay', () => {
-  const t = fresh(['startFlow', 'renderDone', 'planner']);
-  t.startFlow();           // flow.day = currentDay (1 by default)
+/* Work a trainer session to its end screen, then close it (embedded → onSessionEnd advances). */
+function finishSession(engine) {
+  const s = engine.state.session;
+  s.pos = s.queue.length;   // reach the end screen → closeSession reports completed: true
+  engine.closeSession();
+}
+
+test('buildSteps returns descriptor objects for the current blocks', () => {
+  const t = fresh(['buildSteps']);
+  const steps = t.buildSteps(1, {});
+  assert.equal(steps.map((s) => s.id).join(','), 'grammar,vocab,verbs,ai,done', 'the current five blocks, in order');
+  for (const s of steps) {
+    assert.equal(typeof s.run, 'function', `${s.id}.run is a function`);
+    assert.equal(typeof s.isComplete, 'function', `${s.id}.isComplete is a function`);
+    assert.equal(typeof s.required, 'boolean');
+    assert.equal(s.enabled, true, 'buildSteps only returns enabled steps');
+  }
+  assert.equal(steps.find((s) => s.id === 'ai').required, false, 'AI never blocks the day');
+  assert.equal(steps.find((s) => s.id === 'grammar').required, true);
+});
+
+test('finishing every required block completes the day and advances currentDay', () => {
+  const t = fresh(['startFlow', 'nextStep', 'VocabTrainer', 'VerbsTrainer', 'planner']);
+  t.startFlow();               // grammar (flow.day = currentDay, 1 by default)
   const before = t.planner.currentDay;
-  t.renderDone();
+  t.nextStep();                // → vocab session
+  finishSession(t.VocabTrainer); // → verb session (onSessionEnd advances)
+  finishSession(t.VerbsTrainer); // → AI step
+  t.nextStep();                // AI → done (renderDone)
   assert.equal(t.planner.completed[before], true, 'today marked complete');
   assert.equal(t.planner.currentDay, before + 1, 'currentDay advanced');
   assert.match(t.app.innerHTML, /flow-done/);
   assert.match(t.app.innerHTML, new RegExp('You completed Day ' + before), 'states which day was finished');
+});
+
+test('closing a required trainer early leaves the day incomplete (not checked off)', () => {
+  const t = fresh(['startFlow', 'nextStep', 'VocabTrainer', 'VerbsTrainer', 'planner', 'dayComplete']);
+  t.startFlow();
+  const before = t.planner.currentDay;
+  t.nextStep();                  // → vocab session
+  t.VocabTrainer.closeSession(); // closed early (pos 0 < queue length) → verb session
+  finishSession(t.VerbsTrainer); // verbs finished → AI step
+  t.nextStep();                  // AI → done
+  assert.equal(t.dayComplete(), false, 'a required block was closed early');
+  assert.notEqual(t.planner.completed[before], true, 'day NOT marked complete');
+  assert.equal(t.planner.currentDay, before, 'currentDay did not advance');
+  assert.match(t.app.innerHTML, /Almost there/, 'partial-done screen shown');
+  assert.doesNotMatch(t.app.innerHTML, /You completed Day/, 'no false completion claim');
 });
 
 /* A localStorage that reports a saved Gemini key, so the AI panel renders (not the no-key nudge). */

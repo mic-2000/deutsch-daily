@@ -204,7 +204,9 @@ window.VerbsTrainer = (function () {
   }
   function closeSession() {
     const s = state.session;
-    const summary = s ? { right: s.uniqueRight || 0, total: s.uniqueTotal || 0 } : null;
+    // `completed` = the queue was worked to the end (the end screen); false when closed early via ×.
+    // Hosts (e.g. /today) use it to decide whether a required block counts as finished.
+    const summary = s ? { right: s.uniqueRight || 0, total: s.uniqueTotal || 0, completed: s.pos >= s.queue.length } : null;
     if (window.speechSynthesis) window.speechSynthesis.cancel();
     state.session = null;
     if (cfg.embedded && typeof cfg.onSessionEnd === 'function') cfg.onSessionEnd(summary);

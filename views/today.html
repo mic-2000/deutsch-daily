@@ -96,24 +96,53 @@ function applyVerbProgress(d){ VerbsTrainer.applyData(d && typeof d === 'object'
 /* ---- engine persistence hooks (three independent columns) ---- */
 function saveVerbsNow(){ if (typeof saveVerbsToCloud === 'function') saveVerbsToCloud(VerbsTrainer.serialize()); }
 function saveVocabNow(){ if (typeof saveVocabToCloud === 'function') saveVocabToCloud(VocabTrainer.serialize()); }
-VocabTrainer.init({ embedded: true, onSessionEnd: (r) => { flow.vocabResult = r; nextStep(); }, onSaveVocab: saveVocabNow, onSaveVerbs: saveVerbsNow });
-VerbsTrainer.init({ embedded: true, onSessionEnd: (r) => { flow.verbResult = r; nextStep(); }, onSave: saveVerbsNow });
+VocabTrainer.init({ embedded: true, onSessionEnd: (r) => { flow.vocabResult = r; flow.results.vocab = { completed: !!(r && r.completed) }; nextStep(); }, onSaveVocab: saveVocabNow, onSaveVerbs: saveVerbsNow });
+VerbsTrainer.init({ embedded: true, onSessionEnd: (r) => { flow.verbResult = r; flow.results.verbs = { completed: !!(r && r.completed) }; nextStep(); }, onSave: saveVerbsNow });
 
 /* ==========================================================================
-   FLOW
+   FLOW — descriptor-driven. buildSteps() returns an ordered list of step
+   descriptors for a given day; the engine walks the ENABLED ones in order and,
+   at the done step, gates day-completion on the REQUIRED ones. This keeps the
+   current blocks (grammar · words · verbs · AI · done) while making optional
+   blocks, empty-state skips, and completion gates explicit — so later phases can
+   add review/listen/produce and tariff logic by extending buildSteps() alone.
    ========================================================================== */
-const STEPS = ['grammar', 'vocab', 'verbs', 'ai', 'done'];
-let flow = { running: false, step: 0, day: 1 };
+
+/* The user's onboarding profile (level / goal / minutes / hardest / language), or {} before it loads. */
+function onboardingProfile(){ return (typeof userOnboarding !== 'undefined' && userOnboarding) ? userOnboarding : {}; }
+
+/* buildSteps(day, onboarding) → ordered step descriptors, filtered to the enabled ones. Each:
+     id          — stable block id; doubles as the locale-key stem (today_step_<id> / _sub)
+     required    — the day counts as done only when every enabled required block isComplete()
+     enabled     — whether the block appears in the flow at all (filtered out below when false)
+     run()       — paints/starts the block; advances via nextStep() (or a trainer's onSessionEnd)
+     isComplete()— completion predicate, read at the done step (backed by flow.results)
+   Completion rules: AI never blocks the day; a trainer session worked to the end (or auto-skipped
+   on an empty queue) counts complete; closing a trainer early leaves its block incomplete. */
+function buildSteps(day, onboarding){
+  return [
+    { id: 'grammar', required: true,  enabled: true, run: renderGrammar,  isComplete: () => true },
+    { id: 'vocab',   required: true,  enabled: true, run: startVocabStep, isComplete: () => !!(flow.results.vocab && flow.results.vocab.completed) },
+    { id: 'verbs',   required: true,  enabled: true, run: startVerbsStep, isComplete: () => !!(flow.results.verbs && flow.results.verbs.completed) },
+    { id: 'ai',      required: false, enabled: true, run: runAiStep,      isComplete: () => true },
+    { id: 'done',    required: true,  enabled: true, run: renderDone,     isComplete: () => true },
+  ].filter(step => step.enabled);
+}
+
+let flow = { running: false, step: 0, day: 1, steps: [], results: {} };
 let ai = { messages: [], loading: false };
 let grammarExplain = false;   // grammar step: AI breakdown panel expanded under the day card
 
 function render(){ if (flow.running) renderStep(); else renderIntro(); }
+function currentStep(){ return flow.steps[flow.step] || null; }
+/* A day is finished when every enabled required descriptor reports complete (AI is not required). */
+function dayComplete(){ return flow.steps.filter(s => s.required).every(s => s.isComplete()); }
 
 function startFlow(){
   if (dayOf() > TOTAL_DAYS) return;
   ai = { messages: [], loading: false };
   grammarExplain = false;
-  flow = { running: true, step: 0, day: dayOf(), vocabResult: null, verbResult: null };
+  flow = { running: true, step: 0, day: dayOf(), steps: buildSteps(dayOf(), onboardingProfile()), results: {}, vocabResult: null, verbResult: null };
   renderStep();
   loadDayLesson(flow.day);   // pull any saved explanation/chat for this day (shared with the planner)
 }
@@ -129,17 +158,15 @@ async function loadDayLesson(day){
   if (flow.running) render();
 }
 function exitFlow(){ flow.running = false; clearFlow(); if (window.speechSynthesis) window.speechSynthesis.cancel(); render(); }
-function nextStep(){ flow.step = Math.min(flow.step + 1, STEPS.length - 1); renderStep(); }
+function nextStep(){ flow.step = Math.min(flow.step + 1, flow.steps.length - 1); renderStep(); }
 
 function renderStep(){
   saveFlow();   // remember where we are, so a refresh resumes the same step
-  const step = STEPS[flow.step];
-  if (step === 'grammar') renderGrammar();
-  else if (step === 'vocab') startVocabStep();
-  else if (step === 'verbs') startVerbsStep();
-  else if (step === 'ai') { renderAi(); maybeSummarize(); }
-  else renderDone();
+  const step = currentStep();
+  if (step) step.run();
 }
+/* AI step run(): paint the chat, then auto-generate the once-per-day summary if a key is present. */
+function runAiStep(){ renderAi(); maybeSummarize(); }
 /* Cap a session to the user's daily time budget (onboarding "minutes/day"); default = full 25. */
 function sessionCap(){
   const m = (typeof userOnboarding !== 'undefined' && userOnboarding) ? userOnboarding.minutes : null;
@@ -149,24 +176,25 @@ function trimSession(engine){ const s = engine.state.session; if (s && s.queue) 
 function startVocabStep(){
   // Daily review: due backlog from every reached week (incl. mastered-but-due) + new words from today's week.
   VocabTrainer.startSession({ type: 'daily', week: localizedToday().week });
-  if (!VocabTrainer.state.session) { nextStep(); return; }   // (shouldn't happen — daily scope falls back to the week)
+  if (!VocabTrainer.state.session) { flow.results.vocab = { completed: true, skipped: true }; nextStep(); return; }   // empty queue → auto-skip, doesn't block the day
   trimSession(VocabTrainer); VocabTrainer.render();
 }
 function startVerbsStep(){
   VerbsTrainer.startSession({ type: 'due' });                          // repetition first
   if (!VerbsTrainer.state.session) VerbsTrainer.startSession({ type: 'filter', filter: 'all' }); // else due + some new
-  if (!VerbsTrainer.state.session) { nextStep(); return; }
+  if (!VerbsTrainer.state.session) { flow.results.verbs = { completed: true, skipped: true }; nextStep(); return; }   // nothing to train → auto-skip
   trimSession(VerbsTrainer); VerbsTrainer.render();
 }
 
 /* ---- shared in-flow header (progress) ---- */
 function flowHeader(){
-  const idx = flow.step + 1, n = STEPS.length;
-  const pct = (flow.step / (STEPS.length - 1)) * 100;
+  const step = currentStep();
+  const idx = flow.step + 1, n = flow.steps.length;
+  const pct = (flow.step / Math.max(1, flow.steps.length - 1)) * 100;
   return `
 <div class="flow-top">
   <div class="container flow-top-row">
-    <span class="flow-step-name">${T('today_step_' + STEPS[flow.step])}</span>
+    <span class="flow-step-name">${T('today_step_' + (step ? step.id : 'grammar'))}</span>
     <span class="flow-step-counter">${T('today_progress', idx, n)}</span>
     <button class="flow-exit" onclick="exitFlow()" aria-label="${esc(T('today_skip'))}">×</button>
   </div>
@@ -301,10 +329,11 @@ async function runTodayTurn(opts){
   ai.loading = false; render();
 }
 
-/* ---- step: done — close the day ---- */
+/* ---- step: done — close the day (only when every required block is complete) ---- */
 function renderDone(){
   const day = flow.day;
-  if (!planner.completed[day]) {
+  const complete = dayComplete();
+  if (complete && !planner.completed[day]) {
     planner.completed[day] = true;
     if (day === planner.currentDay && planner.currentDay < TOTAL_DAYS) planner.currentDay = day + 1;
     saveToCloud();
@@ -316,12 +345,14 @@ function renderDone(){
     <div class="done-stat"><div class="done-stat-label">${T('today_done_verbs')}</div><div class="done-stat-val num">${fmt(flow.verbResult)}</div></div>
     <div class="done-stat-note">${T('today_done_score')}</div>
   </div>` : '';
+  // Reaching the done step with a required trainer closed early → the day isn't fully finished.
+  const dayLine = complete ? `<div class="done-day">${T('today_done_day', day)}</div>` : '';
   document.getElementById('app').innerHTML = flowHeader() + `
 <main class="container flow-body"><div class="flow-done">
-  <div class="done-mark">✓</div>
-  <h2>${T('today_done_title')}</h2>
-  <div class="done-day">${T('today_done_day', day)}</div>
-  <p>${T('today_done_msg')}</p>
+  <div class="done-mark${complete ? '' : ' partial'}">${complete ? '✓' : '↻'}</div>
+  <h2>${complete ? T('today_done_title') : T('today_done_partial_title')}</h2>
+  ${dayLine}
+  <p>${complete ? T('today_done_msg') : T('today_done_partial_msg')}</p>
   ${stats}
   <div class="flow-actions"><a class="btn accent big" href="/planner">${T('today_done_to_planner')}</a></div>
   <button class="restart" onclick="startFlow()">↻ ${T('today_restart_day')}</button>
@@ -342,10 +373,10 @@ function renderIntro(){
     </div></main>`;
   } else {
     const d = localizedToday();
-    const list = STEPS.map((k, i) => `
+    const list = buildSteps(dayOf(), onboardingProfile()).map((step, i) => `
       <div class="step-row c${i + 1}">
-        <div class="step-badge">${k === 'done' ? '✓' : String(i + 1).padStart(2, '0')}</div>
-        <div class="step-text"><h3>${T('today_step_' + k)}</h3><p>${T('today_step_' + k + '_sub')}</p></div>
+        <div class="step-badge">${step.id === 'done' ? '✓' : String(i + 1).padStart(2, '0')}</div>
+        <div class="step-text"><h3>${T('today_step_' + step.id)}</h3><p>${T('today_step_' + step.id + '_sub')}</p></div>
       </div>`).join('');
     const banner = planner.completed[dayOf()] ? `<div class="today-banner">${T('today_already_msg')}</div>` : '';
     main = `<main class="container">
@@ -393,15 +424,17 @@ async function afterInit(){
   // Resume the same step after a page refresh (sessionStorage), if a flow was in progress for a
   // valid day. vocab/verb steps restart their session for that step (cards can't be restored).
   const saved = readFlow();
-  if (saved && Number.isInteger(saved.step) && saved.step >= 0 && saved.step < STEPS.length
-      && Number.isInteger(saved.day) && saved.day >= 1 && saved.day <= TOTAL_DAYS) {
+  if (saved && Number.isInteger(saved.step) && saved.step >= 0
+      && Number.isInteger(saved.day) && saved.day >= 1 && saved.day <= TOTAL_DAYS
+      && saved.step < buildSteps(saved.day, onboardingProfile()).length) {
     resumeFlow(saved);
   }
 }
 function resumeFlow(saved){
   ai = { messages: [], loading: false };
   grammarExplain = false;
-  flow = { running: true, step: saved.step, day: saved.day, vocabResult: null, verbResult: null };
+  const steps = buildSteps(saved.day, onboardingProfile());
+  flow = { running: true, step: Math.min(saved.step, steps.length - 1), day: saved.day, steps: steps, results: {}, vocabResult: null, verbResult: null };
   loadDayLesson(flow.day);   // its trailing render() paints the resumed step with the lesson loaded
 }
 
