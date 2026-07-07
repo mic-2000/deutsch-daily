@@ -28,6 +28,36 @@ let accountDeletionAt = null;
 // (minutes → session length). A brand-new user (NO progress row) is gated into /welcome by initApp.
 let userOnboarding = {};
 
+// Course v2 cutover (curriculum-redesign-2026-07-v2.md §2/§7): a v1 planner_data row (no
+// courseVersion, day numbers keyed to the old 24-week order) is reset to a clean v2 course state on
+// first v2 load. Old day numbers / completed / lessons are intentionally NOT remapped; safe trainer
+// progress (verbs_data by infinitive key, vocab modes/levels) is kept by the trainer pages. These
+// constants are local so this module stays independent of course-consts.js (not loaded everywhere).
+const COURSE_V2 = 2;
+const V2_START_DAY = { A1: 1, A2: 61, B1: 121 }; // first day of each band ((week-1)*5+1, WEEK_FOR_LEVEL {A1:1,A2:13,B1:25})
+
+/* Return a clean v2 planner_data for a pre-v2 payload; the same object back if it's already v2. */
+function _migratePlannerV2(d) {
+  if (!d || d.courseVersion === COURSE_V2) return d;
+  const level = (userOnboarding && userOnboarding.level) || 'A1';
+  const start = V2_START_DAY[level] || 1;
+  return {
+    courseVersion: COURSE_V2,
+    currentDay: start,
+    viewingDay: start,
+    completed: {},
+    dayStats: {},
+    grammarReview: {},
+    migratedFrom: {
+      courseVersion: 1,
+      at: new Date().toISOString(),
+      oldCurrentDay: (typeof d.currentDay === 'number') ? d.currentDay : null,
+      oldCompletedCount: (d.completed && typeof d.completed === 'object')
+        ? Object.keys(d.completed).filter(k => d.completed[k]).length : 0,
+    },
+  };
+}
+
 /* ==========================================================================
    OFFLINE OUTBOX — replay failed writes when back online.
    Shape: { uid, progress?: {user_id, <columns…>, updated_at},
@@ -204,8 +234,15 @@ async function initApp() {
     isNewUser = !data;
     userOnboarding = (data && data.onboarding) || {};
     if (hasField && typeof applyCloudData === 'function') {
-      const payload = data && data[CLOUD_FIELD];
-      if (payload && Object.keys(payload).length) applyCloudData(payload); // skip empty default ({}::jsonb)
+      let payload = data && data[CLOUD_FIELD];
+      if (payload && Object.keys(payload).length) {
+        // Course v2 cutover: reset a pre-v2 planner_data to a clean v2 state and lock it in.
+        if (CLOUD_FIELD === 'planner_data') {
+          const migrated = _migratePlannerV2(payload);
+          if (migrated !== payload) { payload = migrated; _pushProgress({ planner_data: payload }); }
+        }
+        applyCloudData(payload); // skip empty default ({}::jsonb)
+      }
     }
     if (data && data.lang && LANG_NAMES[data.lang]) lang = data.lang;
     if (data) _cacheProgress(hasField ? { [CLOUD_FIELD]: data[CLOUD_FIELD], lang: data.lang } : { lang: data.lang });

@@ -21,6 +21,21 @@ function fresh() {
   });
 }
 
+/* Find the first VOCAB entry that is a plain-infinitive known verb (no dash), so the wiring tests
+   stay content-agnostic across curriculum versions. Returns { week, idx, de, praet }. */
+function firstVerbSlot(v) {
+  for (const w of Object.keys(v.VOCAB)) {
+    const words = v.VOCAB[w].words;
+    for (let i = 0; i < words.length; i++) {
+      const de = words[i];
+      if (/—/.test(de)) continue;
+      const ent = v.VERBS[de];
+      if (ent && ent.praet) return { week: +w, idx: i, de, praet: ent.praet };
+    }
+  }
+  throw new Error('no plain-infinitive verb found in VOCAB');
+}
+
 test('a haben-verb expands to 3 forms without a (sein) tag', () => {
   const v = fresh();
   assert.equal(v.verbForms('arbeiten — gearbeitet'), 'arbeiten — arbeitete — gearbeitet');
@@ -89,9 +104,10 @@ test('across ALL weeks, every word that is a known verb renders 3 forms', () => 
 
 test('verbForms does not mutate VOCAB, so verbKeyForWord still resolves the infinitive', () => {
   const v = fresh();
-  const original = v.VOCAB[5].words[0];
+  const slot = firstVerbSlot(v);
+  const original = v.VOCAB[slot.week].words[slot.idx];
   v.verbForms(original);
-  assert.equal(v.VOCAB[5].words[0], original, 'stored VOCAB string unchanged');
+  assert.equal(v.VOCAB[slot.week].words[slot.idx], original, 'stored VOCAB string unchanged');
   assert.equal(v.verbKeyForWord(original), original.split('—')[0].trim());
 });
 
@@ -100,30 +116,31 @@ function freshRender() {
   return loadPage({
     page: 'vocab.html',
     extraFiles: ['locales/en.js'],
-    exports: ['render', 'state', 'VOCAB', 'VERBS', 'makeCard'],
+    exports: ['render', 'state', 'VOCAB', 'VERBS', 'makeCard', 'verbKeyForWord'],
   });
 }
 
-test('the word list (week 3) renders the Präteritum for its verbs, not just 2 forms', () => {
+test('the word list renders the Präteritum for its verbs, not just 2 forms', () => {
   const v = freshRender();
-  v.state.selectedWeek = 3;
+  const slot = firstVerbSlot(v);
+  v.state.selectedWeek = slot.week;
   v.state.session = null;
   v.render();
   const html = v.app.innerHTML;
-  // "spielen" is a plain infinitive in week 3 → its Präteritum must reach the screen
-  assert.ok(html.includes('spielte'), 'list should show the Präteritum "spielte" for spielen');
-  assert.ok(html.includes('geschwommen'), 'list should show the Partizip II for schwimmen');
+  // A plain infinitive in the week → its Präteritum must reach the screen.
+  assert.ok(html.includes(slot.praet), `list should show the Präteritum "${slot.praet}" for ${slot.de}`);
 });
 
 test('the flashcard shows all 3 forms for a known verb', () => {
   const v = freshRender();
-  const card = v.makeCard(3, v.VOCAB[3].words.indexOf('spielen'));
+  const slot = firstVerbSlot(v);
+  const card = v.makeCard(slot.week, slot.idx);
   card.mode = 'flashcard';
   v.state.session = {
-    scope: { type: 'week', week: 3 }, queue: [card], pos: 0,
+    scope: { type: 'week', week: slot.week }, queue: [card], pos: 0,
     revealed: false, answered: false, lastCorrect: null,
     uniqueRight: 0, uniqueTotal: 1, spellValue: '',
   };
   v.render();
-  assert.ok(v.app.innerHTML.includes('spielte'), 'flashcard should expand to Inf — Prät — PII');
+  assert.ok(v.app.innerHTML.includes(slot.praet), 'flashcard should expand to Inf — Prät — PII');
 });

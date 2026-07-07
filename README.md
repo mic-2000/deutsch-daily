@@ -15,7 +15,7 @@ Personal German learning app (A1 → B1) with a daily task planner, vocabulary t
   <tr>
     <td width="50%">
       <img src="docs/screenshots/Screenshot_2.png" alt="Daily Planner" /><br/>
-      <sub><b>Daily Planner</b> — 24-week curriculum with today's task, grammar focus and a one-click AI lesson.</sub>
+      <sub><b>Daily Planner</b> — 36-week curriculum with today's task, grammar focus and a one-click AI lesson.</sub>
     </td>
     <td width="50%">
       <img src="docs/screenshots/Screenshot_4.png" alt="Vocabulary Trainer" /><br/>
@@ -36,8 +36,8 @@ Personal German learning app (A1 → B1) with a daily task planner, vocabulary t
 
 ## Features
 
-- **Daily Planner** — 24-week curriculum (118 days) with grammar, listening, writing and speaking tasks. Built-in AI chat (Gemini): copy today's plan to get detailed material and exercises.
-- **Vocabulary Trainer** — ~500 words across 24 weeks. Spaced repetition (5-box Leitner system) with four modes: flashcards, article (der/die/das), spelling, and an opt-in plural drill (separate progress track). Known verbs show all three principal parts (Infinitiv — Präteritum — Partizip II). German text-to-speech.
+- **Daily Planner** — 36-week curriculum (180 days) with grammar, listening, writing and speaking tasks. Built-in AI chat (Gemini): copy today's plan to get detailed material and exercises.
+- **Vocabulary Trainer** — ~660 words across 36 weeks. Spaced repetition (5-box Leitner system) with four modes: flashcards, article (der/die/das), spelling, and an opt-in plural drill (separate progress track). Known verbs show all three principal parts (Infinitiv — Präteritum — Partizip II). German text-to-speech.
 - **Verb Trainer** — conjugation practice on a shared Leitner schedule, with German text-to-speech.
 - **3 UI languages** — English, Ukrainian, Russian (including all week content).
 - **Cloud sync** — progress saved to Supabase; works across devices.

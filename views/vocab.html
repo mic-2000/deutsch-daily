@@ -44,7 +44,7 @@
    /vocab — thin host around the shared VocabTrainer engine (assets/js/vocab-trainer.js).
    The engine owns all trainer logic + state; this page only wires the cloud-sync contract
    (CLOUD_FIELD / getCloudPayload / applyCloudData / applyVerbProgress / render) and the
-   keyboard listener, then boots. VOCAB (24 weeks) lives in data/vocab.js.
+   keyboard listener, then boots. VOCAB (36 weeks) lives in data/vocab.js.
    ========================================================================== */
 const CLOUD_FIELD = 'vocab_data';
 function getCloudPayload(){ return VocabTrainer.serialize(); }

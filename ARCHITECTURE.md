@@ -10,14 +10,14 @@ planner render, lazy locales, and the `tests/` suite). For day-to-day editing ru
 ## 1. What the product is
 
 A small web app that helps one user study German from ~A1 to the **Goethe-Zertifikat B1** exam
-over a ~6-month, 24-week plan. The system has three built-in trainers, a user-collections trainer,
+over a ~9-month, 36-week plan. The system has three built-in trainers, a user-collections trainer,
 and a built-in AI tutor:
 
-1. **Planner** (`/planner`) — one study day = one main task (118 days total).
+1. **Planner** (`/planner`) — one study day = one main task (180 days total).
    Contains a **built-in AI tutor chat** (Gemini). The day card's primary action is always
    "Start lesson with AI"; with no key set it opens the key modal first and auto-starts the lesson
    once a key is saved.
-2. **Vocabulary trainer** (`/vocab`) — 504 words across 24 weekly sets, four exercise modes
+2. **Vocabulary trainer** (`/vocab`) — ~660 words across 36 weekly sets, four exercise modes
    mixed together (the fourth, **plural**, is an opt-in second Leitner track for nouns), Leitner
    spaced repetition, and text-to-speech.
 3. **Verb trainer** (`/verbs`) — drills 306 irregular verbs (three Stammformen) in cloze,
@@ -49,19 +49,21 @@ and a built-in AI tutor:
    grammar → words → verbs → AI tutor → done — with no manual section-switching. It hosts the
    shared trainer engines in `embedded` mode and reuses the planner's day model. (See §19.)
 
-The curriculum runs 24 weeks in 3 phases:
+The curriculum runs **36 weeks (180 study days)** in 3 CEFR bands — this is the Course v2 content,
+cut over from the old 24-week v1 (see §21). Broad shape:
 
-- **Phase 1 (weeks 1–8), A1→A2:** cases (Akkusativ, Dativ, Genitiv intro), modal verbs, Perfekt,
-  separable prefixes, Imperativ.
-- **Phase 2 (weeks 9–16), A2:** Präteritum, subordinate clauses (weil/dass/wenn/als), comparison,
-  reflexive verbs, adjective declension (intro).
-- **Phase 3 (weeks 17–24), B1:** full adjective declension, passive voice, Konjunktiv II,
-  Relativsätze, indirect speech, verbs with prepositions + exam-format practice.
+- **A1 (weeks 1–12):** greetings/family/numbers, the cases (Nominativ→Akkusativ→Dativ), modal verbs,
+  separable verbs, Perfekt, time/calendar.
+- **A2 (weeks 13–24):** Präteritum, subordinate clauses, comparison, reflexive verbs, adjective
+  declension, Wechselpräpositionen, an A2 exam-format review week.
+- **B1 (weeks 25–36):** full adjective declension, passive voice, Konjunktiv II, Relativsätze,
+  indirect speech, verbs with prepositions, and two B1 exam-prep weeks.
 
-These phase boundaries live in one dependency-free module, **`assets/js/course-consts.js`**
-(`COURSE_VERSION = 1`, `TOTAL_WEEKS = 24`, `BAND_WEEKS`, `WEEK_FOR_LEVEL`, `levelOfWeek(week)`) — the
-single source of truth for the course's shape, kept independent from `weeks.js` so the vocab/verbs
-trainer pages (which don't load the curriculum) can still map a week to its CEFR band.
+The band boundaries live in one dependency-free module, **`assets/js/course-consts.js`**
+(`COURSE_VERSION = 2`, `TOTAL_WEEKS = 36`, `BAND_WEEKS { A1:[1,12], A2:[13,24], B1:[25,36] }`,
+`WEEK_FOR_LEVEL { A1:1, A2:13, B1:25 }`, `levelOfWeek(week)`) — the single source of truth for the
+course's shape, kept independent from `weeks.js` so the vocab/verbs trainer pages (which don't load
+the curriculum) can still map a week to its CEFR band.
 
 UI languages: **RU / UA / EN**. Learning content is German with a translation in the active UI
 language.
@@ -117,11 +119,11 @@ deutsch-daily/
 │   ├── favicon.svg · icon.svg · icon-maskable.svg     # icon sources (PNGs rendered into icons/)
 │   └── icons/  icon-192.png · icon-512.png · maskable-512.png · apple-touch-icon.png
 ├── data/   weeks.js (WEEKS) · vocab.js (VOCAB) · verbs.js (VERBS — master verb dictionary)
-│   └── v2/   GENERATED Course-v2 data (weeks/vocab/grammar-drills/dialogues/manifest) — not yet wired. §21
+│   └── v2/   GENERATED Course-v2 data (weeks/vocab/grammar-drills/dialogues/manifest) — source of the live course; swapped into data/ by cutover-v2. §21
 ├── locales/  ru.js · ua.js · en.js   (window.LOCALE_RU / _UA / _EN = { ui, vocab, verbs, weeks })
-│   └── v2/   GENERATED Course-v2 locale overlays (en/ru/ua) — not yet wired. §21
+│   └── v2/   GENERATED Course-v2 locale overlays (en/ru/ua) — merged into locales/ by cutover-v2. §21
 ├── authoring/  Course-v2 single-source content (course.js · verb-bands.js · weeks/w01..w36.js) + README. §21
-├── scripts/  gen-course.js (authoring → data/v2 + locales/v2) · band-verbs.js (verb bands). §21
+├── scripts/  gen-course.js (authoring → data/v2 + locales/v2) · cutover-v2.js (v2 → live data/ + locales/) · band-verbs.js (verb bands). §21
 ├── manifest.webmanifest · sw.js     # installable PWA: web manifest + offline service worker (§17)
 ├── build.js · package.json · vercel.json
 ├── ARCHITECTURE.md · CLAUDE.md · README.md · LICENSE
@@ -300,9 +302,11 @@ The single source of truth for the header + nav, so all four sections render an 
 ### `planner-data.js` — curriculum day model (planner + today)
 The flattening of `WEEKS` into `DAYS` (one task = one day), `TOTAL_DAYS`, and `getLocalizedDay(d)`
 (the active-locale overlay) — extracted from `planner.html` so `/planner` and the `/today` wizard
-share one day model. Top-level `const`/`function` in a classic script live in the shared global
-lexical scope (same pattern as `leitner.js` `MAX_BOX`), so both pages see these directly. Depends on
-`WEEKS` (must load first) and `getLang`.
+share one day model. A task is either a Course-v2 object `{ type, text, grammarFocus?, drill?,
+checklist? }` or a legacy v1 `[type, text]` tuple; `taskFields(task)` normalizes both, so a mixed
+dataset works during a cutover window. Top-level `const`/`function` in a classic script live in the
+shared global lexical scope (same pattern as `leitner.js` `MAX_BOX`), so both pages see these
+directly. Depends on `WEEKS` (must load first) and `getLang`.
 
 ### `vocab-trainer.js` / `verbs-trainer.js` — the shared trainer engines (`window.VocabTrainer` / `window.VerbsTrainer`)
 Each is a single namespace object holding the **entire** trainer: helpers, Leitner routing, the
@@ -442,6 +446,15 @@ collection upserts **merge per id** so a create + later mastery update collapse 
   grandfathers every existing user and never traps an offline read (which lands in the `catch`, where
   the gate flag stays false). Otherwise it resolves the language **before** the first render, then
   `await setLang(lang, true)` loads that one locale and renders **once** — no language flash.
+- **Course v2 migration.** For a `planner_data`-owning page, `initApp` runs `_migratePlannerV2(payload)`
+  before applying it: a **pre-v2** row (no `courseVersion`, day numbers keyed to the old 24-week order)
+  is reset to a **clean v2 course state** — `{ courseVersion:2, currentDay/viewingDay = start day for
+  the onboarding level (A1→1, A2→61, B1→121), completed:{}, dayStats:{}, grammarReview:{}, migratedFrom
+  }` — and immediately persisted (`_pushProgress`) so it sticks. Old day numbers / `completed` /
+  `lessons` are **not** remapped (redesign §2); safe trainer progress (`verbs_data` by infinitive key,
+  vocab modes/levels) is kept by the trainer pages. An already-v2 payload is returned untouched
+  (idempotent). New accounts get `courseVersion:2` stamped by `/welcome`. (Guarded by
+  `tests/course-v2-cutover.test.js`.)
 - `saveToCloud()` / `saveLangToCloud(code)` / `saveThemeToCloud(theme)` / `saveVerbsToCloud(payload)`
   / `saveVocabToCloud(payload)` / `saveOnboardingToCloud(payload)` — all route through the internal `_pushProgress(fields)`, which
   `upsert`s `{ user_id, …fields, updated_at }` on the `progress` row (`onConflict: 'user_id'`). They
@@ -497,7 +510,7 @@ single table, `public.progress`, one row per user (confirmed schema):
 | Column | Type | Null | Default | Written by | Payload shape |
 | --- | --- | --- | --- | --- | --- |
 | `user_id` | `uuid` | NO | — | upserts (conflict key) | `session.user.id` — PK, FK → `auth.users(id)` |
-| `planner_data` | `jsonb` | yes | `'{}'::jsonb` | planner / today / welcome `getCloudPayload()` | `{ currentDay, viewingDay, completed }` — the three keys this app owns. Any other keys (e.g. `/today`'s `dayStats`/`grammarReview`, a future `courseVersion`) are **passed through untouched** by every page that saves the column, so they survive a round trip. |
+| `planner_data` | `jsonb` | yes | `'{}'::jsonb` | planner / today / welcome `getCloudPayload()` | `{ courseVersion:2, currentDay, viewingDay, completed }` — the keys this app owns. Any other keys (e.g. `/today`'s `dayStats`/`grammarReview`, the cutover's `migratedFrom`) are **passed through untouched** by every page that saves the column, so they survive a round trip. A pre-v2 row (no `courseVersion`) is reset to a clean v2 state by `initApp` (see above). |
 | `vocab_data` | `jsonb` | yes | `'{}'::jsonb` | vocab `getCloudPayload()` → `serialize()` | `{ app, version:2, savedAt, selectedWeek, modes, levels, mastery, pluralMastery }` |
 | `verbs_data` | `jsonb` | yes | `'{}'::jsonb` | verbs `getCloudPayload()` **and** vocab `saveVerbStore()` | `{ app, version, savedAt, modes, sel, mastery }` — `mastery` keyed by **verb key**; `sel` = saved training selection |
 | `lang` | `text` | yes | `'en'::text` | `saveLangToCloud` | `'ru' \| 'ua' \| 'en'` |
@@ -637,24 +650,28 @@ user actually selects.
 
 ```js
 const WEEKS = [
-  { n:1, theme:"…", grammar:"…", vocab:"…", tasks:[ ["test","…"], ["grammar","…"], … ] },
-  // … 24 weeks
+  { n:1, phase:"A1.1", level:"A1", theme:"…", grammar:"…", vocab:"…", verbFocus:[…],
+    tasks:[ { type:"grammar", text:"…", grammarFocus:"…", drill:"…" }, … ] },
+  // … 36 weeks (Course v2, generated from authoring/ — see §21)
 ];
 ```
-- `tasks` is an array of `[type, text]` pairs. The base text here is **Russian**; localized text
-  comes from `LOCALE_*.weeks[n].tasks[i]`.
+- `tasks` is an array of Course-v2 **task objects** `{ type, text, grammarFocus?, drill?, checklist? }`
+  (legacy v1 `[type, text]` tuples are still tolerated by `taskFields()`). The base text is **English**
+  (the `T()` default); localized text comes from `LOCALE_*.weeks[n].tasks[i]`.
 - `type` ∈ `test | grammar | listen | write | speak | read | review`. Mapped to a label via the
-  `type_<type>` UI key (and the legacy `TYPE_LABEL` map kept inline in `planner.html`).
+  `type_<type>` UI key.
 - Vocabulary is a **daily habit**, described by the week's `vocab` string — it is *not* its own day.
 
-**Flattening to days** (in `planner.html`): every `[type, text]` across all weeks becomes one day.
+**Flattening to days** (in `planner-data.js`): every task across all weeks becomes one day.
 
 ```js
 const DAYS = [];
-WEEKS.forEach(w => w.tasks.forEach(([type, text], taskIdx) =>
+WEEKS.forEach(w => w.tasks.forEach((task, taskIdx) => {
+  const { type, text } = taskFields(task);   // normalizes v2 object OR v1 [type,text] tuple
   DAYS.push({ day: DAYS.length+1, week:w.n, weekTheme:w.theme, grammar:w.grammar,
-              vocab:w.vocab, type, text, taskIdx })));
-const TOTAL_DAYS = DAYS.length;   // currently 118 days (sum of all WEEKS[n].tasks)
+              vocab:w.vocab, type, text, taskIdx });
+}));
+const TOTAL_DAYS = DAYS.length;   // 180 days (36 weeks × 5 tasks — Course v2)
 ```
 
 `getLocalizedDay(d)` returns a copy of the day with `theme/grammar/vocab/text` replaced by the
@@ -1461,9 +1478,12 @@ locales. Guarded by `tests/onboarding.test.js`.
 
 The redesigned 36-week / 180-day course (`COURSE_VERSION 2`, see
 `private/curriculum-redesign-2026-07-v2.md`) is authored from a **single trilingual source** and
-compiled, not hand-maintained across parallel files. **Nothing here is wired into the app yet** — the
-live course is still the 24-week v1 (`course-consts.js` `COURSE_VERSION 1`, §3). These are the
-artifacts the v2 cutover (a later step) will swap into `data/` and merge into `locales/`.
+compiled, not hand-maintained across parallel files. **This is now the LIVE course:** the cutover
+(§7 of the redesign plan / step 7) swapped the generated artifacts into the runtime files —
+`course-consts.js` is on `COURSE_VERSION 2` (§3), `data/weeks.js` + `data/vocab.js` carry the 36-week
+content, and `locales/{en,ru,ua}.js` carry the merged vocab + weeks. `authoring/` + `data/v2` +
+`locales/v2` remain the generated **source of record**; `scripts/cutover-v2.js` re-swaps them into
+the live files after a regeneration (`npm run cutover:v2`).
 
 **Why a generator.** The runtime contract is index-matched parallel arrays (`VOCAB[w].words[i]` ↔
 `locale.vocab[w][i]`, week tasks ↔ locale tasks) — the exact thing `tests/data-align.test.js`
@@ -1478,10 +1498,20 @@ the parallel arrays makes alignment structural instead of hand-tended.
   invariants and emits `data/v2/{weeks,vocab,grammar-drills,dialogues,manifest}.js` (German + base
   English) and `locales/v2/{en,ru,ua}.js` (index-matched overlays + keyed `drills`/`dialogues`). It
   reports any `verbFocus` key missing from `VERBS`. Generated files carry a DO-NOT-EDIT banner.
+- **`scripts/cutover-v2.js`** (`npm run cutover:v2`) — the Course v2 **cutover** (idempotent): copies
+  `data/v2/weeks.js` → `data/weeks.js`, `data/v2/vocab.js` → `data/vocab.js` (preserving + pruning the
+  hand-kept `PLURALS` map, which v2 authoring doesn't generate), and merges `locales/v2/<l>.js`'s
+  `vocab` + `weeks` into the live `locales/<l>.js` (keeping `ui` + `verbs`). `grammar-drills`/
+  `dialogues` are generated but not yet consumed by the app (Phase 6).
 - **`scripts/band-verbs.js`** — writes the `band` field into every `data/verbs.js` entry (§7).
 - **`tests/course-v2-align.test.js`** — Gate 4: 36 weeks / 180 days / 5 tasks, drill + verbFocus
   resolution, band validity, "review points back", "verbFocus never above band", and full
   vocab/task/canDo/drill/dialogue locale alignment on the generated output.
+- **`tests/course-v2-cutover.test.js`** — Gate 6: the live runtime state after the cutover —
+  `course-consts` on v2, the shipped `data/weeks.js` flattening to 36 weeks / 180 days via
+  `planner-data.js` (object tasks + legacy tuple tolerance), and `cloud-sync`'s pre-v2 → clean-v2
+  `planner_data` migration.
 
-Editing rule: change `authoring/`, then `npm run gen:course` (and `band-verbs.js` if verbs changed);
-never hand-edit `data/v2/*` or `locales/v2/*`.
+Editing rule: change `authoring/`, then `npm run gen:course` (and `band-verbs.js` if verbs changed),
+then `npm run cutover:v2` to refresh the live course; never hand-edit `data/v2/*` or `locales/v2/*`
+(nor the generated blocks in the live `data/weeks.js` / `data/vocab.js` / `locales/*` — regenerate).

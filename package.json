@@ -25,6 +25,7 @@
     "build": "node build.js",
     "gen:course": "node scripts/gen-course.js",
     "gen:check": "node scripts/gen-course.js --check",
+    "cutover:v2": "node scripts/cutover-v2.js",
     "test": "node --test tests/",
     "test:regression": "node --test tests/helpers.test.js tests/leitner.test.js tests/requeue.test.js tests/speech.test.js tests/confirm.test.js tests/markdown.test.js tests/render-smoke.test.js tests/i18n.test.js tests/data-align.test.js tests/outbox.test.js tests/collections.test.js"
   }

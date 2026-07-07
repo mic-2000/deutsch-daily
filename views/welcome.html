@@ -62,7 +62,7 @@
    ========================================================================== */
 
 /* planner_data is this page's CLOUD_FIELD (so we can write the starting currentDay). */
-let planner = { currentDay: 1, viewingDay: 1, completed: {} };
+let planner = { courseVersion: 2, currentDay: 1, viewingDay: 1, completed: {} };
 const CLOUD_FIELD = 'planner_data';
 function getCloudPayload(){ return planner; }
 function applyCloudData(d){ if (d && typeof d === 'object') { planner = Object.assign({ currentDay: 1, viewingDay: 1, completed: {} }, d); if (!planner.completed) planner.completed = {}; } }

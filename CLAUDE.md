@@ -42,17 +42,21 @@ model (`DAYS` / `TOTAL_DAYS` / `getLocalizedDay`) is `assets/js/planner-data.js`
 - **Locales are lazy-loaded** (`i18n.loadLocale`): only the active language is fetched. Don't
   re-add static `<script src="locales/*.js">` tags; `await loadLocale(getLang())` before the first
   render. (§4)
-- **Keep index-match alignment:** adding/removing/reordering a word or task means editing the
-  German base in `data/` **and** the same index in all three `locales/*.{vocab,weeks}`. Verb forms
-  live in `data/verbs.js` (`VERBS`); verb glosses live in `locales/*.verbs[key]`, keyed by the same
-  verb key (not index-matched). (§6–§7)
-- **Course v2 is generated, not hand-edited.** `data/v2/*` and `locales/v2/*` are emitted by
-  `scripts/gen-course.js` from the single source in `authoring/` — never edit them directly. Change
-  `authoring/weeks/wNN.js` (each string co-locates `de/en/ru/ua`, so alignment is structural), then
-  `npm run gen:course`. Every `data/verbs.js` entry carries a `band` (A1/A2/B1) written by
-  `scripts/band-verbs.js` — after adding a verb, run it (never hand-type `band`). These artifacts are
-  **not wired into the app yet** (live course is still v1); the Gate-4 test
-  `tests/course-v2-align.test.js` guards them. (§21)
+- **Keep index-match alignment.** The live curriculum — `data/weeks.js` (`WEEKS`, object tasks),
+  `data/vocab.js` (`VOCAB`), and the `vocab` + `weeks` blocks of `locales/*.js` — is now **generated
+  Course v2**: don't hand-edit it. Change `authoring/weeks/wNN.js` (each string co-locates
+  `de/en/ru/ua`, so alignment is structural), then `npm run gen:course && npm run cutover:v2`. Verbs
+  are still hand-maintained: forms in `data/verbs.js` (`VERBS`), glosses in `locales/*.verbs[key]`
+  (keyed by the same verb key, not index-matched) — keep them aligned by hand. `PLURALS` (in
+  `data/vocab.js`) is also hand-kept (pruned to the v2 vocab by `cutover-v2`). (§6–§7, §21)
+- **Course v2 is generated, and LIVE.** `data/v2/*` and `locales/v2/*` are emitted by
+  `scripts/gen-course.js` from the single source in `authoring/` — never edit them (or the generated
+  blocks in the live `data/`/`locales/`) directly. `scripts/cutover-v2.js` (`npm run cutover:v2`)
+  swaps the generated artifacts into the live files (preserving `PLURALS` and the locales' `ui`/`verbs`).
+  Every `data/verbs.js` entry carries a `band` (A1/A2/B1) written by `scripts/band-verbs.js` — after
+  adding a verb, run it (never hand-type `band`). `tests/course-v2-align.test.js` (Gate 4, generated
+  output) and `tests/course-v2-cutover.test.js` (Gate 6, live state + migration) guard it. A pre-v2
+  `planner_data` row is reset to a clean v2 state by `cloud-sync.initApp`. (§5, §21)
 - **Cloud is the source of truth.** Before calling `initApp()`, a page must define `render()` and —
   if it owns a `progress` column — `CLOUD_FIELD`, `getCloudPayload()`, `applyCloudData(d)`. A page
   with its **own table** (`collections.html` → `collections`) omits `CLOUD_FIELD` and loads via its
