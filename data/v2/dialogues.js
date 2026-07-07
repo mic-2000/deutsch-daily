@@ -39,7 +39,7 @@ const DIALOGUES = {
         "answer": true
       },
       {
-        "de": "Tom wohnt in Berlin.",
+        "de": "Anna wohnt in Polen.",
         "answer": false
       },
       {
@@ -118,7 +118,7 @@ const DIALOGUES = {
       },
       {
         "speaker": "A",
-        "de": "Nein, nicht so gut. Wollen wir am Samstag ins Museum gehen?"
+        "de": "Nein, nicht so gut. Wollen wir heute ins Museum gehen?"
       },
       {
         "speaker": "B",
@@ -135,7 +135,7 @@ const DIALOGUES = {
         "answer": false
       },
       {
-        "de": "Sie wollen am Samstag ins Museum gehen.",
+        "de": "Sie wollen heute ins Museum gehen.",
         "answer": true
       }
     ]

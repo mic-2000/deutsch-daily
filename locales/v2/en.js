@@ -11,7 +11,7 @@ window.LOCALE_EN_V2 = {
       "bye",
       "goodbye",
       "thank you",
-      "please / you are welcome",
+      "please / you're welcome",
       "yes",
       "no",
       "country",
@@ -787,7 +787,7 @@ window.LOCALE_EN_V2 = {
         "Negate with kein/keinen in the accusative and learn when to use nicht instead of kein.",
         "Accusative prepositions für/ohne/gegen/durch/um and the stem-vowel change (du isst, er nimmt).",
         "Write a short shop dialogue of 8–10 lines: greet, ask prices, order and pay.",
-        "Review week 3, then role-play ordering food out loud with a shop template."
+        "Review week 3, then role-play a shop conversation out loud using a template."
       ],
       "canDo": [
         "I can use accusative articles to say what I buy or take.",
@@ -803,7 +803,7 @@ window.LOCALE_EN_V2 = {
       "vocab": "hobbies, sport, free time",
       "tasks": [
         "Learn the present-tense forms of können, wollen and müssen (irregular ich/du/er).",
-        "Learn dürfen, sollen and mögen/möchten and start the sentence bracket.",
+        "Learn dürfen, sollen and mögen/möchten and start using the sentence bracket.",
         "Put the modal in position 2 and the infinitive at the very end (Satzklammer).",
         "Write 8–10 sentences about your hobbies using modal verbs and the sentence bracket.",
         "Review week 4, then give a one-minute spoken monologue about your hobbies."

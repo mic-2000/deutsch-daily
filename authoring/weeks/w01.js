@@ -16,7 +16,7 @@ module.exports = {
     { de: 'Tschüss',          en: 'bye',                   ru: 'пока',                ua: 'бувай' },
     { de: 'Auf Wiedersehen',  en: 'goodbye',               ru: 'до свидания',         ua: 'до побачення' },
     { de: 'Danke',            en: 'thank you',             ru: 'спасибо',             ua: 'дякую' },
-    { de: 'Bitte',            en: 'please / you are welcome', ru: 'пожалуйста',        ua: 'будь ласка' },
+    { de: 'Bitte',            en: "please / you're welcome", ru: 'пожалуйста',        ua: 'будь ласка' },
     { de: 'ja',               en: 'yes',                   ru: 'да',                  ua: 'так' },
     { de: 'nein',             en: 'no',                    ru: 'нет',                 ua: 'ні' },
     { de: 'das Land',         en: 'country',               ru: 'страна',              ua: 'країна' },
@@ -53,13 +53,13 @@ module.exports = {
       ] },
     { type: 'review', drill: 'nominativ-artikel',
       text: { en: 'Review week 1: introduce yourself out loud for 1 minute using 3 bullet points.',
-              ru: 'Повторение недели 1: представьтесь вслух за 1 минуту по 3 пунктам.',
+              ru: 'Повторение недели 1: представьтесь вслух за 1 минуту по трём пунктам.',
               ua: 'Повторення тижня 1: представтеся вголос за 1 хвилину за 3 пунктами.' } },
   ],
 
   canDo: [
     { en: 'I can greet people and say my name.', ru: 'Я могу поздороваться и назвать своё имя.', ua: 'Я можу привітатися й назвати своє ім’я.' },
-    { en: 'I can say who and how I am using sein and haben.', ru: 'Я могу сказать, кто я и как дела, с sein и haben.', ua: 'Я можу сказати, хто я і як справи, з sein і haben.' },
+    { en: 'I can say who and how I am using sein and haben.', ru: 'Я могу сказать, кто я и как у меня дела, используя sein и haben.', ua: 'Я можу сказати, хто я і як у мене справи, використовуючи sein і haben.' },
     { en: 'I can ask and answer simple questions about a person.', ru: 'Я могу задавать простые вопросы о человеке и отвечать на них.', ua: 'Я можу ставити прості запитання про людину й відповідати на них.' },
     { en: 'I can write a short profile about myself.', ru: 'Я могу написать короткую анкету о себе.', ua: 'Я можу написати коротку анкету про себе.' },
     { en: 'I can introduce myself out loud for a minute.', ru: 'Я могу представиться вслух в течение минуты.', ua: 'Я можу представитися вголос протягом хвилини.' },
@@ -113,7 +113,7 @@ module.exports = {
     ],
     questions: [
       { de: 'Anna kommt aus Polen.', answer: true, text: { en: 'Anna is from Poland.', ru: 'Анна из Польши.', ua: 'Анна з Польщі.' } },
-      { de: 'Tom wohnt in Berlin.', answer: false, text: { en: 'Tom lives in Berlin.', ru: 'Том живёт в Берлине.', ua: 'Том живе в Берліні.' } },
+      { de: 'Anna wohnt in Polen.', answer: false, text: { en: 'Anna lives in Poland.', ru: 'Анна живёт в Польше.', ua: 'Анна живе в Польщі.' } },
       { de: 'Anna spricht ein bisschen Deutsch.', answer: true, text: { en: 'Anna speaks a little German.', ru: 'Анна немного говорит по-немецки.', ua: 'Анна трохи говорить німецькою.' } },
     ],
   },

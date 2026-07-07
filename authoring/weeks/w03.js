@@ -72,9 +72,9 @@ module.exports = {
         { en: 'Use kaufen, nehmen or bezahlen at least once.', ru: 'Используйте kaufen, nehmen или bezahlen хотя бы раз.', ua: 'Використайте kaufen, nehmen або bezahlen хоча б раз.' },
       ] },
     { type: 'review', drill: 'akk-artikel',
-      text: { en: 'Review week 3, then role-play ordering food out loud with a shop template.',
-              ru: 'Повторите неделю 3, затем разыграйте вслух заказ еды по шаблону магазина.',
-              ua: 'Повторіть тиждень 3, потім розіграйте вголос замовлення їжі за шаблоном магазину.' } },
+      text: { en: 'Review week 3, then role-play a shop conversation out loud using a template.',
+              ru: 'Повторите неделю 3, затем разыграйте вслух диалог в магазине по шаблону.',
+              ua: 'Повторіть тиждень 3, потім розіграйте вголос діалог у магазині за шаблоном.' } },
   ],
 
   canDo: [
@@ -82,7 +82,7 @@ module.exports = {
     { en: 'I can negate correctly with kein and nicht.', ru: 'Я могу правильно отрицать с kein и nicht.', ua: 'Я можу правильно заперечувати з kein і nicht.' },
     { en: 'I can use accusative prepositions and stem-changing verbs (essen, nehmen).', ru: 'Я могу использовать предлоги Akkusativ и глаголы с чередованием (essen, nehmen).', ua: 'Я можу використовувати прийменники Akkusativ та дієслова з чергуванням (essen, nehmen).' },
     { en: 'I can write a short shopping dialogue.', ru: 'Я могу написать короткий диалог о покупках.', ua: 'Я можу написати короткий діалог про покупки.' },
-    { en: 'I can order food and shop in a role-play.', ru: 'Я могу заказать еду и делать покупки в ролевой игре.', ua: 'Я можу замовити їжу й робити покупки в рольовій грі.' },
+    { en: 'I can order food and shop in a role-play.', ru: 'Я могу заказать еду и сделать покупки в ролевой игре.', ua: 'Я можу замовити їжу й зробити покупки в рольовій грі.' },
   ],
 
   drills: {
@@ -101,9 +101,9 @@ module.exports = {
       concept: { en: 'Negation: kein with nouns, nicht otherwise', ru: 'Отрицание: kein с существительными, иначе nicht', ua: 'Заперечення: kein з іменниками, інакше nicht' },
       prompt:  { en: 'Fill in kein-/keinen or nicht.', ru: 'Вставьте kein-/keinen или nicht.', ua: 'Вставте kein-/keinen або nicht.' },
       items: [
-        { type: 'cloze',  de: 'Ich trinke ___ Bier. (kein Bier)', answer: 'kein' },
+        { type: 'cloze',  de: 'Ich trinke ___ Bier.', answer: 'kein' },
         { type: 'choice', de: 'Ich esse ___ Fisch.', answer: 'keinen', options: ['kein', 'keinen', 'nicht'] },
-        { type: 'cloze',  de: 'Ich mag den Käse ___. (nicht)', answer: 'nicht' },
+        { type: 'cloze',  de: 'Ich mag den Käse ___.', answer: 'nicht' },
       ],
     },
     'akk-praepositionen': {

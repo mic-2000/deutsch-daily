@@ -205,7 +205,7 @@ const GRAMMAR_DRILLS = {
     "items": [
       {
         "type": "cloze",
-        "de": "Ich trinke ___ Bier. (kein Bier)",
+        "de": "Ich trinke ___ Bier.",
         "answer": "kein"
       },
       {
@@ -220,7 +220,7 @@ const GRAMMAR_DRILLS = {
       },
       {
         "type": "cloze",
-        "de": "Ich mag den Käse ___. (nicht)",
+        "de": "Ich mag den Käse ___.",
         "answer": "nicht"
       }
     ]

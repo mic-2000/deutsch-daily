@@ -156,7 +156,7 @@ const WEEKS = [
       },
       {
         "type": "review",
-        "text": "Review week 3, then role-play ordering food out loud with a shop template.",
+        "text": "Review week 3, then role-play a shop conversation out loud using a template.",
         "drill": "akk-artikel"
       }
     ]
@@ -195,7 +195,7 @@ const WEEKS = [
       },
       {
         "type": "grammar",
-        "text": "Learn dürfen, sollen and mögen/möchten and start the sentence bracket.",
+        "text": "Learn dürfen, sollen and mögen/möchten and start using the sentence bracket.",
         "grammarFocus": "dürfen / sollen / mögen (möchten)",
         "drill": "modalverben-2"
       },
