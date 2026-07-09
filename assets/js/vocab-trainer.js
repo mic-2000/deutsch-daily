@@ -205,11 +205,18 @@ window.VocabTrainer = (function () {
   /* ==========================================================================
      STATE
      ========================================================================== */
+  /* Plural drill is on by default for A2/B1 learners and for anyone who flagged articles as hardest
+     (course-redesign §4). Reads the onboarding profile set by cloud-sync; empty (pre-login) → off. */
+  function defaultPlural() {
+    const o = (typeof userOnboarding !== 'undefined' && userOnboarding) ? userOnboarding : {};
+    return o.level === 'A2' || o.level === 'B1' || o.hardest === 'articles';
+  }
+
   let state = {
     selectedWeek: 1,
     mastery: {},
     pluralMastery: {},
-    modes: { flashcard: true, article: true, spelling: true, plural: false },
+    modes: { flashcard: true, article: true, spelling: true, plural: defaultPlural() },
     levels: { A1: false, A2: false, B1: false },
     session: null,
     confirm: null,
@@ -232,7 +239,7 @@ window.VocabTrainer = (function () {
     }
     state.mastery = d.mastery;
     state.pluralMastery = (d.pluralMastery && typeof d.pluralMastery === 'object') ? d.pluralMastery : {};
-    if (d.modes) state.modes = Object.assign({ flashcard: true, article: true, spelling: true, plural: false }, d.modes);
+    if (d.modes) state.modes = Object.assign({ flashcard: true, article: true, spelling: true, plural: defaultPlural() }, d.modes);
     if (d.levels) state.levels = Object.assign({ A1: false, A2: false, B1: false }, d.levels);
     if (d.selectedWeek) state.selectedWeek = d.selectedWeek;
     save(); render();

@@ -138,8 +138,10 @@ function applyLevel(){
   const firstDay = (DAYS.find(d => d.week === week) || DAYS[0]).day;
   planner.currentDay = firstDay; planner.viewingDay = firstDay;
   VocabTrainer.state.levels = { A1: onb.level === 'A1', A2: onb.level === 'A2', B1: onb.level === 'B1' };
-  // "hardest" seeds the default exercise modes (kept after onboarding).
-  const modes = { flashcard: true, article: onb.hardest === 'articles', spelling: onb.hardest === 'spelling', plural: false };
+  // "hardest" seeds the default exercise modes (kept after onboarding). Plural is on by default for
+  // A2/B1 learners and for anyone who flagged articles as hardest (course-redesign §4).
+  const plural = onb.level === 'A2' || onb.level === 'B1' || onb.hardest === 'articles';
+  const modes = { flashcard: true, article: onb.hardest === 'articles', spelling: onb.hardest === 'spelling', plural };
   VocabTrainer.state.modes = modes;
   return week;
 }
