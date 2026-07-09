@@ -60,6 +60,21 @@ test('planner-data taskFields tolerates both v1 tuple and v2 object tasks', () =
   assert.deepEqual(plain(p.taskFields({ type: 'write', text: 'Do Y', drill: 'z' })), { type: 'write', text: 'Do Y' });
 });
 
+test('live data/vocab.js ships the generated VOCAB + PLURALS verbatim (cutover ran)', () => {
+  function evalConsts(rel) {
+    const src = fs.readFileSync(path.join(ROOT, rel), 'utf8');
+    const sb = {};
+    vm.createContext(sb);
+    vm.runInContext(src + '\n;this.O = { VOCAB, PLURALS };', sb);
+    return plain(sb.O);
+  }
+  const live = evalConsts('data/vocab.js');
+  const gen = evalConsts('data/v2/vocab.js');
+  assert.deepEqual(live.VOCAB, gen.VOCAB, 'live VOCAB != generated — re-run `npm run cutover:v2`');
+  assert.deepEqual(live.PLURALS, gen.PLURALS, 'live PLURALS != generated — re-run `npm run cutover:v2`');
+  assert.ok(Object.keys(live.PLURALS).length > 200, 'PLURALS should cover the v2 nouns');
+});
+
 /* ---- cloud-sync.js migration --------------------------------------------------------------- */
 function loadMigration() {
   const src = fs.readFileSync(path.join(ROOT, 'assets/js/cloud-sync.js'), 'utf8');

@@ -122,7 +122,7 @@ deutsch-daily/
 │   └── v2/   GENERATED Course-v2 data (weeks/vocab/grammar-drills/dialogues/manifest) — source of the live course; swapped into data/ by cutover-v2. §21
 ├── locales/  ru.js · ua.js · en.js   (window.LOCALE_RU / _UA / _EN = { ui, vocab, verbs, weeks })
 │   └── v2/   GENERATED Course-v2 locale overlays (en/ru/ua) — merged into locales/ by cutover-v2. §21
-├── authoring/  Course-v2 single-source content (course.js · verb-bands.js · weeks/w01..w36.js) + README. §21
+├── authoring/  Course-v2 single-source content (course.js · verb-bands.js · plurals.js · weeks/w01..w36.js) + README. §21
 ├── scripts/  gen-course.js (authoring → data/v2 + locales/v2) · cutover-v2.js (v2 → live data/ + locales/) · band-verbs.js (verb bands). §21
 ├── manifest.webmanifest · sw.js     # installable PWA: web manifest + offline service worker (§17)
 ├── build.js · package.json · vercel.json
@@ -693,7 +693,10 @@ const VOCAB = {
   rendered with all three principal parts via `verbForms` (see §9), in every week.
 - `PLURALS` (same file) — a German-only `{ "der Vater": "die Väter" }`-style map (keyed by the
   exact singular string, incl. its article) feeding the opt-in **plural** trainer mode. Not
-  index-aligned to locales; nouns without an entry simply get no plural card. (See §9.)
+  index-aligned to locales; nouns without an entry simply get no plural card. **Generated** from
+  `authoring/plurals.js` (a `PLURALS` map + a `NO_PLURAL` list of nouns that intentionally get no
+  card); `gen-course.js` enforces that every noun-shaped vocab word is classified in one of them.
+  (See §9, §21.)
 
 ### `data/verbs.js` — global `VERBS` (master verb dictionary)
 
@@ -896,8 +899,9 @@ verbs are returned unchanged.
 ### Plural trainer (4th mode — opt-in)
 The **plural** chip turns on an INDEPENDENT second Leitner track (`state.pluralMastery`, keyed by
 the same `"week-idx"`) so learning a noun's plural is tracked separately from its meaning. Plural
-forms live in the German-only **`PLURALS`** map (`data/vocab.js`), keyed by the exact singular
-string; a noun only gets a plural card when it has an entry. When on, due/new plural cards are mixed
+forms live in the German-only **`PLURALS`** map (`data/vocab.js`, generated from
+`authoring/plurals.js` — §21), keyed by the exact singular string; a noun only gets a plural card
+when it has an entry. When on, due/new plural cards are mixed
 into the session (`collectPluralCards`) and counted in the "due" stat. Three sub-modes rotate by
 box via `pickPluralMode`: **pl_flash** (reveal → self-grade), **pl_choose** (pick the right plural
 from morphologically-generated distractors — `makePluralOptions` / `pluralDistractors` / `umlautify`),
@@ -1493,16 +1497,19 @@ the parallel arrays makes alignment structural instead of hand-tended.
 - **`authoring/`** — the source of truth. `README.md` documents the week-file schema; `course.js`
   holds course meta (version, `BAND_WEEKS {A1:[1,12],A2:[13,24],B1:[25,36]}`, phases); `weeks/w01..w36.js`
   are one CommonJS module per week (theme/grammar/vocab/verbFocus/5 tasks/5 canDo/keyed drills/one
-  dialogue, every string co-locating all four languages); `verb-bands.js` is the hand CEFR map.
+  dialogue, every string co-locating all four languages); `verb-bands.js` is the hand CEFR map;
+  `plurals.js` is the German-only `PLURALS` map + `NO_PLURAL` list (see §9).
 - **`scripts/gen-course.js`** (`npm run gen:course`, `gen:check`) — validates the authoring
   invariants and emits `data/v2/{weeks,vocab,grammar-drills,dialogues,manifest}.js` (German + base
-  English) and `locales/v2/{en,ru,ua}.js` (index-matched overlays + keyed `drills`/`dialogues`). It
+  English) and `locales/v2/{en,ru,ua}.js` (index-matched overlays + keyed `drills`/`dialogues`).
+  `data/v2/vocab.js` carries both `VOCAB` and the `PLURALS` map (built from `authoring/plurals.js`,
+  with a coverage gate: every noun-shaped vocab word must be in `PLURALS` or `NO_PLURAL`). It
   reports any `verbFocus` key missing from `VERBS`. Generated files carry a DO-NOT-EDIT banner.
 - **`scripts/cutover-v2.js`** (`npm run cutover:v2`) — the Course v2 **cutover** (idempotent): copies
-  `data/v2/weeks.js` → `data/weeks.js`, `data/v2/vocab.js` → `data/vocab.js` (preserving + pruning the
-  hand-kept `PLURALS` map, which v2 authoring doesn't generate), and merges `locales/v2/<l>.js`'s
-  `vocab` + `weeks` into the live `locales/<l>.js` (keeping `ui` + `verbs`). `grammar-drills`/
-  `dialogues` are generated but not yet consumed by the app (Phase 6).
+  `data/v2/weeks.js` → `data/weeks.js`, `data/v2/vocab.js` → `data/vocab.js` (`VOCAB` + `PLURALS`
+  verbatim), and merges `locales/v2/<l>.js`'s `vocab` + `weeks` into the live `locales/<l>.js`
+  (keeping `ui` + `verbs`). `grammar-drills`/`dialogues` are generated but not yet consumed by the
+  app (Phase 6).
 - **`scripts/band-verbs.js`** — writes the `band` field into every `data/verbs.js` entry (§7).
 - **`tests/course-v2-align.test.js`** — Gate 4: 36 weeks / 180 days / 5 tasks, drill + verbFocus
   resolution, band validity, "review points back", "verbFocus never above band", and full

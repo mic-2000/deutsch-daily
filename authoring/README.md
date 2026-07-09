@@ -7,8 +7,8 @@ runtime data + locale files:
 
 ```
 authoring/weeks/w01.js … w36.js   ──gen-course.js──▶   data/v2/weeks.js
-authoring/course.js                                     data/v2/vocab.js
-                                                        data/v2/grammar-drills.js
+authoring/course.js                                     data/v2/vocab.js  (VOCAB + PLURALS)
+authoring/plurals.js                                    data/v2/grammar-drills.js
                                                         data/v2/dialogues.js
                                                         locales/v2/{en,ru,ua}.js
 ```
@@ -119,6 +119,23 @@ Optional fields (`drill`, `checklist`, `milestone`, `dialogue`, `receptiveVerbs`
 `review`/`test`/`milestone` days introduce **0 new grammar** — they carry a `drill` only if it
 re-tests an earlier concept.
 
+## Plurals — `authoring/plurals.js`
+
+Noun plurals are **German-only** content (no locale alignment), so they live in one flat file
+rather than inline on each vocab entry:
+
+```js
+module.exports = {
+  PLURALS:   { 'der Tisch': 'die Tische', … },   // key = exact singular (with article) from a week's vocab
+  NO_PLURAL: [ 'die Milch', 'der Januar', … ],   // noun-shaped words that intentionally get no plural card
+};
+```
+
+The generator emits `const PLURALS` into `data/v2/vocab.js` (feeding the opt-in plural trainer,
+ARCHITECTURE.md §9); `scripts/cutover-v2.js` ships it verbatim. **Coverage is a hard gate:** every
+noun-shaped vocab word (`der`/`die`/`das …`) must appear in `PLURALS` **or** `NO_PLURAL`, or
+`gen:course` fails — so adding a countable noun to a week forces a plural decision here.
+
 ## Invariants the generator + tests enforce (Gate 4)
 
 - 36 weeks, filenames `w01`..`w36`, each `n` matching; 5 tasks each; 180 days total.
@@ -127,3 +144,5 @@ re-tests an earlier concept.
 - `canDo` has exactly 5 non-empty entries per week, in all three locales.
 - Every vocab entry and every T3 has non-empty `en`/`ru`/`ua`; vocab `de` is non-empty & unique-per-week.
 - Every drill slug and dialogue slug has a locale entry in `en`, `ru`, `ua`.
+- Every noun-shaped vocab word is classified in `authoring/plurals.js` (`PLURALS` or `NO_PLURAL`);
+  every `PLURALS` value is a `die …` form.

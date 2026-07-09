@@ -48,11 +48,14 @@ model (`DAYS` / `TOTAL_DAYS` / `getLocalizedDay`) is `assets/js/planner-data.js`
   `de/en/ru/ua`, so alignment is structural), then `npm run gen:course && npm run cutover:v2`. Verbs
   are still hand-maintained: forms in `data/verbs.js` (`VERBS`), glosses in `locales/*.verbs[key]`
   (keyed by the same verb key, not index-matched) — keep them aligned by hand. `PLURALS` (in
-  `data/vocab.js`) is also hand-kept (pruned to the v2 vocab by `cutover-v2`). (§6–§7, §21)
+  `data/vocab.js`) is now **generated too** — authored in `authoring/plurals.js` (a German-only
+  `PLURALS` map + `NO_PLURAL` list; every noun-shaped vocab word must be in one of them or
+  `gen:course` fails) and emitted into `data/v2/vocab.js`. (§6–§7, §21)
 - **Course v2 is generated, and LIVE.** `data/v2/*` and `locales/v2/*` are emitted by
   `scripts/gen-course.js` from the single source in `authoring/` — never edit them (or the generated
   blocks in the live `data/`/`locales/`) directly. `scripts/cutover-v2.js` (`npm run cutover:v2`)
-  swaps the generated artifacts into the live files (preserving `PLURALS` and the locales' `ui`/`verbs`).
+  swaps the generated artifacts into the live files (`VOCAB` + `PLURALS` verbatim; the locales'
+  `ui`/`verbs` blocks are preserved).
   Every `data/verbs.js` entry carries a `band` (A1/A2/B1) written by `scripts/band-verbs.js` — after
   adding a verb, run it (never hand-type `band`). `tests/course-v2-align.test.js` (Gate 4, generated
   output) and `tests/course-v2-cutover.test.js` (Gate 6, live state + migration) guard it. A pre-v2

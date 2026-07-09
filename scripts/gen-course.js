@@ -5,7 +5,7 @@
  * the runtime data + locale files the app will use after the Course v2 cutover (step 7):
  *
  *   data/v2/weeks.js          const WEEKS            (object tasks + phase/level; base text = EN)
- *   data/v2/vocab.js          const VOCAB           (German words only, index source)
+ *   data/v2/vocab.js          const VOCAB + PLURALS (German words + plural map, index source)
  *   data/v2/grammar-drills.js const GRAMMAR_DRILLS  (German items + answers, keyed by slug)
  *   data/v2/dialogues.js      const DIALOGUES       (German lines + meta, keyed by slug)
  *   data/v2/manifest.js       const COURSE_MANIFEST (version/weeks/days — parity anchor)
@@ -30,6 +30,7 @@ const LANGS = ['en', 'ru', 'ua'];
 
 /* ---- load authoring source --------------------------------------------------------------- */
 const course = require(path.join(ROOT, 'authoring/course.js'));
+const pluralsSrc = require(path.join(ROOT, 'authoring/plurals.js'));
 
 function loadWeeks() {
   const dir = path.join(ROOT, 'authoring/weeks');
@@ -166,6 +167,32 @@ function emit(weeks) {
   const vocabBase = {};
   weeks.forEach((w) => { vocabBase[w.n] = { theme: w.vocabTheme.en, words: w.vocab.map((v) => v.de) }; });
 
+  // ---- PLURALS (German-only; authored in authoring/plurals.js, emitted into data/v2/vocab.js) ----
+  // Build in first-appearance (week) order, deduped; validate against the actual vocab.
+  const isNoun = (de) => /^(der|die|das)\s/.test(de);
+  const wordOrder = [];            // distinct vocab words, first-appearance order
+  const wordSet = new Set();
+  for (const n of Object.keys(vocabBase)) for (const de of vocabBase[n].words) if (!wordSet.has(de)) { wordSet.add(de); wordOrder.push(de); }
+  const { PLURALS = {}, NO_PLURAL = [] } = pluralsSrc;
+  const noPlural = new Set(NO_PLURAL);
+  // every PLURALS key / NO_PLURAL entry must be a real vocab word, and a noun (der/die/das)
+  for (const k of Object.keys(PLURALS)) {
+    if (!wordSet.has(k)) err(`plurals: PLURALS key "${k}" is not a vocab word`);
+    else if (!isNoun(k)) err(`plurals: PLURALS key "${k}" is not a noun (no der/die/das article)`);
+    const pl = PLURALS[k];
+    if (typeof pl !== 'string' || !/^die\s+\S/.test(pl)) err(`plurals: "${k}" → "${pl}" must be a "die …" plural form`);
+  }
+  for (const k of NO_PLURAL) {
+    if (!wordSet.has(k)) err(`plurals: NO_PLURAL entry "${k}" is not a vocab word`);
+    else if (!isNoun(k)) err(`plurals: NO_PLURAL entry "${k}" is not a noun (no der/die/das article)`);
+    if (k in PLURALS) err(`plurals: "${k}" is in both PLURALS and NO_PLURAL`);
+  }
+  // coverage gate: every noun-shaped vocab word must be classified (has a plural, or explicitly none)
+  const uncovered = wordOrder.filter((de) => isNoun(de) && !(de in PLURALS) && !noPlural.has(de));
+  if (uncovered.length) err(`plurals: ${uncovered.length} noun(s) not in PLURALS or NO_PLURAL (authoring/plurals.js):\n  ${uncovered.join('\n  ')}`);
+  const pluralsBase = {};
+  wordOrder.forEach((de) => { if (de in PLURALS) pluralsBase[de] = PLURALS[de]; });
+
   // ---- data/v2/grammar-drills.js (slugs unique course-wide) ----
   const drillsBase = {};
   const seenDrill = new Set();
@@ -216,7 +243,7 @@ function emit(weeks) {
 
   const manifest = { courseVersion: course.COURSE_VERSION, weeks: weeks.length, days: weeks.reduce((s, w) => s + w.tasks.length, 0) };
 
-  return { weeksBase, vocabBase, drillsBase, dialoguesBase, locales, manifest };
+  return { weeksBase, vocabBase, pluralsBase, drillsBase, dialoguesBase, locales, manifest };
 }
 
 function writeFile(rel, contents) {
@@ -245,14 +272,19 @@ const unbanded = Object.keys(VERBS).filter((k) => !course.BANDS.includes(VERBS[k
 console.log(`Course v2: ${weeks.length} weeks, ${out.manifest.days} days, ` +
   `${Object.keys(out.vocabBase).reduce((s, k) => s + out.vocabBase[k].words.length, 0)} vocab words, ` +
   `${Object.keys(out.drillsBase).length} drills, ${Object.keys(out.dialoguesBase).length} dialogues, ` +
-  `${focus.size} distinct verbFocus keys.`);
+  `${Object.keys(out.pluralsBase).length} plurals, ${focus.size} distinct verbFocus keys.`);
 if (missing.length) console.warn(`⚠ ${missing.length} verbFocus keys missing from VERBS (add them + a band in data/verbs.js):\n  ${missing.join(', ')}`);
 if (unbanded.length) console.warn(`⚠ ${unbanded.length} VERBS entries missing a band (add band A1/A2/B1):\n  ${unbanded.length > 30 ? unbanded.slice(0, 30).join(', ') + ' …' : unbanded.join(', ')}`);
 
 if (CHECK_ONLY) { console.log('--check: no files written.'); process.exit(0); }
 
 writeFile('data/v2/weeks.js', BANNER('const WEEKS — object tasks; base text is English (the T() default).') + 'const WEEKS = ' + j(out.weeksBase) + ';\n');
-writeFile('data/v2/vocab.js', BANNER() + 'const VOCAB = ' + j(out.vocabBase) + ';\n');
+const PLURALS_DOC =
+  '/* PLURALS — plural form for the countable nouns above, keyed by the EXACT singular string used\n' +
+  '   in VOCAB (incl. its article). German-only (no locale alignment needed). Generated from\n' +
+  '   authoring/plurals.js by gen-course.js; nouns without an entry get no plural card. */\n';
+writeFile('data/v2/vocab.js',
+  BANNER() + 'const VOCAB = ' + j(out.vocabBase) + ';\n\n' + PLURALS_DOC + 'const PLURALS = ' + j(out.pluralsBase) + ';\n');
 writeFile('data/v2/grammar-drills.js', BANNER() + 'const GRAMMAR_DRILLS = ' + j(out.drillsBase) + ';\n');
 writeFile('data/v2/dialogues.js', BANNER() + 'const DIALOGUES = ' + j(out.dialoguesBase) + ';\n');
 writeFile('data/v2/manifest.js', BANNER() + 'const COURSE_MANIFEST = ' + j(out.manifest) + ';\n');

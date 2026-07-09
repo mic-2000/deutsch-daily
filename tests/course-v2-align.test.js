@@ -29,9 +29,9 @@ if (!fs.existsSync(path.join(V2_DIR, 'weeks.js'))) {
       'data/v2/grammar-drills.js', 'data/v2/dialogues.js', 'data/verbs.js',
       'locales/v2/en.js', 'locales/v2/ru.js', 'locales/v2/ua.js',
     ],
-    exports: ['COURSE_MANIFEST', 'WEEKS', 'VOCAB', 'GRAMMAR_DRILLS', 'DIALOGUES', 'VERBS'],
+    exports: ['COURSE_MANIFEST', 'WEEKS', 'VOCAB', 'PLURALS', 'GRAMMAR_DRILLS', 'DIALOGUES', 'VERBS'],
   });
-  const { COURSE_MANIFEST, WEEKS, VOCAB, GRAMMAR_DRILLS, DIALOGUES, VERBS } = r;
+  const { COURSE_MANIFEST, WEEKS, VOCAB, PLURALS, GRAMMAR_DRILLS, DIALOGUES, VERBS } = r;
   const LOC = { en: r.sandbox.LOCALE_EN_V2, ru: r.sandbox.LOCALE_RU_V2, ua: r.sandbox.LOCALE_UA_V2 };
 
   test('manifest: 36 weeks, 180 days, course version 2', () => {
@@ -107,6 +107,29 @@ if (!fs.existsSync(path.join(V2_DIR, 'weeks.js'))) {
         assert.equal(arr.length, base, `${lang}.vocab[${n}] length ${arr.length} != VOCAB ${base}`);
         arr.forEach((t, i) => assert.ok(t != null && t !== '', `${lang}.vocab[${n}][${i}] blank (de="${VOCAB[n].words[i]}")`));
       }
+    }
+  });
+
+  test('PLURALS: generated from authoring, every key a real noun, every value a "die …" form', () => {
+    const pluralsSrc = require(path.join(ROOT, 'authoring/plurals.js'));
+    const words = new Set();
+    for (const n of Object.keys(VOCAB)) VOCAB[n].words.forEach((w) => words.add(w));
+    const isNoun = (de) => /^(der|die|das)\s/.test(de);
+
+    // emitted PLURALS = the authoring PLURALS (every key resolves; every value is a plural article form)
+    for (const [sg, pl] of Object.entries(PLURALS)) {
+      assert.ok(words.has(sg), `PLURALS key "${sg}" is not a VOCAB word`);
+      assert.ok(isNoun(sg), `PLURALS key "${sg}" is not a noun`);
+      assert.match(pl, /^die\s+\S/, `PLURALS["${sg}"] = "${pl}" must start with "die "`);
+    }
+    // coverage gate: every noun-shaped vocab word is classified (has a plural, or explicitly NO_PLURAL)
+    const noPlural = new Set(pluralsSrc.NO_PLURAL || []);
+    const uncovered = [...words].filter((de) => isNoun(de) && !(de in PLURALS) && !noPlural.has(de));
+    assert.deepEqual(uncovered, [], 'every noun must be in authoring/plurals.js PLURALS or NO_PLURAL');
+    // NO_PLURAL entries are real nouns and never also carry a plural
+    for (const de of noPlural) {
+      assert.ok(words.has(de), `NO_PLURAL "${de}" is not a VOCAB word`);
+      assert.ok(!(de in PLURALS), `NO_PLURAL "${de}" also appears in PLURALS`);
     }
   });
 
