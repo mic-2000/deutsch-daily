@@ -50,6 +50,7 @@ window.LOCALE_EN = {
     today_done_words: 'Words',
     today_done_verbs: 'Verbs',
     today_done_score: 'first-try',
+    today_cando_title: 'This week you can…',
     today_done_title: 'Day complete!',
     today_done_day: (n) => `You completed Day ${n}`,
     today_done_msg: "Nice work — today's grammar, words and verbs are done.",

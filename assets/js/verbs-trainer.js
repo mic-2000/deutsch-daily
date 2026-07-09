@@ -164,6 +164,28 @@ window.VerbsTrainer = (function () {
   }
 
   /* ==========================================================================
+     BAND GATING (course-consts.js: BAND_WEEKS / levelOfWeek)
+     Introduce NEW verbs only up to the learner's current CEFR band; already-seen due verbs stay
+     reviewable regardless of band. Bands are ranked by BAND_WEEKS insertion order (A1 < A2 < B1).
+     With no band context (`scope.week` absent, e.g. the standalone /verbs page) or if course-consts
+     isn't loaded, gating is off — so /verbs stays an unrestricted free-explore surface.
+     ========================================================================== */
+  const BAND_RANK = (typeof BAND_WEEKS !== 'undefined')
+    ? Object.keys(BAND_WEEKS).reduce((m, b, i) => { m[b] = i; return m; }, {})
+    : { A1: 0, A2: 1, B1: 2 };
+  function bandRank(band) { return (band in BAND_RANK) ? BAND_RANK[band] : -1; }
+  function maxBandForWeek(week) {
+    if (!week || typeof levelOfWeek !== 'function') return null;   // no context → no gating
+    return levelOfWeek(week);
+  }
+  function newVerbAllowed(k, maxBand) {
+    if (!maxBand) return true;
+    const band = VERBS[k] && VERBS[k].band;
+    if (!band) return true;                                        // unbanded verb → always introducible
+    return bandRank(band) <= bandRank(maxBand);
+  }
+
+  /* ==========================================================================
      SESSION
      ========================================================================== */
   function startSession(scope) {
@@ -175,8 +197,9 @@ window.VerbsTrainer = (function () {
       keys = Object.keys(state.sel).filter(k => VERBS[k]);
     } else {
       const base = filterKeys(scope.filter || 'all');
+      const maxBand = maxBandForWeek(scope.week);                  // null on /verbs → no gating
       const due = base.filter(k => isSeen(k) && isDue(k, now) && !isMastered(k));
-      const neu = base.filter(k => !isSeen(k));
+      const neu = base.filter(k => !isSeen(k) && newVerbAllowed(k, maxBand));  // gate NEW verbs to the current band
       keys = due.concat(neu.slice(0, 15));
       if (!keys.length) keys = base.slice(0);
     }

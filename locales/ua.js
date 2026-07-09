@@ -49,6 +49,7 @@ window.LOCALE_UA = {
     today_done_words: 'Слова',
     today_done_verbs: 'Дієслова',
     today_done_score: 'з першої спроби',
+    today_cando_title: 'Цього тижня ви вмієте…',
     today_done_title: 'День пройдено!',
     today_done_day: (n) => `Ви завершили День ${n}`,
     today_done_msg: 'Чудова робота — граматику, слова й дієслова на сьогодні зроблено.',

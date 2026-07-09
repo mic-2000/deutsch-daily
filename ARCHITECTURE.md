@@ -1381,7 +1381,10 @@ early leaves its block incomplete**.
    backlog from every week reached so far (mastered-but-due included) + up to 12 new words from the
    current week (articles `der/die/das` ride along as a mode).
 3. **verbs** — `VerbsTrainer.startSession({ type:'due' })` (repetition first); falls back to
-   `{ type:'filter', filter:'all' }` (due + some new) when nothing is due.
+   `{ type:'filter', filter:'all', week }` (due + some new) when nothing is due. Passing `week` makes
+   the engine **band-gate new verbs**: only verbs whose `band` is at or below the current week's CEFR
+   band (`levelOfWeek`) are introduced as new; already-seen due verbs stay reviewable regardless of
+   band. The standalone `/verbs` page passes no `week`, so it stays unrestricted.
 4. **ai** — an in-flow chat (reuses `gemini.js` / `ai-config.js` / `markdown.js` / `chat.css`),
    **persisted** to the same `lessons` row the planner uses (one per user×day). On entry it
    **auto-generates a "day summary"** (`maybeSummarize` → `askSummary`): a short recap pinned on top —
@@ -1391,8 +1394,11 @@ early leaves its block incomplete**.
    pinned blocks, the same `ai` thread (`renderAiPanel()`) lets the student ask follow-ups. If no key,
    it nudges to `/settings` and offers **Skip**.
 5. **done** — gated on `dayComplete()` (every enabled `required` descriptor `isComplete()`): when the day
-   is complete it marks `planner_data.completed[day] = true`, advances `currentDay` (when finishing the
-   current day), persists via `saveToCloud`, and shows the completion screen ("You completed Day N") with a
+   is complete it marks `planner_data.completed[day] = true`, records `dayStats[day]`
+   (`{ completedAt, blocks:[{id,required,completed}], counts:{vocab,verbs} }` — written once, on the
+   completing pass only), advances `currentDay` (when finishing the current day), persists via
+   `saveToCloud`, and shows the completion screen ("You completed Day N") with the current week's
+   read-only **can-do list** (`weekCanDo()` → the active locale's `weeks[week].canDo`, EN fallback) and a
    small no-AI **day stats** block (words / verbs first-try score from `flow.vocabResult`/`flow.verbResult`)
    → "Open the planner". If a required trainer was closed early the day is **not** checked off: it shows an
    "almost there" partial screen (`today_done_partial_*`) that doesn't advance `currentDay`, with **Run the

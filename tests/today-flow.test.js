@@ -105,6 +105,54 @@ test('finishing every required block completes the day and advances currentDay',
   assert.match(t.app.innerHTML, new RegExp('You completed Day ' + before), 'states which day was finished');
 });
 
+test('completing the day records a dayStats entry (completedAt + blocks + counts)', () => {
+  const t = fresh(['startFlow', 'nextStep', 'VocabTrainer', 'VerbsTrainer', 'planner']);
+  t.startFlow();
+  const day = t.planner.currentDay;
+  t.nextStep();                    // → vocab session
+  finishSession(t.VocabTrainer);   // → verb session
+  finishSession(t.VerbsTrainer);   // → AI step
+  t.nextStep();                    // AI → done (records stats)
+  const st = t.planner.dayStats[day];
+  assert.ok(st, 'a dayStats entry was written for the finished day');
+  assert.match(st.completedAt, /^\d{4}-\d{2}-\d{2}T/, 'completedAt is an ISO timestamp');
+  const ids = st.blocks.map((b) => b.id).join(',');
+  assert.equal(ids, 'grammar,vocab,verbs,ai', 'records the enabled non-done blocks in order');
+  assert.ok(st.blocks.every((b) => typeof b.completed === 'boolean' && typeof b.required === 'boolean'));
+  assert.ok('vocab' in st.counts && 'verbs' in st.counts, 'trainer scores captured under counts');
+});
+
+test('the done screen renders the current week\'s can-do list (localized, read-only)', () => {
+  const t = fresh(['startFlow', 'nextStep', 'VocabTrainer', 'VerbsTrainer']);
+  t.startFlow();               // day 1 → week 1
+  t.nextStep();
+  finishSession(t.VocabTrainer);
+  finishSession(t.VerbsTrainer);
+  t.nextStep();                // → done
+  const html = t.app.innerHTML;
+  assert.match(html, /done-cando-list/, 'a can-do list is rendered on the done screen');
+  assert.match(html, /This week you can/, 'the localized section title is shown');
+  assert.match(html, /I can greet people and say my name\./, 'week-1 can-do statement present');
+  assert.doesNotMatch(html, /today_cando_title/, 'no raw i18n key leaks');
+});
+
+test('dayStats is not overwritten when re-entering the done step of an already-complete day', () => {
+  const t = fresh(['startFlow', 'nextStep', 'VocabTrainer', 'VerbsTrainer', 'planner']);
+  t.startFlow();
+  const day = t.planner.currentDay;
+  t.nextStep();
+  finishSession(t.VocabTrainer);
+  finishSession(t.VerbsTrainer);
+  t.nextStep();                    // done → writes dayStats
+  const first = t.planner.dayStats[day];
+  t.startFlow();                   // restart the (now-complete) day
+  t.nextStep();
+  finishSession(t.VocabTrainer);
+  finishSession(t.VerbsTrainer);
+  t.nextStep();                    // done again — completed[day] already true → no re-record
+  assert.strictEqual(t.planner.dayStats[day], first, 'the original dayStats entry is preserved');
+});
+
 test('closing a required trainer early leaves the day incomplete (not checked off)', () => {
   const t = fresh(['startFlow', 'nextStep', 'VocabTrainer', 'VerbsTrainer', 'planner', 'dayComplete']);
   t.startFlow();

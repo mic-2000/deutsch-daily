@@ -181,7 +181,7 @@ function startVocabStep(){
 }
 function startVerbsStep(){
   VerbsTrainer.startSession({ type: 'due' });                          // repetition first
-  if (!VerbsTrainer.state.session) VerbsTrainer.startSession({ type: 'filter', filter: 'all' }); // else due + some new
+  if (!VerbsTrainer.state.session) VerbsTrainer.startSession({ type: 'filter', filter: 'all', week: localizedToday().week }); // else due + some new (NEW verbs band-gated to today's week)
   if (!VerbsTrainer.state.session) { flow.results.verbs = { completed: true, skipped: true }; nextStep(); return; }   // nothing to train → auto-skip
   trimSession(VerbsTrainer); VerbsTrainer.render();
 }
@@ -329,12 +329,35 @@ async function runTodayTurn(opts){
   ai.loading = false; render();
 }
 
+/* Record a per-day completion summary into planner_data.dayStats (seeded {} by the v2 migration but
+   never written until now). Keyed by day number; carried through save/load with the rest of the
+   planner payload (getCloudPayload returns `planner` whole; applyCloudData preserves foreign keys).
+   `blocks` = the enabled non-done steps and whether each was completed; `counts` = trainer scores. */
+function recordDayStats(day){
+  if (!planner.dayStats || typeof planner.dayStats !== 'object') planner.dayStats = {};
+  const score = (r) => (r && typeof r === 'object') ? { right: r.right || 0, total: r.total || 0 } : null;
+  planner.dayStats[day] = {
+    completedAt: new Date().toISOString(),
+    blocks: flow.steps.filter(s => s.id !== 'done').map(s => ({ id: s.id, required: !!s.required, completed: !!s.isComplete() })),
+    counts: { vocab: score(flow.vocabResult), verbs: score(flow.verbResult) },
+  };
+}
+
+/* The current week's "I can…" statements from the active locale (weeks block), EN fallback. Read-only;
+   surfaced on the done screen so the learner sees the week's concrete goals. */
+function weekCanDo(){
+  const wk = localizedToday().week;
+  const pick = (loc) => { const w = loc && loc.weeks && loc.weeks[wk]; return (w && Array.isArray(w.canDo)) ? w.canDo : null; };
+  return pick(window['LOCALE_' + getLang().toUpperCase()]) || pick(window.LOCALE_EN) || [];
+}
+
 /* ---- step: done — close the day (only when every required block is complete) ---- */
 function renderDone(){
   const day = flow.day;
   const complete = dayComplete();
   if (complete && !planner.completed[day]) {
     planner.completed[day] = true;
+    recordDayStats(day);
     if (day === planner.currentDay && planner.currentDay < TOTAL_DAYS) planner.currentDay = day + 1;
     saveToCloud();
   }
@@ -345,6 +368,12 @@ function renderDone(){
     <div class="done-stat"><div class="done-stat-label">${T('today_done_verbs')}</div><div class="done-stat-val num">${fmt(flow.verbResult)}</div></div>
     <div class="done-stat-note">${T('today_done_score')}</div>
   </div>` : '';
+  const canDo = weekCanDo();
+  const canDoBlock = canDo.length ? `
+  <div class="done-cando">
+    <div class="done-cando-title">${T('today_cando_title')}</div>
+    <ul class="done-cando-list">${canDo.map(s => `<li>${esc(s)}</li>`).join('')}</ul>
+  </div>` : '';
   // Reaching the done step with a required trainer closed early → the day isn't fully finished.
   const dayLine = complete ? `<div class="done-day">${T('today_done_day', day)}</div>` : '';
   document.getElementById('app').innerHTML = flowHeader() + `
@@ -354,6 +383,7 @@ function renderDone(){
   ${dayLine}
   <p>${complete ? T('today_done_msg') : T('today_done_partial_msg')}</p>
   ${stats}
+  ${canDoBlock}
   <div class="flow-actions"><a class="btn accent big" href="/planner">${T('today_done_to_planner')}</a></div>
   <button class="restart" onclick="startFlow()">↻ ${T('today_restart_day')}</button>
 </div></main>`;

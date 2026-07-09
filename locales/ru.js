@@ -50,6 +50,7 @@ window.LOCALE_RU = {
     today_done_words: 'Слова',
     today_done_verbs: 'Глаголы',
     today_done_score: 'с первой попытки',
+    today_cando_title: 'На этой неделе вы умеете…',
     today_done_title: 'День пройден!',
     today_done_day: (n) => `Вы закончили День ${n}`,
     today_done_msg: 'Отлично — грамматика, слова и глаголы на сегодня сделаны.',
