@@ -925,6 +925,18 @@ on the card's first appearance, so a wrong-then-right card is not double-counted
 immediately; article/spelling/plural-choose/plural-input wait for "Next". `uniqueRight /
 uniqueTotal` → first-try score on end screen.
 
+**Per-day new-card budget.** Both engines keep a local-date-keyed ledger `state.newLog`
+(`{ 'YYYY-MM-DD': count }`, via `leitnerToday()` in `leitner.js`) of how many **brand-new** cards
+were introduced today — bumped once per new card on its **first grading** (not on re-queue, not for
+already-seen cards). A scope opts into a per-day cap with `scope.dailyNew` (`true` → the engine
+default — 12 words / 15 verbs — or a number to override); the session's new slice is then
+`min(per-session slice, cap − introducedToday)`. `/today` passes `dailyNew: true` so extra same-day
+sessions stop introducing fresh cards (and a capped-out day with nothing due yields no session, so
+`/today` auto-skips that block); the free-explore `/vocab` & `/verbs` pages omit it and stay
+uncapped, mirroring how band-gating is off there. The ledger is carried in `vocab_data`/`verbs_data`
+(serialize/applyData) and pruned to today's entry. See `scripts/srs-budget.js` for the load model
+that motivates conservative new-card rates (Plan §5, §11 Phase 2).
+
 ### Progress portability
 - **Cloud** (Supabase) is the live store.
 
@@ -1517,6 +1529,11 @@ the parallel arrays makes alignment structural instead of hand-tended.
   (keeping `ui` + `verbs`). `grammar-drills`/`dialogues` are generated but not yet consumed by the
   app (Phase 6).
 - **`scripts/band-verbs.js`** — writes the `band` field into every `data/verbs.js` entry (§7).
+- **`scripts/srs-budget.js`** (`node scripts/srs-budget.js`, `--json`) — dependency-free SRS
+  due-pressure estimator: counts the four card families from the live data (words + verbs + plurals +
+  grammar), applies the §5 model (units × Leitner-box reviews × lapse), and reports per tariff
+  (5/10/15/20+) whether the daily answer budget carries a learner through the 180-day course. Guarded
+  by `tests/srs-budget.test.js` (the 15-minute default path must stay viable; 5-min is a light track).
 - **`tests/course-v2-align.test.js`** — Gate 4: 36 weeks / 180 days / 5 tasks, drill + verbFocus
   resolution, band validity, "review points back", "verbFocus never above band", and full
   vocab/task/canDo/drill/dialogue locale alignment on the generated output.

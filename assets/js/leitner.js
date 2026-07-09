@@ -13,6 +13,15 @@ const MAX_BOX = 5;
 /* A fresh, never-seen card. */
 function leitnerBlank() { return { box: 0, due: 0, right: 0, wrong: 0, seen: 0 }; }
 
+/* Local-date key ("YYYY-MM-DD") used by the trainers' per-day new-card ledgers (newLog). Local, not
+   UTC, so the "new cards today" budget rolls over at the learner's own midnight; `d` is optional and
+   defaults to now. Shared here so vocab + verb trainers key their ledgers identically. */
+function leitnerToday(d) {
+  const t = d || new Date();
+  const p = (n) => String(n).padStart(2, '0');
+  return `${t.getFullYear()}-${p(t.getMonth() + 1)}-${p(t.getDate())}`;
+}
+
 /* A card is due when it has never been seen (no record) or its due time has passed. */
 function leitnerIsDue(card, now) { return !card || card.due <= now; }
 function leitnerIsSeen(card) { return !!(card && card.seen > 0); }

@@ -218,9 +218,43 @@ window.VocabTrainer = (function () {
     pluralMastery: {},
     modes: { flashcard: true, article: true, spelling: true, plural: defaultPlural() },
     levels: { A1: false, A2: false, B1: false },
+    newLog: {},        // per-day new-WORD ledger { 'YYYY-MM-DD': count } — see NEW-CARD BUDGET below
     session: null,
     confirm: null,
   };
+
+  /* ==========================================================================
+     PER-DAY NEW-CARD BUDGET (Plan §11 Phase 2 / §5, item 7)
+     Caps how many brand-new WORD cards are introduced per LOCAL day, across ALL sessions — and
+     across /vocab + /today, since both share the same vocab_data (so a word first seen on /vocab
+     counts against /today's daily budget too). The ledger is ALWAYS maintained (bumped when a new
+     word is first graded); a scope ENFORCES the cap by opting in with `scope.dailyNew` (true → the
+     default cap, or a number to override). Without it — the /vocab free-explore scopes — only the
+     per-session slice limits new cards, exactly as before. Local-date keyed via leitnerToday() so
+     the budget rolls over at the learner's own midnight; ledger is pruned to today's entry to stay
+     bounded. Plural cards are out of scope here and keep their per-session cap.
+     ========================================================================== */
+  const NEW_WORDS_PER_DAY = 12;
+  function newLogToday() { return (state.newLog && state.newLog[leitnerToday()]) || 0; }
+  function newDailyCap(scope) {
+    const dn = scope && scope.dailyNew;
+    if (dn === true) return NEW_WORDS_PER_DAY;
+    if (typeof dn === 'number' && dn >= 0) return dn;
+    return Infinity;                                   // no opt-in → uncapped (per-session slice only)
+  }
+  /* New-word budget still available today under `scope` (Infinity when uncapped). >= check tolerates
+     a ledger that somehow ran over (e.g. a cap lowered mid-day) — it never goes negative. */
+  function newRemaining(scope) { const cap = newDailyCap(scope); return cap === Infinity ? Infinity : Math.max(0, cap - newLogToday()); }
+  /* How many NEW cards this session may introduce = min(per-session slice, today's remaining budget). */
+  function newTake(scope, sessionSlice) { return Math.min(sessionSlice, newRemaining(scope)); }
+  /* Record one brand-new WORD introduction against today's ledger, then persist. Called from answer()
+     BEFORE grading (while the card is still unseen). Pruned to a single (today) entry to stay bounded. */
+  function bumpNewLog() {
+    const t = leitnerToday();
+    const cur = (state.newLog && state.newLog[t]) || 0;
+    state.newLog = { [t]: cur + 1 };
+    save();
+  }
 
   // levelOfWeek / BAND_WEEKS come from course-consts.js (loaded before this module on every host page).
   function activeLevels() { return Object.keys(state.levels).filter(l => state.levels[l]); }
@@ -231,7 +265,7 @@ window.VocabTrainer = (function () {
   function serialize() {
     return { app: 'deutsch-vokabeltrainer', version: 2, savedAt: new Date().toISOString(),
              selectedWeek: state.selectedWeek, modes: state.modes, levels: state.levels,
-             mastery: state.mastery, pluralMastery: state.pluralMastery };
+             mastery: state.mastery, pluralMastery: state.pluralMastery, newLog: state.newLog };
   }
   function applyData(d) {
     if (!d || typeof d !== 'object' || !d.mastery || typeof d.mastery !== 'object') {
@@ -241,6 +275,7 @@ window.VocabTrainer = (function () {
     state.pluralMastery = (d.pluralMastery && typeof d.pluralMastery === 'object') ? d.pluralMastery : {};
     if (d.modes) state.modes = Object.assign({ flashcard: true, article: true, spelling: true, plural: defaultPlural() }, d.modes);
     if (d.levels) state.levels = Object.assign({ A1: false, A2: false, B1: false }, d.levels);
+    state.newLog = (d.newLog && typeof d.newLog === 'object') ? d.newLog : {};
     if (d.selectedWeek) state.selectedWeek = d.selectedWeek;
     save(); render();
     return true;
@@ -309,7 +344,7 @@ window.VocabTrainer = (function () {
         if (isSeen(scope.week, i)) { if (isDue(scope.week, i, now)) due.push(i); }
         else neu.push(i);
       }
-      list = due.map(i => makeCard(scope.week, i)).concat(neu.slice(0, 12).map(i => makeCard(scope.week, i)));
+      list = due.map(i => makeCard(scope.week, i)).concat(neu.slice(0, newTake(scope, 12)).map(i => makeCard(scope.week, i)));
       if (usePlural) list = list.concat(collectPluralCards([scope.week], now, 8));
       if (list.length === 0) {
         list = words.map((_, i) => makeCard(scope.week, i));
@@ -326,7 +361,7 @@ window.VocabTrainer = (function () {
           else neu.push([+w, i]);
         }
       }
-      list = due.map(([w, i]) => makeCard(w, i)).concat(neu.slice(0, 20).map(([w, i]) => makeCard(w, i)));
+      list = due.map(([w, i]) => makeCard(w, i)).concat(neu.slice(0, newTake(scope, 20)).map(([w, i]) => makeCard(w, i)));
       if (usePlural) list = list.concat(collectPluralCards(weeks, now, 12));
       if (list.length === 0) {
         for (const w of weeks) { VOCAB[w].words.forEach((_, i) => list.push(makeCard(+w, i))); }
@@ -349,9 +384,12 @@ window.VocabTrainer = (function () {
           else if (w === curWeek) neu.push([w, i]);                      // new words only from the current week
         }
       }
-      list = due.map(([w, i]) => makeCard(w, i)).concat(neu.slice(0, 12).map(([w, i]) => makeCard(w, i)));
+      list = due.map(([w, i]) => makeCard(w, i)).concat(neu.slice(0, newTake(scope, 12)).map(([w, i]) => makeCard(w, i)));
       if (usePlural) list = list.concat(collectPluralCards(reached, now, 8));
-      if (list.length === 0) {
+      // Empty-queue fallback shows the whole current week as new — but only when UNCAPPED. When the
+      // daily new-word budget is the reason the queue is empty, leave it empty so the /today host
+      // auto-skips the vocab step instead of blowing past today's cap.
+      if (list.length === 0 && newDailyCap(scope) === Infinity) {
         VOCAB[curWeek].words.forEach((_, i) => list.push(makeCard(curWeek, i)));
         if (usePlural) list = list.concat(allPluralCards([curWeek]));
       }
@@ -380,7 +418,10 @@ window.VocabTrainer = (function () {
        in-session reinforcement, not a fresh review, so it must not grade the same card twice. */
     if (!card.requeued) {
       if (card.kind === 'plural') updatePlural(card.week, card.idx, correct);
-      else updateCard(card.week, card.idx, correct);
+      else {
+        if (!isSeen(card.week, card.idx)) bumpNewLog();   // count the introduction (before grading flips 'seen')
+        updateCard(card.week, card.idx, correct);
+      }
     }
     if (!correct && !card.requeued) {
       s.queue.push({ ...card, mode: card.kind === 'plural' ? 'pl_flash' : 'flashcard', requeued: true });
@@ -905,6 +946,7 @@ ${appFooter()}`;
     collectPluralCards, allPluralCards, pickPluralMode,
     updatePlural, plHasPlural, plBox, plIsSeen, plIsMastered, plIsDue, plCard,
     weekStats, globalStats,
+    newLogToday, newRemaining, newDailyCap, bumpNewLog,
     get state() { return state; },
     get verbStore() { return verbStore; },
   };

@@ -175,13 +175,15 @@ function sessionCap(){
 function trimSession(engine){ const s = engine.state.session; if (s && s.queue) { s.queue = s.queue.slice(0, sessionCap()); s.uniqueTotal = s.queue.length; } }
 function startVocabStep(){
   // Daily review: due backlog from every reached week (incl. mastered-but-due) + new words from today's week.
-  VocabTrainer.startSession({ type: 'daily', week: localizedToday().week });
-  if (!VocabTrainer.state.session) { flow.results.vocab = { completed: true, skipped: true }; nextStep(); return; }   // empty queue → auto-skip, doesn't block the day
+  // `dailyNew: true` opts into the trainer's per-day new-word budget so extra same-day sessions don't
+  // keep introducing fresh words (the free-explore /vocab page omits it and stays uncapped).
+  VocabTrainer.startSession({ type: 'daily', week: localizedToday().week, dailyNew: true });
+  if (!VocabTrainer.state.session) { flow.results.vocab = { completed: true, skipped: true }; nextStep(); return; }   // empty queue (incl. daily new-word cap reached) → auto-skip, doesn't block the day
   trimSession(VocabTrainer); VocabTrainer.render();
 }
 function startVerbsStep(){
   VerbsTrainer.startSession({ type: 'due' });                          // repetition first
-  if (!VerbsTrainer.state.session) VerbsTrainer.startSession({ type: 'filter', filter: 'all', week: localizedToday().week }); // else due + some new (NEW verbs band-gated to today's week)
+  if (!VerbsTrainer.state.session) VerbsTrainer.startSession({ type: 'filter', filter: 'all', week: localizedToday().week, dailyNew: true }); // else due + some new (band-gated to today's week + capped to today's new-verb budget)
   if (!VerbsTrainer.state.session) { flow.results.verbs = { completed: true, skipped: true }; nextStep(); return; }   // nothing to train → auto-skip
   trimSession(VerbsTrainer); VerbsTrainer.render();
 }

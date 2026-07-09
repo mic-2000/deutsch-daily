@@ -60,9 +60,34 @@ window.VerbsTrainer = (function () {
   /* ==========================================================================
      STATE + CLOUD
      ========================================================================== */
-  let state = { mastery: {}, modes: { triad: true, conjug: true, cloze: true, table: true }, filter: 'all', sel: {}, session: null, confirm: null };
-  function serialize() { return { app: 'deutsch-verbtrainer', version: 1, savedAt: new Date().toISOString(), modes: state.modes, sel: state.sel, mastery: state.mastery }; }
-  function applyData(d) { if (!d || typeof d !== 'object') return; if (d.mastery && typeof d.mastery === 'object') state.mastery = d.mastery; if (d.modes) state.modes = Object.assign(state.modes, d.modes); if (d.sel && typeof d.sel === 'object') state.sel = d.sel; }
+  let state = { mastery: {}, modes: { triad: true, conjug: true, cloze: true, table: true }, filter: 'all', sel: {}, newLog: {}, session: null, confirm: null };
+  function serialize() { return { app: 'deutsch-verbtrainer', version: 1, savedAt: new Date().toISOString(), modes: state.modes, sel: state.sel, mastery: state.mastery, newLog: state.newLog }; }
+  function applyData(d) { if (!d || typeof d !== 'object') return; if (d.mastery && typeof d.mastery === 'object') state.mastery = d.mastery; if (d.modes) state.modes = Object.assign(state.modes, d.modes); if (d.sel && typeof d.sel === 'object') state.sel = d.sel; state.newLog = (d.newLog && typeof d.newLog === 'object') ? d.newLog : {}; }
+
+  /* ==========================================================================
+     PER-DAY NEW-CARD BUDGET (Plan §11 Phase 2 / §5, item 7)
+     Caps how many brand-new VERB cards are introduced per LOCAL day, across ALL sessions. The ledger
+     lives in verbs_data (this store), so it also counts new verbs the vocab trainer routes here. It
+     is ALWAYS maintained (bumped when a new verb is first graded); a scope ENFORCES the cap by opting
+     in with `scope.dailyNew` (true → default cap, or a number). Without it — the /verbs free-explore
+     page — only the per-session slice applies, mirroring how band-gating is off there. Local-date
+     keyed via leitnerToday(); pruned to today's entry to stay bounded. See assets/js/leitner.js. */
+  const NEW_VERBS_PER_DAY = 15;
+  function newLogToday() { return (state.newLog && state.newLog[leitnerToday()]) || 0; }
+  function newDailyCap(scope) {
+    const dn = scope && scope.dailyNew;
+    if (dn === true) return NEW_VERBS_PER_DAY;
+    if (typeof dn === 'number' && dn >= 0) return dn;
+    return Infinity;                                   // no opt-in → uncapped (per-session slice only)
+  }
+  function newRemaining(scope) { const cap = newDailyCap(scope); return cap === Infinity ? Infinity : Math.max(0, cap - newLogToday()); }
+  function newTake(scope, sessionSlice) { return Math.min(sessionSlice, newRemaining(scope)); }
+  function bumpNewLog() {
+    const t = leitnerToday();
+    const cur = (state.newLog && state.newLog[t]) || 0;
+    state.newLog = { [t]: cur + 1 };
+    save();
+  }
   function setMasteryStore(map) { if (map && typeof map === 'object') state.mastery = map; }   // /today: share verbs_data.mastery with VocabTrainer
   function save() { if (cfg.onSave) cfg.onSave(); else if (typeof saveToCloud === 'function') saveToCloud(); }
 
@@ -200,8 +225,10 @@ window.VerbsTrainer = (function () {
       const maxBand = maxBandForWeek(scope.week);                  // null on /verbs → no gating
       const due = base.filter(k => isSeen(k) && isDue(k, now) && !isMastered(k));
       const neu = base.filter(k => !isSeen(k) && newVerbAllowed(k, maxBand));  // gate NEW verbs to the current band
-      keys = due.concat(neu.slice(0, 15));
-      if (!keys.length) keys = base.slice(0);
+      keys = due.concat(neu.slice(0, newTake(scope, 15)));                     // + cap NEW verbs to today's budget
+      // Fallback to all base verbs only when UNCAPPED; a capped-out day with nothing due stays empty
+      // so the /today host auto-skips the verbs step instead of blowing past today's cap.
+      if (!keys.length && newDailyCap(scope) === Infinity) keys = base.slice(0);
     }
     keys = keys.sort(() => Math.random() - 0.5).slice(0, scope.type === 'selected' ? 40 : 20);
     if (!keys.length) { showToast(T('toast_no_words')); return; }
@@ -213,7 +240,10 @@ window.VerbsTrainer = (function () {
     const card = s.queue[s.pos];
     if (card.firstTry === null) { card.firstTry = correct; if (correct) s.uniqueRight++; }
     /* Grade only on the card's first appearance — a re-queued card must not grade twice. */
-    if (!card.requeued) updateCard(card.key, correct);
+    if (!card.requeued) {
+      if (!isSeen(card.key)) bumpNewLog();   // count the introduction (before grading flips 'seen')
+      updateCard(card.key, correct);
+    }
     if (!correct && !card.requeued) { s.queue.push({ ...card, mode: 'triad', clozeField: null, requeued: true, firstTry: card.firstTry }); }
     if (card.mode === 'triad') { nextCard(); return; }
     s.lastCorrect = correct; s.answered = true; s.revealed = true; render();
@@ -595,6 +625,7 @@ ${appFooter()}`;
     verbGloss, triadHtml, auxHtml, jk, selCount,
     availableModes, pickMode, makeCard, filterKeys, stats, conjugatePresent,
     updateCard, getCard, isDue, isSeen, cardBox, isMastered,
+    newLogToday, newRemaining, newDailyCap, bumpNewLog,
     get state() { return state; },
   };
 })();
