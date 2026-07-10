@@ -258,7 +258,7 @@ function buildSteps(day, onboarding){
   ].filter(step => step.enabled);
 }
 
-let flow = { running: false, step: 0, day: 1, steps: [], results: {} };
+let flow = { running: false, step: 0, day: 1, steps: [], results: {}, backlog: {} };
 let ai = { messages: [], loading: false };
 let grammarExplain = false;   // grammar step: AI breakdown panel expanded under the day card
 let listen = { checked: false, answers: [] };   // listen step: per-question true/false picks + graded flag
@@ -277,7 +277,7 @@ function startFlow(){
   listen = { checked: false, answers: [] };
   produce = { text: '', checks: {}, feedback: '', loading: false };
   weak = { active: false, seq: [], stage: 0, results: {} };
-  flow = { running: true, step: 0, day: dayOf(), steps: buildSteps(dayOf(), onboardingProfile()), results: {}, vocabResult: null, verbResult: null };
+  flow = { running: true, step: 0, day: dayOf(), steps: buildSteps(dayOf(), onboardingProfile()), results: {}, backlog: {}, vocabResult: null, verbResult: null };
   renderStep();
   loadDayLesson(flow.day);   // pull any saved explanation/chat for this day (shared with the planner)
 }
@@ -305,15 +305,22 @@ function runAiStep(){ renderAi(); maybeSummarize(); }
 /* Cap a session to the active tariff's daily time budget (onboarding "minutes/day"). */
 function sessionCap(){ return { 5: 6, 10: 12, 15: 18, '20+': 25 }[tariff()]; }
 function trimSession(engine){ const s = engine.state.session; if (s && s.queue) { s.queue = s.queue.slice(0, sessionCap()); s.uniqueTotal = s.queue.length; } }
+/* SRS backlog (Plan §4, curriculum-redesign-2026-07-v2.md §17 item 4): record how many DUE cards a
+   trainer step couldn't fit into its capped session, so the done screen can tell the learner what
+   carried over ("N cards waiting"). Measured at step start (before grading) against the tariff's
+   session cap; 0 when the whole due backlog fits — the done screen only surfaces a non-zero total. */
+function noteBacklog(id, due){ flow.backlog[id] = Math.max(0, (due || 0) - sessionCap()); }
 function startVocabStep(){
   // Daily review: due backlog from every reached week (incl. mastered-but-due) + new words from today's week.
   // `dailyNew: true` opts into the trainer's per-day new-word budget so extra same-day sessions don't
   // keep introducing fresh words (the free-explore /vocab page omits it and stays uncapped).
+  noteBacklog('vocab', VocabTrainer.dueCount(localizedToday().week));
   VocabTrainer.startSession({ type: 'daily', week: localizedToday().week, dailyNew: true });
   if (!VocabTrainer.state.session) { flow.results.vocab = { completed: true, skipped: true }; nextStep(); return; }   // empty queue (incl. daily new-word cap reached) → auto-skip, doesn't block the day
   trimSession(VocabTrainer); VocabTrainer.render();
 }
 function startVerbsStep(){
+  noteBacklog('verbs', VerbsTrainer.dueCount());
   VerbsTrainer.startSession({ type: 'due' });                          // repetition first
   if (!VerbsTrainer.state.session) VerbsTrainer.startSession({ type: 'filter', filter: 'all', week: localizedToday().week, dailyNew: true }); // else due + some new (band-gated to today's week + capped to today's new-verb budget)
   if (!VerbsTrainer.state.session) { flow.results.verbs = { completed: true, skipped: true }; nextStep(); return; }   // nothing to train → auto-skip
@@ -772,6 +779,10 @@ function renderDone(){
     <div class="done-stat"><div class="done-stat-label">${T('today_done_verbs')}</div><div class="done-stat-val num">${fmt(flow.verbResult)}</div></div>
     <div class="done-stat-note">${T('today_done_score')}</div>
   </div>` : '';
+  // SRS backlog: due cards that didn't fit today's capped session carry over. Surfaced only when a
+  // trainer's due backlog actually overflowed the budget (typically the shorter tariffs). (Plan §4.)
+  const waiting = Object.keys(flow.backlog).reduce((n, id) => n + (flow.backlog[id] || 0), 0);
+  const backlogBlock = waiting > 0 ? `<div class="done-backlog">${T('today_backlog', waiting)}</div>` : '';
   // 5-min light track: remind the learner this is a maintenance pace, not the full B1 path. (Plan §4.)
   const lightNote = tariff() === 5 ? `<div class="done-light">${T('today_light_pace')}</div>` : '';
   const canDo = weekCanDo();
@@ -789,6 +800,7 @@ function renderDone(){
   ${dayLine}
   <p>${complete ? T('today_done_msg') : T('today_done_partial_msg')}</p>
   ${stats}
+  ${backlogBlock}
   ${lightNote}
   ${canDoBlock}
   <div class="flow-actions"><a class="btn accent big" href="/planner">${T('today_done_to_planner')}</a></div>
@@ -883,7 +895,7 @@ function resumeFlow(saved){
   produce = { text: '', checks: {}, feedback: '', loading: false };
   weak = { active: false, seq: [], stage: 0, results: {} };
   const steps = buildSteps(saved.day, onboardingProfile());
-  flow = { running: true, step: Math.min(saved.step, steps.length - 1), day: saved.day, steps: steps, results: {}, vocabResult: null, verbResult: null };
+  flow = { running: true, step: Math.min(saved.step, steps.length - 1), day: saved.day, steps: steps, results: {}, backlog: {}, vocabResult: null, verbResult: null };
   loadDayLesson(flow.day);   // its trailing render() paints the resumed step with the lesson loaded
 }
 

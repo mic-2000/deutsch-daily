@@ -1505,7 +1505,11 @@ complete; **closing a trainer early leaves its block incomplete**.
    `saveToCloud`, and shows the completion screen ("You completed Day N") with the current week's
    read-only **can-do list** (`weekCanDo()` → the active locale's `weeks[week].canDo`, EN fallback) and a
    small no-AI **day stats** block (words / verbs first-try score from `flow.vocabResult`/`flow.verbResult`)
-   → "Open the planner". If a required trainer was closed early the day is **not** checked off: it shows an
+   → "Open the planner". When a trainer's **due backlog** overflowed the tariff's `sessionCap()` (recorded
+   at step start via `noteBacklog(id, due)` from `VocabTrainer.dueCount(week)` / `VerbsTrainer.dueCount()`
+   into `flow.backlog`), the done screen also shows a small `.done-backlog` "N cards waiting" note
+   (`today_backlog`) — the due cards that carry over to the next sessions (Plan §4). If a required trainer
+   was closed early the day is **not** checked off: it shows an
    "almost there" partial screen (`today_done_partial_*`) that doesn't advance `currentDay`, with **Run the
    day again**.
 

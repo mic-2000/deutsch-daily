@@ -188,6 +188,16 @@ window.VerbsTrainer = (function () {
     return { total: all.length, mastered, learning, due };
   }
 
+  /* How many verbs are DUE for review — seen, not yet mastered, past their interval: exactly the
+     `type:'due'` session's backlog. /today compares this against the session cap to flag a due backlog
+     it can't clear in one capped session (Plan §4). */
+  function dueCount() {
+    const now = Date.now();
+    let n = 0;
+    for (const k of Object.keys(VERBS)) if (isSeen(k) && !isMastered(k) && isDue(k, now)) n++;
+    return n;
+  }
+
   /* ==========================================================================
      BAND GATING (course-consts.js: BAND_WEEKS / levelOfWeek)
      Introduce NEW verbs only up to the learner's current CEFR band; already-seen due verbs stay
@@ -638,7 +648,7 @@ ${appFooter()}`;
     serialize, applyData, setMasteryStore,
     /* introspection (used by tests + the /today host) */
     verbGloss, triadHtml, auxHtml, jk, selCount,
-    availableModes, pickMode, makeCard, filterKeys, stats, conjugatePresent,
+    availableModes, pickMode, makeCard, filterKeys, stats, dueCount, conjugatePresent,
     collectWeakKeys, weakCount,
     updateCard, getCard, isDue, isSeen, cardBox, isMastered,
     newLogToday, newRemaining, newDailyCap, bumpNewLog,

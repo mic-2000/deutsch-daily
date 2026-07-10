@@ -364,6 +364,78 @@ test('20+ produce day offers optional AI feedback that renders inline', async ()
   assert.ok(Array.isArray(sawMessages) && /Ich heiße Anna/.test(sawMessages[0].text), 'the learner draft is sent to the model');
 });
 
+/* ---- SRS backlog note (dueCount helpers + done screen; Plan §4, plan §17 item 4) ---- */
+
+test('VerbsTrainer.dueCount counts seen, unmastered, due verbs (the daily backlog)', () => {
+  const t = fresh(['VerbsTrainer', 'VERBS']);
+  const V = t.VerbsTrainer;
+  const keys = Object.keys(t.VERBS).slice(0, 7);
+  keys.forEach((k) => { V.state.mastery[k] = { box: 1, due: 1, right: 1, wrong: 0, seen: 1 }; }); // seen + due
+  assert.equal(V.dueCount(), 7, 'all seven seen+due verbs are counted');
+  V.state.mastery[keys[0]] = { box: 5, due: 1, right: 5, wrong: 0, seen: 5 };                     // mastered
+  assert.equal(V.dueCount(), 6, 'a mastered card is excluded even when its due date has passed');
+  V.state.mastery[keys[1]] = { box: 2, due: Date.now() + 1e9, right: 2, wrong: 0, seen: 2 };       // not due yet
+  assert.equal(V.dueCount(), 5, 'a not-yet-due card is excluded');
+});
+
+test('VocabTrainer.dueCount counts seen+due word cards up to the given week (daily scope)', () => {
+  const t = fresh(['VocabTrainer', 'VOCAB']);
+  const V = t.VocabTrainer;
+  V.state.modes.plural = false;   // words only, keep the count deterministic
+  const DUE = { box: 1, due: 1, right: 1, wrong: 0, seen: 1 };
+  // mark five NON-verb word slots of week 1 as due (verb-words route to the shared verb store)
+  const w1 = [];
+  for (let i = 0; i < t.VOCAB[1].words.length && w1.length < 5; i++) {
+    if (!V.verbKeyForWord(t.VOCAB[1].words[i])) w1.push(i);
+  }
+  w1.forEach((i) => { V.state.mastery['1-' + i] = { ...DUE }; });
+  assert.equal(V.dueCount(1), w1.length, 'counts the seen+due week-1 words');
+  // a due card in a LATER week is out of scope while the day is still in week 1
+  const w2 = [];
+  for (let i = 0; i < t.VOCAB[2].words.length && w2.length < 3; i++) {
+    if (!V.verbKeyForWord(t.VOCAB[2].words[i])) w2.push(i);
+  }
+  w2.forEach((i) => { V.state.mastery['2-' + i] = { ...DUE }; });
+  assert.equal(V.dueCount(1), w1.length, 'week-2 due cards are not counted for a week-1 day');
+  assert.equal(V.dueCount(2), w1.length + w2.length, 'both weeks count once the day reaches week 2');
+});
+
+test('10-min mode surfaces the SRS backlog on the done screen when due cards exceed the cap', () => {
+  const t = loadPage({
+    page: 'today.html', extraFiles: ['locales/en.js'],
+    exports: ['startFlow', 'nextStep', 'VocabTrainer', 'VerbsTrainer', 'VERBS', 'planner'],
+    shims: { userOnboarding: { minutes: '10' } },
+  });
+  // 20 verbs due, seen but not mastered → 10-min session cap is 12 → 8 carry over.
+  Object.keys(t.VERBS).slice(0, 20).forEach((k) => {
+    t.VerbsTrainer.state.mastery[k] = { box: 1, due: 1, right: 1, wrong: 0, seen: 1 };
+  });
+  t.startFlow();                   // grammar (10-min day 1: grammar, vocab, verbs, done — no listen on an odd day)
+  t.nextStep();                    // → vocab session
+  finishSession(t.VocabTrainer);   // → verb session
+  finishSession(t.VerbsTrainer);   // → done
+  const html = t.app.innerHTML;
+  assert.match(html, /flow-done/, 'reached the done screen');
+  assert.match(html, /done-backlog/, 'the SRS backlog line is shown');
+  assert.match(html, /8 due cards didn't fit today/, 'shows the leftover due count (20 − 12)');
+  assert.doesNotMatch(html, /today_backlog/, 'no raw i18n key leaks');
+});
+
+test('no backlog line when the due cards fit within the session cap', () => {
+  const t = fresh(['startFlow', 'nextStep', 'VocabTrainer', 'VerbsTrainer', 'finishListen', 'VERBS']);
+  // a handful of due verbs, well under the default 15-min cap (18) → nothing carries over
+  Object.keys(t.VERBS).slice(0, 5).forEach((k) => {
+    t.VerbsTrainer.state.mastery[k] = { box: 1, due: 1, right: 1, wrong: 0, seen: 1 };
+  });
+  t.startFlow();
+  t.nextStep();
+  finishSession(t.VocabTrainer);
+  finishSession(t.VerbsTrainer);   // → listen block (day 1 default has a dialogue + TTS)
+  t.finishListen();                // → done
+  assert.match(t.app.innerHTML, /flow-done/);
+  assert.doesNotMatch(t.app.innerHTML, /done-backlog/, 'no backlog note when the backlog fits');
+});
+
 /* A localStorage that reports a saved Gemini key, so the AI panel renders (not the no-key nudge). */
 function keyStore() {
   const m = new Map([['gemini_key', 'testkey'], ['ui_lang', 'en']]);

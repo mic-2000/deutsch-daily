@@ -336,6 +336,29 @@ window.VocabTrainer = (function () {
     return { total, mastered, learning, due };
   }
 
+  /* How many cards are DUE for review under /today's `daily` scope up to `week` — the same selection
+     startSession('daily') makes: WORD cards that are seen + due (mastered-but-due included) across
+     every reached week, plus PLURAL cards when the plural track is on. Brand-new (unseen) cards are
+     NOT counted: they're fresh introductions gated by the daily new-word budget, not a review backlog.
+     /today compares this against the session cap to flag a due backlog it can't clear in one capped
+     session (Plan §4). */
+  function dueCount(week) {
+    const now = Date.now();
+    const maxWeek = Math.max(...Object.keys(VOCAB).map(Number));
+    const curWeek = Math.max(1, Math.min(+week || 1, maxWeek));
+    const usePlural = !!state.modes.plural;
+    let n = 0;
+    for (let w = 1; w <= curWeek; w++) {
+      if (!VOCAB[w]) continue;
+      const words = VOCAB[w].words;
+      for (let i = 0; i < words.length; i++) {
+        if (isSeen(w, i) && isDue(w, i, now)) n++;
+        if (usePlural && plHasPlural(w, i) && plIsSeen(w, i) && plIsDue(w, i, now)) n++;
+      }
+    }
+    return n;
+  }
+
   /* ==========================================================================
      SESSION BUILDER
      ========================================================================== */
@@ -983,7 +1006,7 @@ ${appFooter()}`;
     collectPluralCards, allPluralCards, pickPluralMode,
     updatePlural, plHasPlural, plBox, plIsSeen, plIsMastered, plIsDue, plCard,
     collectWeakCards, weakCount,
-    weekStats, globalStats,
+    weekStats, globalStats, dueCount,
     newLogToday, newRemaining, newDailyCap, bumpNewLog,
     get state() { return state; },
     get verbStore() { return verbStore; },

@@ -105,6 +105,8 @@ window.LOCALE_EN = {
     today_done_partial_title: 'Almost there',
     today_done_partial_msg: "You left a step unfinished, so this day isn't checked off yet — run it again to complete it.",
     today_light_pace: 'Light pace: one trainer a day keeps you ticking over — switch to a longer daily goal when you want to move toward B1 faster.',
+    // SRS backlog: due cards that didn't fit today's capped session (shown on the done screen)
+    today_backlog: (n) => `${n} due card${n === 1 ? '' : 's'} didn't fit today — ${n === 1 ? "it'll" : "they'll"} carry over to your next sessions.`,
     version_reload_title: 'Update available',
     version_reload_msg: 'A new version of the course has shipped, but some files on this device are still from the old one. Reload to fetch the latest and avoid a mismatched lesson.',
     version_reload_btn: 'Reload the app',
