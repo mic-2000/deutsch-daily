@@ -97,6 +97,25 @@ if (!fs.existsSync(path.join(V2_DIR, 'weeks.js'))) {
     }
   });
 
+  test('no drill introduces grammar above the band of the week that first teaches it', () => {
+    // The earliest week whose task carries a slug is where that grammar is introduced; reviews in
+    // later weeks point back (guarded above). WEEKS is n-ordered, so the first hit is the lowest week.
+    const introWeek = {};
+    for (const w of WEEKS) {
+      for (const t of w.tasks) {
+        if (t.drill && !(t.drill in introWeek)) introWeek[t.drill] = w.n;
+      }
+    }
+    for (const slug of Object.keys(GRAMMAR_DRILLS)) {
+      const wn = introWeek[slug];
+      if (wn === undefined) continue; // drill defined but not referenced by any week task
+      const week = WEEKS[wn - 1];
+      const drillLevel = GRAMMAR_DRILLS[slug].level;
+      assert.ok(BAND_ORDER[drillLevel] <= BAND_ORDER[week.level],
+        `drill "${slug}" (level ${drillLevel}) is introduced in week ${wn} (${week.level}) — above the week's band`);
+    }
+  });
+
   test('VOCAB words are index-matched to every locale (same length, no blanks)', () => {
     for (const n of Object.keys(VOCAB)) {
       const base = VOCAB[n].words.length;

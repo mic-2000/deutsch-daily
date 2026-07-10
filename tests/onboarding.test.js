@@ -79,3 +79,27 @@ test('an existing user with an empty onboarding column is not gated (grandfather
   const r = await runInit({ mainData: { planner_data: {}, lang: 'en', onboarding: {} }, pathname: '/vocab' });
   assert.equal(r.redirect, '', 'a row exists → never gated, regardless of onboarding flag');
 });
+
+/* ---------------- Part C: applyLevel() derives the default vocab modes (§16 item 2, plan §4) ----------------
+ * Plural training is on by default for A2/B1 learners and for anyone who flagged articles as hardest;
+ * it stays off for an A1 learner who did not. We drive the REAL applyLevel() from /welcome and read
+ * back the modes it writes onto the shared VocabTrainer, mirroring what onboarding persists. */
+test('welcome applyLevel: plural default is on for A2/B1 or hardest=articles, off otherwise', () => {
+  const w = loadPage({ page: 'welcome.html', exports: ['onb', 'applyLevel', 'VocabTrainer'] });
+  const modesFor = (level, hardest) => {
+    w.onb.level = level;
+    w.onb.hardest = hardest;
+    w.applyLevel();
+    return w.VocabTrainer.state.modes;
+  };
+
+  assert.equal(modesFor('A1', 'verbs').plural, false, 'A1 + non-articles → plural off');
+  assert.equal(modesFor('A2', 'verbs').plural, true, 'A2 → plural on');
+  assert.equal(modesFor('B1', 'listening').plural, true, 'B1 → plural on');
+  assert.equal(modesFor('A1', 'articles').plural, true, 'hardest=articles → plural on even at A1');
+
+  // sanity: the other hardest-driven modes still track the answer alongside plural
+  const m = modesFor('A1', 'articles');
+  assert.equal(m.article, true, 'hardest=articles also turns on the article mode');
+  assert.equal(m.flashcard, true, 'flashcard mode is always on');
+});
