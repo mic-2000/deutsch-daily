@@ -116,7 +116,7 @@ deutsch-daily/
 ├── views/              # login + all authenticated app pages live here; served via pretty-URL rewrites
 │   ├── login.html       # LOGIN / REGISTER (email + Google OAuth).    ( /login ) §5
 │   ├── welcome.html     # First-run onboarding wizard (5 questions → mini-lesson). ( /welcome ) §20
-│   ├── today.html       # Daily-flow wizard (descriptor steps → …→produce→AI→done). ( /today ) §19
+│   ├── today.html       # Daily-flow wizard (descriptor steps → …→produce→AI→weak→done). ( /today ) §19
 │   ├── planner.html     # Daily planner + AI Lehrer chat.            ( /planner )
 │   ├── vocab.html       # Vocabulary trainer (thin host → VocabTrainer). ( /vocab )
 │   ├── verbs.html       # Irregular-verb trainer (thin host → VerbsTrainer). ( /verbs )
@@ -397,6 +397,10 @@ Card shape: `{ box:0..5, due:ms, right:count, wrong:count, seen:count }`.
 - `leitnerIsSeen(card)` → `card.seen > 0`.
 - `leitnerIsMastered(card)` → `card.box >= 5`.
 - `leitnerBoxOf(card)` → `card.box`.
+- `leitnerIsWeak(card)` → is this a **weak spot**? `seen>0 && wrong>0 && box<5` (seen + missed + not
+  mastered). `leitnerWeakness(card)` → a ranking score (higher = weaker: miss count, then miss ratio,
+  then distance from mastery; `-Infinity` for non-weak). Drive `/today`'s cross-track weak-spots round
+  (§19); due date is intentionally ignored (shore up shaky cards now, not when they fall due).
 - `leitnerApply(card, correct, opts)` — mutates the card:
   - `seen++`; correct → `box = min(5, box+1)`.
   - wrong → configurable via `opts.wrongPolicy`: `'reset'` (default) → `box = 1`;
@@ -933,6 +937,7 @@ the three singular modes).
 | `'levels'` | Due/new words across the selected CEFR levels; up to 20 new per multi-level run |
 | `'review-all'` | All weeks: `seen>0 && !mastered && due<=now` |
 | `'daily'` | **`/today`'s guided daily review.** Every due card from weeks `1..scope.week` — **including mastered-but-due** (so long-interval words resurface, unlike `'review-all'`) — plus up to 12 new words from the current week only; `scope.week` is clamped to the real week range, and it falls back to the current week's cards if empty |
+| `'weak'` | **`/today`'s weak-spots round.** The worst word + plural cards across ALL weeks (seen + missed + not mastered), worst-first (`leitnerWeakness`), regardless of due date; verb-WORDS excluded (owned by the verb store). Capped by `scope.cap` (default 20). `collectWeakCards()`/`weakCount()`. §19 |
 
 Queue is shuffled and capped at **25 cards**. `answer(correct)` → `updateCard` (or `updatePlural`
 for plural cards). A wrong card is re-queued **once** at the end as an easier reveal card of the
@@ -1030,6 +1035,7 @@ random person (ich/du/er/wir/ihr/sie) and reveals the full six-person paradigm o
 | `'due'` | All verbs with `seen>0 && !mastered && due<=now` (across all verbs) |
 | `'filter'` | Within the verbs matching `state.filter`: due (seen, not mastered) first, then up to **15** new; if that set is empty, fall back to the whole filter set |
 | `'selected'` | Verbs in `state.sel`, capped at **40 cards** |
+| `'weak'` | **`/today`'s weak-spots round.** The worst verbs (seen + missed + not mastered), worst-first (`leitnerWeakness`), regardless of due date; capped by `scope.cap` (default 20). `collectWeakKeys()`/`weakCount()`. §19 |
 
 Non-`selected` sessions are shuffled and capped at **20 cards**; `selected` at **40**.
 
@@ -1401,12 +1407,14 @@ when TTS is usable *and* the current week has a dialogue *and* `shouldRunListeni
 allows it for the tariff (light track skips listening unless `hardest === 'listening'`; 10-min every
 other day; 15/20+ always). A **produce** block (after listen, before the AI step) appears on **produce
 days** — the productive `write`/`speak` tasks (`isProduceDay(day)`) — at every tariff: micro-output on
-the light track, a static self-check on 10/15, and an optional AI-feedback turn on 20+.
+the light track, a static self-check on 10/15, and an optional AI-feedback turn on 20+. A **weak-spots**
+block (right before done) appears on 10/15/20+ (not the light track) when the learner actually has weak
+cards (`hasWeakSpots()`): an optional remedial round over their worst cards across all four families.
 `nextStep`/`flowHeader`/the intro checklist all iterate `flow.steps` (the intro builds a preview
-list for the current day). Completion model: **AI is `required:false`** (never blocks the day); a trainer
-session worked to its end screen (`onSessionEnd`'s `summary.completed`, set from `s.pos >= s.queue.length`
-in `closeSession`) — or auto-skipped on an empty queue — marks its block complete; **closing a trainer
-early leaves its block incomplete**.
+list for the current day). Completion model: **AI and the weak-spots round are `required:false`** (never
+block the day); a trainer session worked to its end screen (`onSessionEnd`'s `summary.completed`, set
+from `s.pos >= s.queue.length` in `closeSession`) — or auto-skipped on an empty queue — marks its block
+complete; **closing a trainer early leaves its block incomplete**.
 1. **grammar** — the day card (week theme · grammar focus · today's task with its `type_<type>` label),
    rendered by the page. A **"Break it down with AI"** button (`explainDay`) expands the AI chat panel
    right under the card and auto-sends a point-by-point breakdown request (`dayBreakdownText` →
@@ -1462,7 +1470,22 @@ early leaves its block incomplete**.
    generated once and persisted, so revisiting the day (or no key) doesn't regenerate. Below the
    pinned blocks, the same `ai` thread (`renderAiPanel()`) lets the student ask follow-ups. If no key,
    it nudges to `/settings` and offers **Skip**.
-8. **done** — gated on `dayComplete()` (every enabled `required` descriptor `isComplete()`): when the day
+8. **weak** — an **optional remedial round** over the learner's worst cards across the four card
+   families (Plan §11 Phase 6, item 14). Enabled on 10/15/20+ only, when `hasWeakSpots()`. It runs each
+   family that has weak cards as its own sub-session **in turn** (vocab → verbs → grammar), reusing the
+   very engines the main steps use: `VocabTrainer`/`VerbsTrainer` gain a `{ type:'weak', cap }` scope
+   (worst word+plural / verb cards, `weakCount()` for availability), and `GrammarDrill.weakReviewSlugs`
+   picks the weakest review topics. While `weak.active`, each engine's `onSessionEnd` routes to
+   `weakStageDone` (which chains families) instead of the normal per-step handler, so a weak sub-session
+   never clobbers a main step's result; a grammar sub-session still regrades its topics. "Weak spot" is
+   the shared model in `leitner.js` — `leitnerIsWeak` (seen + missed + not mastered) / `leitnerWeakness`
+   (worst first: miss count, then miss ratio, then distance from mastery); verb-WORDS are excluded from
+   the vocab family (the verb store owns them, so a verb-word is never double-drilled). Selection is
+   **re-scanned at run time**, so a family shored up earlier today drops out; an empty round auto-skips.
+   `required:false`, so it never gates the day and can be bailed out of (× → the round ends without
+   starting the next family). Caps scale by tariff (`weakCap` `{10:8,15:12,'20+':16}`; `weakGrammarCap`
+   `{10:1,15:2,'20+':3}`).
+9. **done** — gated on `dayComplete()` (every enabled `required` descriptor `isComplete()`): when the day
    is complete it marks `planner_data.completed[day] = true`, records `dayStats[day]`
    (`{ completedAt, blocks:[{id,required,completed}], counts:{vocab,verbs,listen} }` — written once, on the
    completing pass only), advances `currentDay` (when finishing the current day), persists via

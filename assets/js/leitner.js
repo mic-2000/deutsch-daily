@@ -28,6 +28,18 @@ function leitnerIsSeen(card) { return !!(card && card.seen > 0); }
 function leitnerBoxOf(card) { return card ? card.box : 0; }
 function leitnerIsMastered(card) { return leitnerBoxOf(card) >= MAX_BOX; }
 
+/* "Weak spot" model — shared by the trainers' cross-track weak-spots session (/today, item 14). A
+   weak spot is a card the learner keeps getting wrong: SEEN at least once, MISSED at least once, and
+   NOT yet mastered. `leitnerWeakness` ranks them (higher = weaker) so the weakest surface first —
+   dominated by the miss COUNT, then the miss RATIO, then how far the card still is from mastery.
+   Non-weak cards score -Infinity so they sort out of any ranking. Due date is intentionally ignored:
+   the point of a weak-spots round is to shore up shaky cards now, not to wait for them to fall due. */
+function leitnerIsWeak(card) { return !!(card && card.seen > 0 && card.wrong > 0 && leitnerBoxOf(card) < MAX_BOX); }
+function leitnerWeakness(card) {
+  if (!leitnerIsWeak(card)) return -Infinity;
+  return card.wrong * 10 + (card.wrong / card.seen) * 5 + (MAX_BOX - card.box);
+}
+
 /* Record one answer on the card (mutates and returns it):
  *   correct → box = min(MAX_BOX, box + 1)   (new 0→1, one box per correct)
  *   wrong   → depends on opts.wrongPolicy:

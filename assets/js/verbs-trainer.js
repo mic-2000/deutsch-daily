@@ -211,6 +211,17 @@ window.VerbsTrainer = (function () {
   }
 
   /* ==========================================================================
+     WEAK SPOTS (Plan §11 Phase 6, item 14) — the learner's worst-performing verbs, worst-first,
+     regardless of due date. Used by /today's cross-track weak-spots round.
+     ========================================================================== */
+  function collectWeakKeys() {
+    return Object.keys(VERBS)
+      .filter(k => leitnerIsWeak(state.mastery[k]))
+      .sort((a, b) => leitnerWeakness(state.mastery[b]) - leitnerWeakness(state.mastery[a]));
+  }
+  function weakCount() { return collectWeakKeys().length; }
+
+  /* ==========================================================================
      SESSION
      ========================================================================== */
   function startSession(scope) {
@@ -220,6 +231,10 @@ window.VerbsTrainer = (function () {
       keys = Object.keys(VERBS).filter(k => isSeen(k) && !isMastered(k) && isDue(k, now));
     } else if (scope.type === 'selected') {
       keys = Object.keys(state.sel).filter(k => VERBS[k]);
+    } else if (scope.type === 'weak') {
+      // /today weak-spots: the worst-performing verbs, worst-first, regardless of due date.
+      const cap = (typeof scope.cap === 'number' && scope.cap > 0) ? scope.cap : 20;
+      keys = collectWeakKeys().slice(0, cap);
     } else {
       const base = filterKeys(scope.filter || 'all');
       const maxBand = maxBandForWeek(scope.week);                  // null on /verbs → no gating
@@ -443,7 +458,7 @@ ${appFooter()}`;
 <div class="session-bg">
   <div class="session-top"><div class="container session-top-row">
     <span class="session-mode-badge ${card.mode}">${modeLabel}</span>
-    <span class="session-counter">${s.pos+1} / ${s.queue.length}</span>
+    <span class="session-counter">${s.pos+1} / ${s.queue.length}${(s.scope && s.scope.type==='weak') ? T('session_weak') : ''}</span>
     <button class="session-close" onclick="VerbsTrainer.closeSession()">×</button>
   </div>
   <div class="container"><div class="session-progress"><div class="session-progress-fill" style="width:${progress}%"></div></div></div>
@@ -624,6 +639,7 @@ ${appFooter()}`;
     /* introspection (used by tests + the /today host) */
     verbGloss, triadHtml, auxHtml, jk, selCount,
     availableModes, pickMode, makeCard, filterKeys, stats, conjugatePresent,
+    collectWeakKeys, weakCount,
     updateCard, getCard, isDue, isSeen, cardBox, isMastered,
     newLogToday, newRemaining, newDailyCap, bumpNewLog,
     get state() { return state; },

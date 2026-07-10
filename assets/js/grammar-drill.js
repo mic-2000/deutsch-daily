@@ -129,6 +129,22 @@ window.GrammarDrill = (function () {
     return (typeof limit === 'number' && limit >= 0) ? due.slice(0, limit) : due;
   }
 
+  /* Which grammar-review slugs are the WEAKEST (Plan §11 Phase 6, item 14): topics whose card is a
+     weak spot (seen + missed + not mastered), ranked worst-first by leitnerWeakness, regardless of
+     due date. Filtered to slugs that still resolve in GRAMMAR_DRILLS, capped to `limit` WHOLE topics.
+     Used by /today's cross-track weak-spots round; the `review` step still uses dueReviewSlugs
+     (due-based spacing), so the two selections stay independent. */
+  function weakReviewSlugs(reviewMap, limit) {
+    if (!reviewMap || typeof reviewMap !== 'object') return [];
+    const weak = Object.keys(reviewMap)
+      .filter((slug) => hasDrill(slug))
+      .map((slug) => ({ slug, card: reviewMap[slug] }))
+      .filter((x) => leitnerIsWeak(x.card))
+      .sort((a, b) => leitnerWeakness(b.card) - leitnerWeakness(a.card))
+      .map((x) => x.slug);
+    return (typeof limit === 'number' && limit >= 0) ? weak.slice(0, limit) : weak;
+  }
+
   /* ---- answering ---- */
   function grade(item, correct) {
     if (item.firstTry === null) { item.firstTry = correct; if (correct) state.session.uniqueRight++; }
@@ -309,7 +325,7 @@ window.GrammarDrill = (function () {
     choose, check, next, setInput, pickToken, unpickToken, handleKeydown,
     hasDrill, drillOf, drillLocale,
     /* grammar-review track (state owned by /today's planner_data.grammarReview) */
-    dueReviewSlugs, reviewPassed,
+    dueReviewSlugs, weakReviewSlugs, reviewPassed,
     /* introspection (tests) */
     makeItem, assembled, summarize,
     get state() { return state; },

@@ -142,14 +142,25 @@ function applyVerbProgress(d){ VerbsTrainer.applyData(d && typeof d === 'object'
 /* ---- engine persistence hooks (three independent columns) ---- */
 function saveVerbsNow(){ if (typeof saveVerbsToCloud === 'function') saveVerbsToCloud(VerbsTrainer.serialize()); }
 function saveVocabNow(){ if (typeof saveVocabToCloud === 'function') saveVocabToCloud(VocabTrainer.serialize()); }
-VocabTrainer.init({ embedded: true, onSessionEnd: (r) => { flow.vocabResult = r; flow.results.vocab = { completed: !!(r && r.completed) }; nextStep(); }, onSaveVocab: saveVocabNow, onSaveVerbs: saveVerbsNow });
-VerbsTrainer.init({ embedded: true, onSessionEnd: (r) => { flow.verbResult = r; flow.results.verbs = { completed: !!(r && r.completed) }; nextStep(); }, onSave: saveVerbsNow });
-/* GrammarDrill runs a keyed drill in the grammar step (the day's slug) AND in the review step (all due
-   review topics). Its end advances the flow like the other engines; per-topic results feed the same
-   grammar-review Leitner track (recordGrammarReview), and the result is filed under whichever step is
-   active so the done step gates on it. */
+/* Each engine's onSessionEnd normally files its result and advances the flow. During the optional
+   weak-spots round (weak.active) the same callback instead hands the result to weakStageDone, which
+   chains the family sub-sessions — so a weak sub-session never clobbers the main step's result. */
+VocabTrainer.init({ embedded: true, onSessionEnd: (r) => {
+  if (weak.active) { weakStageDone(r); return; }
+  flow.vocabResult = r; flow.results.vocab = { completed: !!(r && r.completed) }; nextStep();
+}, onSaveVocab: saveVocabNow, onSaveVerbs: saveVerbsNow });
+VerbsTrainer.init({ embedded: true, onSessionEnd: (r) => {
+  if (weak.active) { weakStageDone(r); return; }
+  flow.verbResult = r; flow.results.verbs = { completed: !!(r && r.completed) }; nextStep();
+}, onSave: saveVerbsNow });
+/* GrammarDrill runs a keyed drill in the grammar step (the day's slug), the review step (due review
+   topics), AND the weak-spots round (the weakest review topics). Its end advances the flow like the
+   other engines; per-topic results always feed the grammar-review Leitner track (recordGrammarReview,
+   so a weak-spots drill still regrades the topic). Outside the weak round the result is filed under
+   whichever step is active so the done step gates on it. */
 GrammarDrill.init({ embedded: true, onSessionEnd: (r) => {
   if (r && Array.isArray(r.perSlug)) recordGrammarReview(r.perSlug);
+  if (weak.active) { weakStageDone(r); return; }
   const id = (currentStep() && currentStep().id) || 'grammar';
   if (id === 'grammar') flow.grammarResult = r;
   flow.results[id] = { completed: !!(r && r.completed) };
@@ -202,9 +213,14 @@ function tariff(onboarding){
    tasks) at every tariff — micro-output on the light track, a static self-check on 10/15, and an
    optional AI-feedback turn on 20+ (Plan §4/§10). It never depends on TTS or a key (the static
    self-check always works), so it can't deadlock the day (Gate 5).
-   Completion rules: AI never blocks the day; a trainer/review/listen block worked to the end (or
-   auto-skipped on empty content) counts complete; the produce block completes on the learner's own
-   self-check (never gated on writing/speech quality); closing one early leaves its block incomplete. */
+   The `weak` block is an OPTIONAL remedial round over the learner's worst cards across the four card
+   families (words + plurals, verbs, grammar-review topics); it appears only on 10/15/20+ (not the
+   light track) when the learner actually has weak cards (hasWeakSpots). Like AI it is never required,
+   so it never blocks the day and can be bailed out of (Plan §11 Phase 6, item 14).
+   Completion rules: AI + weak-spots never block the day; a trainer/review/listen block worked to the
+   end (or auto-skipped on empty content) counts complete; the produce block completes on the
+   learner's own self-check (never gated on writing/speech quality); closing one early leaves its
+   block incomplete. */
 function buildSteps(day, onboarding){
   const t = tariff(onboarding);
   const light = t === 5;
@@ -214,6 +230,7 @@ function buildSteps(day, onboarding){
   const reviewEnabled = !light && hasDueGrammarReview();   // 10/15/20+ only, when a practised topic is due
   const listenEnabled = shouldRunListening(day, onboarding);
   const produceEnabled = isProduceDay(day);                // write/speak days, at every tariff
+  const weakEnabled = !light && hasWeakSpots();            // 10/15/20+ only, when the learner has weak cards
   return [
     { id: 'grammar', required: true,           enabled: true,           run: renderGrammar,   isComplete: () => true },
     { id: 'review',  required: reviewEnabled,  enabled: reviewEnabled,  run: startReviewStep, isComplete: () => !hasDueGrammarReview() || !!(flow.results.review && flow.results.review.completed) },
@@ -222,6 +239,7 @@ function buildSteps(day, onboarding){
     { id: 'listen',  required: listenEnabled,  enabled: listenEnabled,  run: renderListen,    isComplete: () => !ttsAvailable() || !dialogueForDay(day) || !!(flow.results.listen && flow.results.listen.completed) },
     { id: 'produce', required: produceEnabled, enabled: produceEnabled, run: renderProduce,   isComplete: () => !isProduceDay(day) || !!(flow.results.produce && flow.results.produce.completed) },
     { id: 'ai',      required: false,          enabled: t === '20+',    run: runAiStep,       isComplete: () => true },
+    { id: 'weak',    required: false,          enabled: weakEnabled,    run: startWeakStep,   isComplete: () => true },
     { id: 'done',    required: true,           enabled: true,           run: renderDone,      isComplete: () => true },
   ].filter(step => step.enabled);
 }
@@ -231,6 +249,7 @@ let ai = { messages: [], loading: false };
 let grammarExplain = false;   // grammar step: AI breakdown panel expanded under the day card
 let listen = { checked: false, answers: [] };   // listen step: per-question true/false picks + graded flag
 let produce = { text: '', checks: {}, feedback: '', loading: false };   // produce step: draft + self-check ticks + optional AI feedback
+let weak = { active: false, seq: [], stage: 0, results: {} };   // weak-spots round: cross-engine sub-session orchestration
 
 function render(){ if (flow.running) renderStep(); else renderIntro(); }
 function currentStep(){ return flow.steps[flow.step] || null; }
@@ -243,6 +262,7 @@ function startFlow(){
   grammarExplain = false;
   listen = { checked: false, answers: [] };
   produce = { text: '', checks: {}, feedback: '', loading: false };
+  weak = { active: false, seq: [], stage: 0, results: {} };
   flow = { running: true, step: 0, day: dayOf(), steps: buildSteps(dayOf(), onboardingProfile()), results: {}, vocabResult: null, verbResult: null };
   renderStep();
   loadDayLesson(flow.day);   // pull any saved explanation/chat for this day (shared with the planner)
@@ -476,6 +496,66 @@ async function produceFeedback(){
 }
 /* Finish the produce block on the learner's self-check (quality is never graded); advance the flow. */
 function finishProduce(){ flow.results.produce = { completed: true }; nextStep(); }
+
+/* ---- step: weak-spots (Plan §11 Phase 6, item 14) — an OPTIONAL remedial round over the learner's
+   worst cards across the four families: non-verb words + plurals (the vocab engine), verbs, and
+   grammar-review topics (whose weakest cards live in planner_data.grammarReview). It runs each family
+   that HAS weak cards as its own sub-session in turn (vocab → verbs → grammar), reusing the very same
+   engines the main steps use; the engines' onSessionEnd routes to weakStageDone while weak.active is
+   set. Never required (like the AI step): no weak cards → the step auto-skips; a completed sub-session
+   chains to the next family; bailing (× on a sub-session) ends the round early. Selection is re-scanned
+   at run time, so a family the learner shored up earlier today simply drops out. ---- */
+function weakCap(){ return ({ 10: 8, 15: 12, '20+': 16 })[tariff()] || 12; }          // card cap per trainer family
+function weakGrammarCap(){ return ({ 10: 1, 15: 2, '20+': 3 })[tariff()] || 2; }      // whole grammar topics
+/* The families that currently have weak cards, in run order. Cheap (pure reads), so buildSteps and
+   the step itself can both call it. */
+function weakSeq(){
+  const seq = [];
+  if (VocabTrainer.weakCount() > 0) seq.push('vocab');
+  if (VerbsTrainer.weakCount() > 0) seq.push('verbs');
+  if (GrammarDrill.weakReviewSlugs(planner.grammarReview).length > 0) seq.push('grammar');
+  return seq;
+}
+function hasWeakSpots(){ return weakSeq().length > 0; }
+/* Enter the weak-spots round: build the family sequence, then start the first sub-session. An empty
+   sequence auto-skips (marks the block done) rather than deadlocking, mirroring the trainer skips. */
+function startWeakStep(){
+  const seq = weakSeq();
+  if (!seq.length) { flow.results.weak = { completed: true, skipped: true }; nextStep(); return; }
+  weak = { active: true, seq, stage: 0, results: {} };
+  startWeakStage();
+}
+/* Start the current family's weak sub-session. An empty queue (nothing survived the re-scan) skips
+   straight to the next family via weakStageDone(null). */
+function startWeakStage(){
+  const id = weak.seq[weak.stage];
+  if (id === 'vocab'){
+    VocabTrainer.startSession({ type: 'weak', cap: weakCap() });
+    if (!VocabTrainer.state.session) { weakStageDone(null); return; }
+    trimSession(VocabTrainer); VocabTrainer.render();
+  } else if (id === 'verbs'){
+    VerbsTrainer.startSession({ type: 'weak', cap: weakCap() });
+    if (!VerbsTrainer.state.session) { weakStageDone(null); return; }
+    trimSession(VerbsTrainer); VerbsTrainer.render();
+  } else {
+    const slugs = GrammarDrill.weakReviewSlugs(planner.grammarReview, weakGrammarCap());
+    GrammarDrill.startSession({ slugs, review: true });
+    if (!GrammarDrill.state.session) { weakStageDone(null); return; }
+    GrammarDrill.render();
+  }
+}
+/* A weak sub-session ended (r === null when the family auto-skipped on an empty queue). A completed
+   sub-session advances to the next family; bailing out (× → completed:false) ends the whole optional
+   round. When every family is done, advance the flow to the done step. */
+function weakStageDone(r){
+  const id = weak.seq[weak.stage];
+  if (r) weak.results[id] = { right: r.right || 0, total: r.total || 0, completed: !!r.completed };
+  if (r && r.completed === false) { finishWeak(); return; }   // bailed → stop the round
+  weak.stage++;
+  if (weak.stage < weak.seq.length) { startWeakStage(); return; }
+  finishWeak();
+}
+function finishWeak(){ weak.active = false; flow.results.weak = { completed: true }; nextStep(); }
 
 /* ---- shared in-flow header (progress) ---- */
 function flowHeader(){
@@ -779,6 +859,7 @@ function resumeFlow(saved){
   grammarExplain = false;
   listen = { checked: false, answers: [] };
   produce = { text: '', checks: {}, feedback: '', loading: false };
+  weak = { active: false, seq: [], stage: 0, results: {} };
   const steps = buildSteps(saved.day, onboardingProfile());
   flow = { running: true, step: Math.min(saved.step, steps.length - 1), day: saved.day, steps: steps, results: {}, vocabResult: null, verbResult: null };
   loadDayLesson(flow.day);   // its trailing render() paints the resumed step with the lesson loaded

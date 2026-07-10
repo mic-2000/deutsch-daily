@@ -33,6 +33,7 @@
 .step-row.c6 .step-badge { border-color: var(--die); color: var(--die); }
 .step-row.c7 .step-badge { border-color: var(--green); color: var(--green); }
 .step-row.c8 .step-badge { border-color: var(--gold); color: var(--gold); }
+.step-row.c9 .step-badge { border-color: var(--accent); color: var(--accent); }
 .step-text h3 { margin: 2px 0 4px; font-size: 17px; font-weight: 600; }
 .step-text p { margin: 0; color: var(--ink-soft); font-size: 14px; line-height: 1.5; }
 

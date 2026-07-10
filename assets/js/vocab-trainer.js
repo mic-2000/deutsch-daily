@@ -183,6 +183,29 @@ window.VocabTrainer = (function () {
     return out;
   }
 
+  /* ==========================================================================
+     WEAK SPOTS (Plan §11 Phase 6, item 14) — the learner's worst WORD + PLURAL cards across ALL
+     weeks, for /today's cross-track weak-spots round. Verb-WORDS are excluded here: their mastery
+     lives in the shared verbs_data store and the verb trainer's own weak scope owns them, so the
+     daily weak round never double-drills a verb-word. Ranked worst-first by leitnerWeakness,
+     regardless of due date. Plural cards count only when the plural track is on.
+     ========================================================================== */
+  function wordWeak(week, idx) { return !vkOf(week, idx) && leitnerIsWeak(mRec(week, idx)); }
+  function pluralWeak(week, idx) { return plHasPlural(week, idx) && leitnerIsWeak(plRec(week, idx)); }
+  function collectWeakCards() {
+    const usePlural = !!state.modes.plural;
+    const scored = [];
+    for (const w in VOCAB) {
+      const words = VOCAB[w].words;
+      for (let i = 0; i < words.length; i++) {
+        if (wordWeak(+w, i)) scored.push({ w: +w, i, kind: 'word', score: leitnerWeakness(mRec(+w, i)) });
+        if (usePlural && pluralWeak(+w, i)) scored.push({ w: +w, i, kind: 'plural', score: leitnerWeakness(plRec(+w, i)) });
+      }
+    }
+    return scored.sort((a, b) => b.score - a.score);
+  }
+  function weakCount() { return collectWeakCards().length; }
+
   function resetAll() { askConfirm(T('confirm_reset_all'), 'all'); }
   function resetWord(week, idx) { askConfirm(T('confirm_reset_word'), { week, idx }); }
   function askConfirm(message, action) { stageConfirm(state, message, action); render(); }
@@ -393,6 +416,12 @@ window.VocabTrainer = (function () {
         VOCAB[curWeek].words.forEach((_, i) => list.push(makeCard(curWeek, i)));
         if (usePlural) list = list.concat(allPluralCards([curWeek]));
       }
+    } else if (scope.type === 'weak') {
+      /* /today's weak-spots round: the worst-performing word + plural cards, worst-first, regardless
+         of due date. Capped via scope.cap (default 20). Empty when the learner has no logged misses,
+         so the /today host auto-skips this family (see startWeakStage). */
+      const cap = (typeof scope.cap === 'number' && scope.cap > 0) ? scope.cap : 20;
+      list = collectWeakCards().slice(0, cap).map(x => x.kind === 'plural' ? makePluralCard(x.w, x.i) : makeCard(x.w, x.i));
     } else {
       for (const w in VOCAB) {
         const words = VOCAB[w].words;
@@ -633,6 +662,14 @@ ${appFooter()}`;
   /* ==========================================================================
      RENDER — SESSION
      ========================================================================== */
+  /* Session-counter suffix by scope: "· review" (review-all), "· weak spots" (the /today weak-spots
+     round), "· week N" (week/daily/levels scopes that carry a week), or nothing. */
+  function sessionScopeLabel(scope) {
+    if (!scope) return '';
+    if (scope.type === 'review-all') return T('session_review');
+    if (scope.type === 'weak') return T('session_weak');
+    return scope.week ? T('session_week', scope.week) : '';
+  }
   function renderSession() {
     const s = state.session;
     if (s.pos >= s.queue.length) { renderEnd(); return; }
@@ -654,7 +691,7 @@ ${appFooter()}`;
 <div class="session-bg">
   <div class="session-top"><div class="container session-top-row">
     <span class="session-mode-badge ${badgeClass}">${modeLabel}</span>
-    <span class="session-counter">${s.pos+1} / ${s.queue.length}${s.scope.type==='review-all'? T('session_review') : T('session_week', s.scope.week)}</span>
+    <span class="session-counter">${s.pos+1} / ${s.queue.length}${sessionScopeLabel(s.scope)}</span>
     <button class="session-close" onclick="VocabTrainer.closeSession()">×</button>
   </div>
   <div class="container"><div class="session-progress"><div class="session-progress-fill" style="width:${progress}%"></div></div></div>
@@ -945,6 +982,7 @@ ${appFooter()}`;
     makePluralCard, makePluralOptions, pluralDistractors, umlautify,
     collectPluralCards, allPluralCards, pickPluralMode,
     updatePlural, plHasPlural, plBox, plIsSeen, plIsMastered, plIsDue, plCard,
+    collectWeakCards, weakCount,
     weekStats, globalStats,
     newLogToday, newRemaining, newDailyCap, bumpNewLog,
     get state() { return state; },
