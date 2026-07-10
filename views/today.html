@@ -80,6 +80,20 @@ function applyCloudData(d){
     if (!planner.completed || typeof planner.completed !== 'object') planner.completed = {};
   }
 }
+/* One-time reset notice for v1→v2 migrated accounts (curriculum-redesign-2026-07-v2.md §2, "Do not
+   hide the reset"): cloud-sync silently rebuilt a pre-v2 planner_data into a clean v2 state, leaving
+   planner.migratedFrom as the only trace. Surface a dismissible notice on the intro until the user
+   acks it — the ack is a timestamp stored back inside migratedFrom, so it round-trips with the rest
+   of planner_data (no new column, no localStorage; unknown-key preservation covers it end to end). */
+function migrationPending(){ const m = planner.migratedFrom; return !!(m && typeof m === 'object' && !m.ackAt); }
+function ackMigration(){
+  const m = planner.migratedFrom;
+  if (!m || typeof m !== 'object' || m.ackAt) return;
+  m.ackAt = new Date().toISOString();
+  saveToCloud();   // idempotent planner_data upsert — persists the ack alongside the rest of the payload
+  render();
+}
+
 function dayOf(){ return planner.currentDay; }
 function activeDay(){ return flow.running ? flow.day : dayOf(); }   // the day the flow is on (== currentDay normally)
 function localizedToday(){ return getLocalizedDay(DAYS[Math.min(activeDay(), TOTAL_DAYS) - 1]); }
@@ -786,9 +800,16 @@ function renderDone(){
    INTRO / CHECKLIST
    ========================================================================== */
 function renderIntro(){
+  const notice = migrationPending() ? `<div class="today-migrated" role="status">
+        <div class="today-migrated-body">
+          <strong>${T('today_migrated_title')}</strong>
+          <p>${T('today_migrated_msg')}</p>
+        </div>
+        <button class="today-migrated-ack" onclick="ackMigration()">${T('today_migrated_dismiss')}</button>
+      </div>` : '';
   let main;
   if (dayOf() > TOTAL_DAYS) {
-    main = `<main class="container flow-body"><div class="flow-done">
+    main = `<main class="container flow-body">${notice}<div class="flow-done">
       <div class="done-mark">✓</div>
       <h2>${T('today_course_done_title')}</h2>
       <p>${T('today_course_done_msg')}</p>
@@ -813,6 +834,7 @@ function renderIntro(){
           <div class="today-badge">${T('today_minutes')}</div>
         </div>
         <div class="today-day-tag">${esc(d.grammar)}</div>
+        ${notice}
         ${banner}
         <div class="steps-label">${T('today_steps_label')}</div>
         <div class="steps-list">${list}</div>

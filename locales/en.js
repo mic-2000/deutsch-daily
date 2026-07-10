@@ -114,6 +114,10 @@ window.LOCALE_EN = {
     today_already_msg: 'You can run it again for review, or open the planner.',
     today_course_done_title: 'Course complete!',
     today_course_done_msg: "You've reached the end of the 36-week plan. Keep reviewing words and verbs any time.",
+    // one-time reset notice for accounts migrated from the old course (v1 → v2)
+    today_migrated_title: 'Your course was rebuilt',
+    today_migrated_msg: 'We moved to the new 180-day plan. Your settings and word and verb progress were kept where possible, but the daily plan starts fresh.',
+    today_migrated_dismiss: 'Got it',
     // onboarding wizard (/welcome)
     onb_kicker: 'GETTING STARTED',
     onb_title: "Let's set you up in a minute",

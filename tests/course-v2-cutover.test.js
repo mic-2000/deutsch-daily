@@ -189,3 +189,59 @@ test('an already-v2 planner_data is returned untouched (idempotent)', () => {
   const v2 = { courseVersion: 2, currentDay: 130, viewingDay: 130, completed: { 121: true } };
   assert.equal(env.__mig(v2), v2, 'same object reference back — no re-migration');
 });
+
+test('a freshly-migrated planner_data has no ack yet (the reset notice must show — §2)', () => {
+  const env = loadMigration();
+  env.__setOnb({ level: 'A1' });
+  const out = env.__mig({ currentDay: 5, completed: {} });
+  assert.ok(out.migratedFrom && out.migratedFrom.at, 'migratedFrom.at marks the reset event');
+  assert.equal(out.migratedFrom.ackAt, undefined, 'no ack yet — the notice is pending');
+});
+
+/* ---- one-time reset notice on /today (curriculum-redesign-2026-07-v2.md §2 "Do not hide the reset") ---- */
+test('the three locales carry the v1→v2 reset-notice keys (title, message, dismiss)', () => {
+  for (const lang of ['en', 'ru', 'ua']) {
+    const src = fs.readFileSync(path.join(ROOT, `locales/${lang}.js`), 'utf8');
+    const sb = { window: {} }; vm.createContext(sb); vm.runInContext(src, sb);
+    const ui = sb.window['LOCALE_' + lang.toUpperCase()].ui;
+    for (const k of ['today_migrated_title', 'today_migrated_msg', 'today_migrated_dismiss']) {
+      assert.ok(ui[k] && typeof ui[k] === 'string' && ui[k].trim(), `${lang}: ${k} present`);
+    }
+  }
+});
+
+test('the /today intro shows the reset notice for a migrated account, and dismissing it persists the ack', () => {
+  const { loadPage } = require('./harness');
+  const p = loadPage({
+    page: 'today.html', extraFiles: ['locales/en.js'],
+    exports: ['applyCloudData', 'migrationPending', 'ackMigration', 'getCloudPayload', 'render'],
+  });
+  // a freshly-migrated planner_data, exactly as cloud-sync._migratePlannerV2 writes it (no ack yet)
+  p.applyCloudData({
+    courseVersion: 2, currentDay: 1, viewingDay: 1, completed: {}, dayStats: {}, grammarReview: {},
+    migratedFrom: { courseVersion: 1, at: '2026-07-10T00:00:00.000Z', oldCurrentDay: 40, oldCompletedCount: 2 },
+  });
+  assert.equal(p.migrationPending(), true, 'the notice is pending before ack');
+  p.render();
+  assert.match(p.app.innerHTML, /today-migrated/, 'the reset notice is rendered on the intro');
+  assert.match(p.app.innerHTML, /Your course was rebuilt/, 'the localized notice copy is shown');
+  assert.doesNotMatch(p.app.innerHTML, /today_migrated_/, 'no raw i18n key leaks');
+
+  p.ackMigration();
+  const payload = p.getCloudPayload();
+  assert.ok(payload.migratedFrom.ackAt, 'the ack timestamp is written back into planner_data.migratedFrom');
+  assert.equal(p.migrationPending(), false, 'the notice is no longer pending after ack');
+  assert.doesNotMatch(p.app.innerHTML, /today-migrated/, 're-render after ack drops the notice');
+});
+
+test('the /today intro shows no reset notice for a native v2 account (never migrated)', () => {
+  const { loadPage } = require('./harness');
+  const p = loadPage({
+    page: 'today.html', extraFiles: ['locales/en.js'],
+    exports: ['applyCloudData', 'migrationPending', 'render'],
+  });
+  p.applyCloudData({ courseVersion: 2, currentDay: 1, viewingDay: 1, completed: {} });
+  assert.equal(p.migrationPending(), false, 'no migratedFrom → nothing to notify');
+  p.render();
+  assert.doesNotMatch(p.app.innerHTML, /today-migrated/, 'no reset notice for a native v2 account');
+});

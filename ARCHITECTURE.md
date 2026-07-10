@@ -473,7 +473,11 @@ collection upserts **merge per id** so a create + later mastery update collapse 
   }` — and immediately persisted (`_pushProgress`) so it sticks. Old day numbers / `completed` /
   `lessons` are **not** remapped (redesign §2); safe trainer progress (`verbs_data` by infinitive key,
   vocab modes/levels) is kept by the trainer pages. An already-v2 payload is returned untouched
-  (idempotent). New accounts get `courseVersion:2` stamped by `/welcome`. (Guarded by
+  (idempotent). New accounts get `courseVersion:2` stamped by `/welcome`. Because the reset is
+  silent otherwise (redesign §2 "Do not hide the reset"), `/today`'s intro shows a **one-time
+  dismissible notice** whenever `planner.migratedFrom` exists without an ack (`migrationPending()`);
+  dismissing it (`ackMigration()`) writes `migratedFrom.ackAt` back into `planner_data` and re-renders,
+  so it never re-appears and the ack round-trips like any other planner key. (Guarded by
   `tests/course-v2-cutover.test.js`.)
 - `saveToCloud()` / `saveLangToCloud(code)` / `saveThemeToCloud(theme)` / `saveVerbsToCloud(payload)`
   / `saveVocabToCloud(payload)` / `saveOnboardingToCloud(payload)` — all route through the internal `_pushProgress(fields)`, which

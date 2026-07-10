@@ -20,6 +20,15 @@
 
 .today-banner { margin-top: 18px; border: 1px solid var(--line); border-left: 3px solid var(--gold); background: var(--paper-3); border-radius: 4px; padding: 12px 16px; color: var(--ink-soft); font-size: 14px; }
 
+/* one-time v1→v2 reset notice (§2 "Do not hide the reset") — dismissible; the ack persists in
+   planner_data.migratedFrom.ackAt so it never re-appears once acknowledged. */
+.today-migrated { margin-top: 18px; display: flex; gap: 14px; align-items: flex-start; border: 1px solid var(--line); border-left: 3px solid var(--accent); background: var(--paper-3); border-radius: 4px; padding: 14px 16px; }
+.today-migrated-body { flex: 1 1 auto; min-width: 0; }
+.today-migrated-body strong { display: block; font-size: 15px; margin-bottom: 4px; }
+.today-migrated-body p { margin: 0; color: var(--ink-soft); font-size: 14px; line-height: 1.55; }
+.today-migrated-ack { flex: 0 0 auto; align-self: center; border: 1px solid var(--line); background: transparent; color: var(--ink); border-radius: 4px; padding: 8px 14px; font-size: 13px; cursor: pointer; white-space: nowrap; transition: all 0.15s; }
+.today-migrated-ack:hover { background: var(--ink); color: var(--paper); }
+
 .steps-label { margin: 26px 0 10px; font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-soft); }
 .steps-list { border: 1px solid var(--line); border-radius: 6px; overflow: hidden; background: var(--paper-3); }
 .step-row { display: flex; gap: 16px; align-items: flex-start; padding: 18px 20px; border-bottom: 1px solid var(--line); }
