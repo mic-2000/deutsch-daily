@@ -10,23 +10,26 @@
 
    Depends on globals: WEEKS (data/weeks.js, must load first), getLang (i18n.js). */
 
-/* Normalize a task entry (v2 object or v1 [type, text] tuple) to { type, text }. */
+/* Normalize a task entry (v2 object or v1 [type, text] tuple) to { type, text, drill? }.
+   `drill` is the keyed grammar-drill slug (v2 object tasks only; tuples never carry one) — /today's
+   grammar step resolves it against GRAMMAR_DRILLS to run an interactive drill. */
 function taskFields(task) {
-  return Array.isArray(task) ? { type: task[0], text: task[1] } : { type: task.type, text: task.text };
+  return Array.isArray(task) ? { type: task[0], text: task[1], drill: null }
+                             : { type: task.type, text: task.text, drill: task.drill || null };
 }
 
 /* Flatten weeks into days (one task = one day) */
 const DAYS = [];
 WEEKS.forEach(w => {
   w.tasks.forEach((task, taskIdx) => {
-    const { type, text } = taskFields(task);
+    const { type, text, drill } = taskFields(task);
     DAYS.push({
       day: DAYS.length + 1,
       week: w.n,
       weekTheme: w.theme,
       grammar: w.grammar,
       vocab: w.vocab,
-      type, text, taskIdx
+      type, text, drill, taskIdx
     });
   });
 });

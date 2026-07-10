@@ -40,7 +40,8 @@ const SHELL_ASSETS = [
   '/assets/js/pwa.js', '/assets/js/speech.js', '/assets/js/supabase.js',
   '/assets/js/theme.js', '/assets/js/utils.js',
   '/assets/js/vocab-trainer.js', '/assets/js/verbs-trainer.js',
-  '/data/vocab.js', '/data/verbs.js', '/data/weeks.js',
+  '/assets/js/grammar-drill.js',
+  '/data/vocab.js', '/data/verbs.js', '/data/weeks.js', '/data/grammar-drills.js',
   '/locales/en.js', '/locales/ru.js', '/locales/ua.js'
 ];
 

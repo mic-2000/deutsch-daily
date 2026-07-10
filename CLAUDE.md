@@ -25,8 +25,11 @@ The vocab + verb **trainer engines are shared modules** (`assets/js/vocab-traine
 `window.VocabTrainer`, `verbs-trainer.js` = `window.VerbsTrainer`). `/vocab` and `/verbs` are thin
 hosts (home + sessions, `embedded:false`); `/today` is a guided wizard that drives both engines in
 `embedded:true` mode (sessions only; the end screen advances the flow). Template handlers are
-namespaced (`VocabTrainer.answer(true)`) so both engines coexist on `/today`. The curriculum day
-model (`DAYS` / `TOTAL_DAYS` / `getLocalizedDay`) is `assets/js/planner-data.js`, shared by
+namespaced (`VocabTrainer.answer(true)`) so both engines coexist on `/today`. The grammar step also
+hosts a third shared engine, `grammar-drill.js` = `window.GrammarDrill` — a keyed-drill trainer for
+the day's `drill` slug (`cloze`/`choice`/`order` items; `embedded:true`, same
+`onSessionEnd → advance` contract). The curriculum day model (`DAYS` / `TOTAL_DAYS` /
+`getLocalizedDay`, now carrying each day's `drill` slug) is `assets/js/planner-data.js`, shared by
 `/planner` and `/today`. (Details: ARCHITECTURE.md §9–§10, §19.)
 
 ## Build
@@ -54,8 +57,9 @@ model (`DAYS` / `TOTAL_DAYS` / `getLocalizedDay`) is `assets/js/planner-data.js`
 - **Course v2 is generated, and LIVE.** `data/v2/*` and `locales/v2/*` are emitted by
   `scripts/gen-course.js` from the single source in `authoring/` — never edit them (or the generated
   blocks in the live `data/`/`locales/`) directly. `scripts/cutover-v2.js` (`npm run cutover:v2`)
-  swaps the generated artifacts into the live files (`VOCAB` + `PLURALS` verbatim; the locales'
-  `ui`/`verbs` blocks are preserved).
+  swaps the generated artifacts into the live files (`VOCAB` + `PLURALS` + `GRAMMAR_DRILLS` verbatim;
+  the locales' `vocab`/`weeks`/`drills` blocks are replaced while `ui`/`verbs` are preserved). The
+  live `data/grammar-drills.js` (keyed by slug) is what `/today`'s grammar step reads.
   Every `data/verbs.js` entry carries a `band` (A1/A2/B1) written by `scripts/band-verbs.js` — after
   adding a verb, run it (never hand-type `band`). `tests/course-v2-align.test.js` (Gate 4, generated
   output) and `tests/course-v2-cutover.test.js` (Gate 6, live state + migration) guard it. A pre-v2

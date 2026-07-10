@@ -40,10 +40,12 @@
 <script src="/data/weeks.js"></script>
 <script src="/data/vocab.js"></script>
 <script src="/data/verbs.js"></script>
+<script src="/data/grammar-drills.js"></script>
 <script src="/assets/js/course-consts.js"></script>
 <script src="/assets/js/planner-data.js"></script>
 <script src="/assets/js/vocab-trainer.js"></script>
 <script src="/assets/js/verbs-trainer.js"></script>
+<script src="/assets/js/grammar-drill.js"></script>
 </head>
 <body>
 <div id="app"></div>
@@ -80,6 +82,8 @@ function applyCloudData(d){
 function dayOf(){ return planner.currentDay; }
 function activeDay(){ return flow.running ? flow.day : dayOf(); }   // the day the flow is on (== currentDay normally)
 function localizedToday(){ return getLocalizedDay(DAYS[Math.min(activeDay(), TOTAL_DAYS) - 1]); }
+/* The day's grammar-drill slug, or null when the day has none or it doesn't resolve in GRAMMAR_DRILLS. */
+function drillForDay(){ const slug = localizedToday().drill; return (slug && GrammarDrill.hasDrill(slug)) ? slug : null; }
 
 /* Resume position across a page refresh — transient per-tab nav state (NOT progress; progress lives
    in the cloud). sessionStorage survives reload, clears on tab close — exactly "same step on refresh". */
@@ -100,6 +104,8 @@ function saveVerbsNow(){ if (typeof saveVerbsToCloud === 'function') saveVerbsTo
 function saveVocabNow(){ if (typeof saveVocabToCloud === 'function') saveVocabToCloud(VocabTrainer.serialize()); }
 VocabTrainer.init({ embedded: true, onSessionEnd: (r) => { flow.vocabResult = r; flow.results.vocab = { completed: !!(r && r.completed) }; nextStep(); }, onSaveVocab: saveVocabNow, onSaveVerbs: saveVerbsNow });
 VerbsTrainer.init({ embedded: true, onSessionEnd: (r) => { flow.verbResult = r; flow.results.verbs = { completed: !!(r && r.completed) }; nextStep(); }, onSave: saveVerbsNow });
+/* GrammarDrill runs a keyed drill inside the grammar step; its end advances the flow like the other engines. */
+GrammarDrill.init({ embedded: true, onSessionEnd: (r) => { flow.grammarResult = r; flow.results.grammar = { completed: !!(r && r.completed) }; nextStep(); } });
 
 /* ==========================================================================
    FLOW — descriptor-driven. buildSteps() returns an ordered list of step
@@ -227,12 +233,24 @@ function flowHeader(){
 </div>`;
 }
 
-/* ---- step: grammar of the day (with an inline "break it down with AI" panel) ---- */
+/* ---- step: grammar of the day — concept card + an inline "break it down with AI" panel, and (when
+   the day has a keyed drill) an interactive drill via the GrammarDrill engine. The drill is optional
+   practice: grammar's isComplete() stays true so a drill-less day — or a skipped drill — never
+   deadlocks the flow. Working the drill to its end advances the flow (onSessionEnd → nextStep). ---- */
 function renderGrammar(){
   const d = localizedToday();
+  const slug = drillForDay();
   const aiBlock = grammarExplain
     ? `<div class="ai-wrap" style="margin-top:22px">${renderAiPanel('grammar')}</div>`
     : `<div class="flow-actions" style="margin-top:18px"><button class="btn" onclick="explainDay()">${T('today_grammar_explain')}</button></div>`;
+  const actions = slug
+    ? `<div class="flow-actions">
+         <button class="btn accent big" onclick="startGrammarDrill()">${T('today_grammar_practice')}</button>
+         <button class="btn" onclick="nextStep()">${T('today_next')}</button>
+       </div>`
+    : `<div class="flow-actions">
+         <button class="btn accent big" onclick="nextStep()">${T('today_next')}</button>
+       </div>`;
   document.getElementById('app').innerHTML = flowHeader() + `
 <main class="container flow-body">
   <div class="grammar-card">
@@ -242,11 +260,18 @@ function renderGrammar(){
     <div class="grammar-task"><span class="task-type">${T('type_' + d.type)}</span><br>${esc(d.text)}</div>
   </div>
   ${aiBlock}
-  <div class="flow-actions">
-    <button class="btn accent big" onclick="nextStep()">${T('today_next')}</button>
-  </div>
+  ${actions}
 </main>`;
   scrollAi();
+}
+/* Launch the day's interactive grammar drill. An empty/unknown drill auto-skips (marks grammar done)
+   rather than leaving a blank step, mirroring the vocab/verb empty-queue skips. */
+function startGrammarDrill(){
+  const slug = drillForDay();
+  if (!slug) { nextStep(); return; }
+  GrammarDrill.startSession({ slug });
+  if (!GrammarDrill.state.session) { flow.results.grammar = { completed: true, skipped: true }; nextStep(); return; }
+  GrammarDrill.render();
 }
 /* Open the AI panel right on the grammar card and auto-ask for a point-by-point breakdown. */
 function explainDay(){
@@ -464,6 +489,7 @@ function renderIntro(){
    KEYBOARD (route to whichever engine has an active session) + INIT
    ========================================================================== */
 document.addEventListener('keydown', e => {
+  if (GrammarDrill.state.session) { GrammarDrill.handleKeydown(e); return; }
   if (VocabTrainer.state.session) { VocabTrainer.handleKeydown(e); return; }
   if (VerbsTrainer.state.session) { VerbsTrainer.handleKeydown(e); return; }
 });

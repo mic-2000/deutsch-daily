@@ -31,6 +31,20 @@ window.LOCALE_UA = {
     today_progress: (i, n) => `Крок ${i} з ${n}`,
     today_grammar_intro: 'ГРАМАТИКА ДНЯ',
     today_grammar_explain: '🤖 Розібрати з ШІ',
+    today_grammar_practice: 'Потренуватися',
+    // grammar-drill engine (grammar-drill.js) — інтерактивне відпрацювання теми дня
+    drill_badge: 'Вправа',
+    drill_check: 'Перевірити',
+    drill_next: 'Далі →',
+    drill_correct: 'Правильно!',
+    drill_wrong: (ans) => `Відповідь: ${ans}`,
+    drill_enter_hint: 'Натисніть Enter для перевірки',
+    drill_order_prompt: 'Натискайте на слова в правильному порядку.',
+    drill_order_empty: 'Натискайте на слова нижче…',
+    drill_end_title: 'Вправу пройдено',
+    drill_end_perfect: 'Чудово — усе правильно!',
+    drill_end_good: 'Гарна робота.',
+    drill_end_inwork: 'Ще трохи практики — варто повторити.',
     today_ai_breakdown_req: 'Розбери цю тему по пунктах. Для КОЖНОГО граматичного пункту вище дай коротке правило, 2–3 приклади з перекладом, таблиці відмінювання (якщо є) і що саме треба вивчити напам’ять. У кінці — короткий чек-лист «що я маю запам’ятати сьогодні».',
     today_ai_title: 'Запитати ШІ-вчителя',
     today_ai_lead: 'Підсумки дня закріплені нижче — запитайте ще щось, якщо хочете.',
@@ -2251,6 +2265,336 @@ window.LOCALE_UA = {
         "Я можу зробити коротку презентацію за темою.",
         "Я можу пройти повну репетицію іспиту B1."
       ]
+    }
+  },
+  drills: {
+    "praesens-endungen": {
+      "concept": "Закінчення правильних дієслів у Präsens",
+      "prompt": "Поставте дієслово в правильну форму теперішнього часу."
+    },
+    "sein-haben": {
+      "concept": "Відмінювання sein і haben",
+      "prompt": "Вставте правильну форму sein або haben."
+    },
+    "nominativ-artikel": {
+      "concept": "Артиклі Nominativ і порядок слів у питанні",
+      "prompt": "Виберіть артикль або складіть питання."
+    },
+    "possessiv-nom": {
+      "concept": "Присвійні артиклі в Nominativ",
+      "prompt": "Виберіть або вставте правильний присвійний артикль."
+    },
+    "plural-modelle": {
+      "concept": "Утворення множини (5 моделей)",
+      "prompt": "Напишіть форму множини."
+    },
+    "zahlen-1-1000": {
+      "concept": "Числа від 1 до 1000",
+      "prompt": "Запишіть число словом."
+    },
+    "akk-artikel": {
+      "concept": "Артиклі Akkusativ (der→den, ein→einen)",
+      "prompt": "Поставте артикль в Akkusativ."
+    },
+    "kein-nicht": {
+      "concept": "Заперечення: kein з іменниками, інакше nicht",
+      "prompt": "Вставте kein-/keinen або nicht."
+    },
+    "akk-praepositionen": {
+      "concept": "Прийменники Akkusativ та зміна кореневого голосного",
+      "prompt": "Вставте форму Akkusativ або правильну форму дієслова."
+    },
+    "modalverben-1": {
+      "concept": "Präsens дієслів können, wollen, müssen",
+      "prompt": "Вставте правильну форму модального дієслова."
+    },
+    "modalverben-2": {
+      "concept": "Präsens дієслів dürfen, sollen, mögen/möchten",
+      "prompt": "Вставте правильну форму модального дієслова."
+    },
+    "satzklammer": {
+      "concept": "Рамкова конструкція: модальне на 2-му місці, інфінітив у кінці",
+      "prompt": "Складіть речення або завершіть рамку."
+    },
+    "dativ-artikel": {
+      "concept": "Артиклі Dativ (dem/der/dem/den+n) та дієслова з Dativ",
+      "prompt": "Поставте артикль в Dativ."
+    },
+    "dativ-praepositionen": {
+      "concept": "Прийменники Dativ (aus, bei, mit, nach, seit, von, zu)",
+      "prompt": "Вставте форму Dativ після прийменника."
+    },
+    "pronomen-akk-dat": {
+      "concept": "Особові займенники в Akkusativ та Dativ",
+      "prompt": "Виберіть правильний займенник."
+    },
+    "zeit-praepositionen": {
+      "concept": "Прийменники часу am/im/um/von…bis",
+      "prompt": "Вставте правильний прийменник часу."
+    },
+    "uhrzeit-datum": {
+      "concept": "Час (halb, Viertel) та порядкові дати",
+      "prompt": "Доповніть час або дату."
+    },
+    "trennbare-verben": {
+      "concept": "Відокремлювані дієслова — префікс у кінці",
+      "prompt": "Поставте відокремлюване дієслово в правильну форму."
+    },
+    "trennbar-untrennbar": {
+      "concept": "Відокремлювані vs. невідокремлювані префікси",
+      "prompt": "Визначте, чи відокремлюється префікс."
+    },
+    "konnektoren-abfolge": {
+      "concept": "Конектори послідовності та дієслово на 2-му місці",
+      "prompt": "Виберіть конектор або складіть речення."
+    },
+    "partizip-modelle": {
+      "concept": "Утворення Partizip II (три моделі)",
+      "prompt": "Утворіть Partizip II."
+    },
+    "partizip-praefixe": {
+      "concept": "Partizip II з відокремлюваними та невідокремлюваними префіксами",
+      "prompt": "Утворіть Partizip II."
+    },
+    "perfekt-haben-sein": {
+      "concept": "Вибір haben або sein у Perfekt",
+      "prompt": "Виберіть або вставте правильне допоміжне дієслово."
+    },
+    "wechselpraep-wo": {
+      "concept": "Прийменники подвійного керування з Wo? → Dativ",
+      "prompt": "Вставте Dativ (Wo?)."
+    },
+    "wechselpraep-wohin": {
+      "concept": "Прийменники подвійного керування з Wohin? → Akkusativ",
+      "prompt": "Вставте Akkusativ (Wohin?)."
+    },
+    "wechselpraep-sechs": {
+      "concept": "Решта шість прийменників подвійного керування",
+      "prompt": "Виберіть правильний прийменник."
+    },
+    "imperativ-du-ihr": {
+      "concept": "Imperativ для du та ihr",
+      "prompt": "Утворіть наказовий спосіб."
+    },
+    "imperativ-sie": {
+      "concept": "Imperativ Sie та особливі форми",
+      "prompt": "Утворіть ввічливий наказ."
+    },
+    "wegbeschreibung": {
+      "concept": "Пояснення дороги",
+      "prompt": "Виберіть правильне слово напрямку."
+    },
+    "aduso-position-0": {
+      "concept": "Сполучники в позиції 0",
+      "prompt": "Виберіть правильний сполучник."
+    },
+    "denn-sondern": {
+      "concept": "denn проти sondern",
+      "prompt": "Виберіть denn або sondern."
+    },
+    "zeit-vor-ort": {
+      "concept": "Час перед місцем",
+      "prompt": "Поставте речення в правильному порядку."
+    },
+    "kasus-wdh-a1": {
+      "concept": "Повторення: артиклі Nom/Akk/Dativ",
+      "prompt": "Виберіть правильний артикль для відмінка."
+    },
+    "praeteritum-sein-haben": {
+      "concept": "Präteritum дієслів sein і haben",
+      "prompt": "Поставте sein або haben у Präteritum."
+    },
+    "praeteritum-modalverben": {
+      "concept": "Модальні дієслова в Präteritum",
+      "prompt": "Поставте модальне дієслово у Präteritum."
+    },
+    "futur-plaene": {
+      "concept": "Futur I для планів (werden + інфінітив)",
+      "prompt": "Поставте дієслово у Futur I (werden + інфінітив)."
+    },
+    "futur-vermutung": {
+      "concept": "Futur I для припущень",
+      "prompt": "Доповніть припущення з werden і wohl."
+    },
+    "komparativ-als": {
+      "concept": "Порівняльний ступінь з -er + als",
+      "prompt": "Поставте прикметник у порівняльний ступінь."
+    },
+    "superlativ-am-sten": {
+      "concept": "Найвищий ступінь з am -sten",
+      "prompt": "Поставте прикметник у найвищий ступінь."
+    },
+    "weil-verbfinal": {
+      "concept": "weil відправляє дієслово в кінець",
+      "prompt": "Завершіть підрядне з weil."
+    },
+    "dass-ob": {
+      "concept": "підрядні з dass і ob",
+      "prompt": "Виберіть dass або ob."
+    },
+    "nebensatz-vorne": {
+      "concept": "Підрядне на початку",
+      "prompt": "Переставте так, щоб підрядне було спереду."
+    },
+    "wenn-als": {
+      "concept": "wenn проти als",
+      "prompt": "Виберіть wenn або als."
+    },
+    "temporal-konjunktionen": {
+      "concept": "während / bevor / sobald",
+      "prompt": "Виберіть часовий сполучник."
+    },
+    "plusquamperfekt": {
+      "concept": "Plusquamperfekt із nachdem",
+      "prompt": "Утворіть Plusquamperfekt."
+    },
+    "zeiten-wdh-a2": {
+      "concept": "Повторення: минулі часи",
+      "prompt": "Виберіть правильну форму минулого."
+    },
+    "reflexiv-akkusativ": {
+      "concept": "Зворотні займенники в Akkusativ зі зворотними дієсловами",
+      "prompt": "Вставте правильний зворотний займенник в Akkusativ."
+    },
+    "reflexiv-dativ": {
+      "concept": "Зворотні займенники в Dativ за наявності додатка в Akkusativ",
+      "prompt": "Вставте правильний зворотний займенник в Dativ."
+    },
+    "adjektiv-schwach": {
+      "concept": "Слабкі закінчення прикметників після означеного артикля",
+      "prompt": "Додайте правильне слабке закінчення прикметника."
+    },
+    "adjektiv-gemischt": {
+      "concept": "Змішані закінчення прикметників після ein/kein/mein",
+      "prompt": "Додайте правильне змішане закінчення прикметника."
+    },
+    "infinitiv-mit-zu": {
+      "concept": "zu-Infinitiv після дієслів і виразів",
+      "prompt": "Доповніть конструкцію із zu-Infinitiv."
+    },
+    "um-zu-damit": {
+      "concept": "Підрядні мети: um…zu (один суб’єкт) vs damit (різні суб’єкти)",
+      "prompt": "Виберіть um…zu або damit і завершіть речення."
+    },
+    "rektionen-1": {
+      "concept": "Дієслова з фіксованим прийменником",
+      "prompt": "Вставте правильний прийменник."
+    },
+    "relativ-nominativ": {
+      "concept": "Відносний займенник як підмет (Nominativ)",
+      "prompt": "Виберіть відносний займенник у Nominativ."
+    },
+    "relativ-akkusativ": {
+      "concept": "Відносний займенник як додаток (Akkusativ)",
+      "prompt": "Виберіть відносний займенник в Akkusativ."
+    },
+    "kii-hoeflich": {
+      "concept": "Ввічливі прохання в Konjunktiv II",
+      "prompt": "Виберіть ввічливу форму."
+    },
+    "sollte-rat": {
+      "concept": "Поради з sollte",
+      "prompt": "Дайте пораду з sollte."
+    },
+    "genitiv-formen": {
+      "concept": "Артиклі та закінчення іменників у генітиві",
+      "prompt": "Поставте іменникову групу в генітив."
+    },
+    "genitiv-praepositionen": {
+      "concept": "Прийменники, що вимагають генітива",
+      "prompt": "Вставте генітивний прийменник або артикль у генітиві."
+    },
+    "n-deklination": {
+      "concept": "n-Deklination: слабкі іменники чоловічого роду отримують -(e)n",
+      "prompt": "Додайте правильне закінчення n-Deklination."
+    },
+    "praeteritum-schwach-ei": {
+      "concept": "Слабкий Präteritum -te та клас аблауту ei-ie-ie",
+      "prompt": "Поставте дієслово в Präteritum."
+    },
+    "praeteritum-klasse-ia": {
+      "concept": "Сильний Präteritum з чергуванням i/e → a",
+      "prompt": "Поставте сильне дієслово в Präteritum."
+    },
+    "praeteritum-klasse-a": {
+      "concept": "Сильні форми Präteritum, наприклад fuhr, ging і kam",
+      "prompt": "Поставте сильне дієслово в Präteritum або складіть речення."
+    },
+    "adjektiv-stark": {
+      "concept": "Сильне відмінювання прикметника (без артикля)",
+      "prompt": "Додайте сильне закінчення прикметника (без артикля)."
+    },
+    "adjektiv-kontrast": {
+      "concept": "Контраст слабкого, мішаного та сильного відмінювання",
+      "prompt": "Дайте закінчення прикметника для кожного типу відмінювання."
+    },
+    "passiv-vorgang": {
+      "concept": "Пасив у теперішньому й минулому часі",
+      "prompt": "Поставте речення в пасив."
+    },
+    "passiv-modal": {
+      "concept": "Пасив із модальними дієсловами",
+      "prompt": "Доповніть пасив із модальним дієсловом."
+    },
+    "passiv-agens": {
+      "concept": "Виконавець через von/durch та lassen + інфінітив",
+      "prompt": "Вставте von/durch або форму lassen."
+    },
+    "kii-formen": {
+      "concept": "Форми Konjunktiv II",
+      "prompt": "Вставте форму Konjunktiv II."
+    },
+    "kii-gebrauch": {
+      "concept": "KII для порад і нереальних умов",
+      "prompt": "Завершіть речення."
+    },
+    "kii-vergangenheit": {
+      "concept": "KII минулого",
+      "prompt": "Утворіть KII минулого."
+    },
+    "kasus-wdh-b1": {
+      "concept": "Повторення: Genitiv і закінчення прикметників",
+      "prompt": "Виберіть правильну форму."
+    },
+    "relativ-dativ": {
+      "concept": "Відносний займенник у давальному",
+      "prompt": "Вставте відносний займенник у давальному або складіть речення."
+    },
+    "relativ-praeposition": {
+      "concept": "Прийменник перед відносним займенником",
+      "prompt": "Вставте відносний займенник після прийменника."
+    },
+    "relativ-dessen-deren": {
+      "concept": "Відносні займенники в генітиві dessen і deren",
+      "prompt": "Виберіть dessen (чол./сер.) або deren (жін./мн.)."
+    },
+    "verben-praeposition-2": {
+      "concept": "Сталі дієслівно-прийменникові пари (частина 2)",
+      "prompt": "Вставте правильний прийменник."
+    },
+    "da-wo-komposita": {
+      "concept": "Займенникові прислівники da(r)- і wo(r)-",
+      "prompt": "Утворіть слово da(r)-/wo(r)- для предмета."
+    },
+    "korrelativ-konjunktionen": {
+      "concept": "Корелятивні (подвійні) сполучники",
+      "prompt": "Доповніть подвійний сполучник або складіть речення."
+    },
+    "indirekte-rede": {
+      "concept": "Непряма мова з dass",
+      "prompt": "Перетворіть пряму мову на непряму."
+    },
+    "konjunktiv-1-rezeptiv": {
+      "concept": "Розпізнавання Konjunktiv I",
+      "prompt": "У якому реченні Konjunktiv I (стиль новин)?"
+    },
+    "pro-contra": {
+      "concept": "Зв’язки Pro/Contra",
+      "prompt": "Виберіть правильний зв’язок."
+    },
+    "briefformeln": {
+      "concept": "Формули формальних і неформальних листів",
+      "prompt": "Виберіть відповідну формулу."
     }
   },
 };

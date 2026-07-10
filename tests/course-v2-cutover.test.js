@@ -56,8 +56,9 @@ test('planner-data taskFields tolerates both v1 tuple and v2 object tasks', () =
     extraFiles: ['data/weeks.js', 'assets/js/planner-data.js'],
     exports: ['taskFields'],
   });
-  assert.deepEqual(plain(p.taskFields(['grammar', 'Do X'])), { type: 'grammar', text: 'Do X' });
-  assert.deepEqual(plain(p.taskFields({ type: 'write', text: 'Do Y', drill: 'z' })), { type: 'write', text: 'Do Y' });
+  // v1 tuples carry no drill (null); v2 objects surface their keyed grammar-drill slug.
+  assert.deepEqual(plain(p.taskFields(['grammar', 'Do X'])), { type: 'grammar', text: 'Do X', drill: null });
+  assert.deepEqual(plain(p.taskFields({ type: 'write', text: 'Do Y', drill: 'z' })), { type: 'write', text: 'Do Y', drill: 'z' });
 });
 
 test('live data/vocab.js ships the generated VOCAB + PLURALS verbatim (cutover ran)', () => {
@@ -73,6 +74,37 @@ test('live data/vocab.js ships the generated VOCAB + PLURALS verbatim (cutover r
   assert.deepEqual(live.VOCAB, gen.VOCAB, 'live VOCAB != generated — re-run `npm run cutover:v2`');
   assert.deepEqual(live.PLURALS, gen.PLURALS, 'live PLURALS != generated — re-run `npm run cutover:v2`');
   assert.ok(Object.keys(live.PLURALS).length > 200, 'PLURALS should cover the v2 nouns');
+});
+
+test('live data/grammar-drills.js ships the generated GRAMMAR_DRILLS verbatim (cutover ran)', () => {
+  function evalDrills(rel) {
+    const src = fs.readFileSync(path.join(ROOT, rel), 'utf8');
+    const sb = {};
+    vm.createContext(sb);
+    vm.runInContext(src + '\n;this.O = GRAMMAR_DRILLS;', sb);
+    return plain(sb.O);
+  }
+  const live = evalDrills('data/grammar-drills.js');
+  const gen = evalDrills('data/v2/grammar-drills.js');
+  assert.deepEqual(live, gen, 'live GRAMMAR_DRILLS != generated — re-run `npm run cutover:v2`');
+  assert.ok(Object.keys(live).length > 50, 'the course should ship many keyed drills');
+  // every task.drill slug in the live curriculum must resolve in the live drills map
+  const w = fs.readFileSync(path.join(ROOT, 'data/weeks.js'), 'utf8');
+  const sb = {}; vm.createContext(sb); vm.runInContext(w + '\n;this.W = WEEKS;', sb);
+  const unresolved = new Set();
+  sb.W.forEach((wk) => wk.tasks.forEach((t) => { if (t.drill && !(t.drill in live)) unresolved.add(t.drill); }));
+  assert.deepEqual([...unresolved], [], 'every task.drill resolves in GRAMMAR_DRILLS');
+});
+
+test('the live locales carry the keyed drills block (concept + prompt) in all three languages', () => {
+  for (const lang of ['en', 'ru', 'ua']) {
+    const src = fs.readFileSync(path.join(ROOT, `locales/${lang}.js`), 'utf8');
+    const sb = { window: {} }; vm.createContext(sb); vm.runInContext(src, sb);
+    const loc = sb.window['LOCALE_' + lang.toUpperCase()];
+    assert.ok(loc.drills && Object.keys(loc.drills).length > 50, `${lang}: a populated drills block`);
+    const d = loc.drills['praesens-endungen'];
+    assert.ok(d && d.concept && d.prompt, `${lang}: a known drill has concept + prompt`);
+  }
 });
 
 /* ---- cloud-sync.js migration --------------------------------------------------------------- */

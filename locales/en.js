@@ -32,6 +32,20 @@ window.LOCALE_EN = {
     today_progress: (i, n) => `Step ${i} of ${n}`,
     today_grammar_intro: 'GRAMMAR OF THE DAY',
     today_grammar_explain: '🤖 Break it down with AI',
+    today_grammar_practice: 'Practise the drill',
+    // grammar-drill engine (grammar-drill.js) — interactive practice of the day's concept
+    drill_badge: 'Drill',
+    drill_check: 'Check',
+    drill_next: 'Next →',
+    drill_correct: 'Correct!',
+    drill_wrong: (ans) => `Answer: ${ans}`,
+    drill_enter_hint: 'Press Enter to check',
+    drill_order_prompt: 'Tap the words in the right order.',
+    drill_order_empty: 'Tap the words below…',
+    drill_end_title: 'Drill complete',
+    drill_end_perfect: 'Perfect — every one right!',
+    drill_end_good: 'Well done.',
+    drill_end_inwork: 'Keep practising — this one needs a few more goes.',
     today_ai_breakdown_req: 'Break this topic down point by point. For EACH grammar item above, give a short rule, 2–3 examples with translation, any conjugation tables, and exactly what to memorize. End with a short "what I must remember today" checklist.',
     today_ai_title: 'Ask the AI tutor',
     today_ai_lead: "Today's summary is pinned below — ask anything else you like.",
@@ -2256,6 +2270,336 @@ window.LOCALE_EN = {
         "I can give a short presentation on a topic.",
         "I can complete a full B1 exam rehearsal."
       ]
+    }
+  },
+  drills: {
+    "praesens-endungen": {
+      "concept": "Present-tense endings of regular verbs",
+      "prompt": "Put the verb in the correct present-tense form."
+    },
+    "sein-haben": {
+      "concept": "Conjugation of sein and haben",
+      "prompt": "Fill in the correct form of sein or haben."
+    },
+    "nominativ-artikel": {
+      "concept": "Nominative articles and question word order",
+      "prompt": "Choose the right article or build the question."
+    },
+    "possessiv-nom": {
+      "concept": "Possessive articles in the nominative",
+      "prompt": "Choose or fill in the correct possessive article."
+    },
+    "plural-modelle": {
+      "concept": "Forming the plural (five patterns)",
+      "prompt": "Write the plural form."
+    },
+    "zahlen-1-1000": {
+      "concept": "Numbers from 1 to 1000",
+      "prompt": "Write the number as a word."
+    },
+    "akk-artikel": {
+      "concept": "Accusative articles (der→den, ein→einen)",
+      "prompt": "Put the article into the accusative."
+    },
+    "kein-nicht": {
+      "concept": "Negation: kein with nouns, nicht otherwise",
+      "prompt": "Fill in kein-/keinen or nicht."
+    },
+    "akk-praepositionen": {
+      "concept": "Accusative prepositions and stem-vowel change",
+      "prompt": "Fill in the accusative form or the correct verb form."
+    },
+    "modalverben-1": {
+      "concept": "Present tense of können, wollen, müssen",
+      "prompt": "Fill in the correct modal-verb form."
+    },
+    "modalverben-2": {
+      "concept": "Present tense of dürfen, sollen, mögen/möchten",
+      "prompt": "Fill in the correct modal-verb form."
+    },
+    "satzklammer": {
+      "concept": "The sentence bracket: modal in position 2, infinitive at the end",
+      "prompt": "Build the sentence or complete the bracket."
+    },
+    "dativ-artikel": {
+      "concept": "Dative articles (dem/der/dem/den+n) and dative verbs",
+      "prompt": "Put the article into the dative."
+    },
+    "dativ-praepositionen": {
+      "concept": "Dative prepositions (aus, bei, mit, nach, seit, von, zu)",
+      "prompt": "Fill in the dative form after the preposition."
+    },
+    "pronomen-akk-dat": {
+      "concept": "Personal pronouns in the accusative and dative",
+      "prompt": "Choose the correct pronoun."
+    },
+    "zeit-praepositionen": {
+      "concept": "Time prepositions am/im/um/von…bis",
+      "prompt": "Fill in the right time preposition."
+    },
+    "uhrzeit-datum": {
+      "concept": "Clock times (halb, Viertel) and ordinal dates",
+      "prompt": "Complete the time or the date."
+    },
+    "trennbare-verben": {
+      "concept": "Separable verbs — prefix at the end",
+      "prompt": "Put the separable verb in the correct form."
+    },
+    "trennbar-untrennbar": {
+      "concept": "Separable vs. inseparable prefixes",
+      "prompt": "Decide whether the prefix separates."
+    },
+    "konnektoren-abfolge": {
+      "concept": "Sequence connectors and verb position 2",
+      "prompt": "Choose the connector or build the sentence."
+    },
+    "partizip-modelle": {
+      "concept": "Forming the Partizip II (three patterns)",
+      "prompt": "Form the Partizip II."
+    },
+    "partizip-praefixe": {
+      "concept": "Partizip II with separable and inseparable prefixes",
+      "prompt": "Form the Partizip II."
+    },
+    "perfekt-haben-sein": {
+      "concept": "Choosing haben or sein in the Perfekt",
+      "prompt": "Choose or fill in the correct auxiliary."
+    },
+    "wechselpraep-wo": {
+      "concept": "Two-way prepositions with Wo? → Dativ",
+      "prompt": "Fill in the Dativ (Wo?)."
+    },
+    "wechselpraep-wohin": {
+      "concept": "Two-way prepositions with Wohin? → Akkusativ",
+      "prompt": "Fill in the Akkusativ (Wohin?)."
+    },
+    "wechselpraep-sechs": {
+      "concept": "The other six two-way prepositions",
+      "prompt": "Choose the right preposition."
+    },
+    "imperativ-du-ihr": {
+      "concept": "Imperativ for du and ihr",
+      "prompt": "Form the imperative."
+    },
+    "imperativ-sie": {
+      "concept": "Imperativ Sie and special forms",
+      "prompt": "Form the polite imperative."
+    },
+    "wegbeschreibung": {
+      "concept": "Giving directions",
+      "prompt": "Choose the right direction word."
+    },
+    "aduso-position-0": {
+      "concept": "Conjunctions in position 0",
+      "prompt": "Choose the right conjunction."
+    },
+    "denn-sondern": {
+      "concept": "denn vs. sondern",
+      "prompt": "Choose denn or sondern."
+    },
+    "zeit-vor-ort": {
+      "concept": "Time before place",
+      "prompt": "Put the sentence in the right order."
+    },
+    "kasus-wdh-a1": {
+      "concept": "Review: Nominativ/Akkusativ/Dativ articles",
+      "prompt": "Choose the correct article for the case."
+    },
+    "praeteritum-sein-haben": {
+      "concept": "Präteritum of sein and haben",
+      "prompt": "Put sein or haben into the Präteritum."
+    },
+    "praeteritum-modalverben": {
+      "concept": "Modal verbs in the Präteritum",
+      "prompt": "Put the modal verb into the Präteritum."
+    },
+    "futur-plaene": {
+      "concept": "Futur I for plans (werden + infinitive)",
+      "prompt": "Put the verb into Futur I (werden + infinitive)."
+    },
+    "futur-vermutung": {
+      "concept": "Futur I for assumptions",
+      "prompt": "Complete the assumption with werden and wohl."
+    },
+    "komparativ-als": {
+      "concept": "Comparative with -er + als",
+      "prompt": "Put the adjective into the comparative."
+    },
+    "superlativ-am-sten": {
+      "concept": "Superlative with am -sten",
+      "prompt": "Put the adjective into the superlative."
+    },
+    "weil-verbfinal": {
+      "concept": "weil sends the verb to the end",
+      "prompt": "Complete the weil-clause."
+    },
+    "dass-ob": {
+      "concept": "dass and ob clauses",
+      "prompt": "Choose dass or ob."
+    },
+    "nebensatz-vorne": {
+      "concept": "Subordinate clause in front position",
+      "prompt": "Reorder so the clause comes first."
+    },
+    "wenn-als": {
+      "concept": "wenn vs. als",
+      "prompt": "Choose wenn or als."
+    },
+    "temporal-konjunktionen": {
+      "concept": "während / bevor / sobald",
+      "prompt": "Choose the temporal conjunction."
+    },
+    "plusquamperfekt": {
+      "concept": "Plusquamperfekt with nachdem",
+      "prompt": "Form the Plusquamperfekt."
+    },
+    "zeiten-wdh-a2": {
+      "concept": "Review: past tenses",
+      "prompt": "Choose the right past-tense form."
+    },
+    "reflexiv-akkusativ": {
+      "concept": "Accusative reflexive pronouns with reflexive verbs",
+      "prompt": "Put in the correct accusative reflexive pronoun."
+    },
+    "reflexiv-dativ": {
+      "concept": "Dative reflexive pronouns when there is an accusative object",
+      "prompt": "Put in the correct dative reflexive pronoun."
+    },
+    "adjektiv-schwach": {
+      "concept": "Weak adjective endings after the definite article",
+      "prompt": "Add the correct weak adjective ending."
+    },
+    "adjektiv-gemischt": {
+      "concept": "Mixed adjective endings after ein/kein/mein",
+      "prompt": "Add the correct mixed adjective ending."
+    },
+    "infinitiv-mit-zu": {
+      "concept": "The zu-Infinitiv after verbs and expressions",
+      "prompt": "Complete the zu-Infinitiv construction."
+    },
+    "um-zu-damit": {
+      "concept": "Purpose clauses: um…zu (same subject) vs damit (different subjects)",
+      "prompt": "Choose um…zu or damit and complete the clause."
+    },
+    "rektionen-1": {
+      "concept": "Verbs with a fixed preposition",
+      "prompt": "Fill in the correct preposition."
+    },
+    "relativ-nominativ": {
+      "concept": "Relative pronoun as the subject (nominative)",
+      "prompt": "Choose the nominative relative pronoun."
+    },
+    "relativ-akkusativ": {
+      "concept": "Relative pronoun as the direct object (accusative)",
+      "prompt": "Choose the accusative relative pronoun."
+    },
+    "kii-hoeflich": {
+      "concept": "Polite Konjunktiv II requests",
+      "prompt": "Choose the polite form."
+    },
+    "sollte-rat": {
+      "concept": "Advice with sollte",
+      "prompt": "Give advice with sollte."
+    },
+    "genitiv-formen": {
+      "concept": "Genitive article and noun endings",
+      "prompt": "Put the noun phrase into the genitive."
+    },
+    "genitiv-praepositionen": {
+      "concept": "Prepositions that take the genitive",
+      "prompt": "Fill in the genitive preposition or the genitive article."
+    },
+    "n-deklination": {
+      "concept": "n-Deklination: weak masculine nouns add -(e)n",
+      "prompt": "Add the correct n-Deklination ending."
+    },
+    "praeteritum-schwach-ei": {
+      "concept": "Weak Präteritum -te and the ei-ie-ie ablaut class",
+      "prompt": "Put the verb into the Präteritum."
+    },
+    "praeteritum-klasse-ia": {
+      "concept": "Strong Präteritum with the vowel change i/e → a",
+      "prompt": "Put the strong verb into the Präteritum."
+    },
+    "praeteritum-klasse-a": {
+      "concept": "Strong Präteritum patterns such as fuhr, ging and kam",
+      "prompt": "Put the strong verb into the Präteritum or build the sentence."
+    },
+    "adjektiv-stark": {
+      "concept": "Strong adjective declension (no article)",
+      "prompt": "Add the strong (no-article) adjective ending."
+    },
+    "adjektiv-kontrast": {
+      "concept": "Weak, mixed and strong declension contrasted",
+      "prompt": "Give the adjective ending for each declension type."
+    },
+    "passiv-vorgang": {
+      "concept": "Passive in the present and past tense",
+      "prompt": "Put the sentence into the passive."
+    },
+    "passiv-modal": {
+      "concept": "Passive with modal verbs",
+      "prompt": "Complete the modal passive."
+    },
+    "passiv-agens": {
+      "concept": "Agent with von/durch and lassen + infinitive",
+      "prompt": "Fill in von/durch or the form of lassen."
+    },
+    "kii-formen": {
+      "concept": "Konjunktiv II forms",
+      "prompt": "Fill in the Konjunktiv II form."
+    },
+    "kii-gebrauch": {
+      "concept": "Using KII for advice and unreal conditions",
+      "prompt": "Complete the sentence."
+    },
+    "kii-vergangenheit": {
+      "concept": "KII of the past",
+      "prompt": "Form the past Konjunktiv II."
+    },
+    "kasus-wdh-b1": {
+      "concept": "Review: Genitiv and adjective endings",
+      "prompt": "Choose the correct form."
+    },
+    "relativ-dativ": {
+      "concept": "Relative pronoun in the dative case",
+      "prompt": "Insert the dative relative pronoun or build the sentence."
+    },
+    "relativ-praeposition": {
+      "concept": "Preposition placed before the relative pronoun",
+      "prompt": "Fill in the relative pronoun after the preposition."
+    },
+    "relativ-dessen-deren": {
+      "concept": "Genitive relative pronouns dessen and deren",
+      "prompt": "Choose dessen (masc./neut.) or deren (fem./plural)."
+    },
+    "verben-praeposition-2": {
+      "concept": "Fixed verb-preposition pairs (part 2)",
+      "prompt": "Fill in the correct preposition."
+    },
+    "da-wo-komposita": {
+      "concept": "Pronominal adverbs da(r)- and wo(r)-",
+      "prompt": "Form the da(r)-/wo(r)- word for the thing."
+    },
+    "korrelativ-konjunktionen": {
+      "concept": "Correlative (two-part) conjunctions",
+      "prompt": "Complete the two-part conjunction or build the sentence."
+    },
+    "indirekte-rede": {
+      "concept": "Reported speech with dass",
+      "prompt": "Turn direct speech into reported speech."
+    },
+    "konjunktiv-1-rezeptiv": {
+      "concept": "Recognising Konjunktiv I",
+      "prompt": "Which sentence uses Konjunktiv I (news style)?"
+    },
+    "pro-contra": {
+      "concept": "Pro/contra discourse markers",
+      "prompt": "Choose the right discourse marker."
+    },
+    "briefformeln": {
+      "concept": "Formal vs. informal letter formulas",
+      "prompt": "Choose the fitting formula."
     }
   },
 };

@@ -125,12 +125,12 @@ deutsch-daily/
 │   ├── css/  base.css · components.css · planner.css · chat.css · vocab.css · verbs.css · auth.css · collections.css · landing.css · settings.css · today.css · welcome.css
 │   ├── js/   i18n.js · theme.js · utils.js · supabase.js · cloud-sync.js · ai-config.js
 │   │         gemini.js · leitner.js · speech.js · header.js · pwa.js
-│   │         markdown.js · course-consts.js · planner-data.js · vocab-trainer.js · verbs-trainer.js   # AI md + course shape + day model + trainer engines
+│   │         markdown.js · course-consts.js · planner-data.js · vocab-trainer.js · verbs-trainer.js · grammar-drill.js   # AI md + course shape + day model + trainer engines
 │   ├── favicon.svg · icon.svg · icon-maskable.svg     # icon sources (PNGs rendered into icons/)
 │   └── icons/  icon-192.png · icon-512.png · maskable-512.png · apple-touch-icon.png
-├── data/   weeks.js (WEEKS) · vocab.js (VOCAB) · verbs.js (VERBS — master verb dictionary)
+├── data/   weeks.js (WEEKS) · vocab.js (VOCAB) · verbs.js (VERBS — master verb dictionary) · grammar-drills.js (GRAMMAR_DRILLS — keyed by slug, cut from v2)
 │   └── v2/   GENERATED Course-v2 data (weeks/vocab/grammar-drills/dialogues/manifest) — source of the live course; swapped into data/ by cutover-v2. §21
-├── locales/  ru.js · ua.js · en.js   (window.LOCALE_RU / _UA / _EN = { ui, vocab, verbs, weeks })
+├── locales/  ru.js · ua.js · en.js   (window.LOCALE_RU / _UA / _EN = { ui, vocab, verbs, weeks, drills })
 │   └── v2/   GENERATED Course-v2 locale overlays (en/ru/ua) — merged into locales/ by cutover-v2. §21
 ├── authoring/  Course-v2 single-source content (course.js · verb-bands.js · plurals.js · weeks/w01..w36.js) + README. §21
 ├── scripts/  gen-course.js (authoring → data/v2 + locales/v2) · cutover-v2.js (v2 → live data/ + locales/) · band-verbs.js (verb bands). §21
@@ -1398,7 +1398,13 @@ early leaves its block incomplete**.
    right under the card and auto-sends a point-by-point breakdown request (`dayBreakdownText` →
    `today_ai_breakdown_req`: rule + examples + tables + a "what to memorize" checklist for EACH item).
    The panel reuses the shared `renderAiPanel()` / `ai` state, so the conversation carries over to the
-   AI step. "Continue →" advances (the breakdown does not change the flow order).
+   AI step. When the day's task carries a keyed **grammar-drill slug** (`localizedToday().drill`,
+   resolved via `drillForDay()` against `GRAMMAR_DRILLS`), a **"Practise the drill"** button starts an
+   interactive drill via the shared **`GrammarDrill` engine** (`assets/js/grammar-drill.js`,
+   `window.GrammarDrill`, `embedded:true`) — a short session of `cloze` / `choice` / `order` items
+   whose end advances the flow (`onSessionEnd → nextStep`, like the vocab/verb engines). The drill is
+   optional practice: grammar's `isComplete()` stays `true`, so a drill-less day (or a skipped/empty
+   drill, which auto-skips) never deadlocks. "Continue →" advances without drilling.
 2. **vocab** — `VocabTrainer.startSession({ type:'daily', week })` — the day's daily review: the due
    backlog from every week reached so far (mastered-but-due included) + up to 12 new words from the
    current week (articles `der/die/das` ride along as a mode).
@@ -1535,9 +1541,11 @@ the parallel arrays makes alignment structural instead of hand-tended.
   reports any `verbFocus` key missing from `VERBS`. Generated files carry a DO-NOT-EDIT banner.
 - **`scripts/cutover-v2.js`** (`npm run cutover:v2`) — the Course v2 **cutover** (idempotent): copies
   `data/v2/weeks.js` → `data/weeks.js`, `data/v2/vocab.js` → `data/vocab.js` (`VOCAB` + `PLURALS`
-  verbatim), and merges `locales/v2/<l>.js`'s `vocab` + `weeks` into the live `locales/<l>.js`
-  (keeping `ui` + `verbs`). `grammar-drills`/`dialogues` are generated but not yet consumed by the
-  app (Phase 6).
+  verbatim), `data/v2/grammar-drills.js` → `data/grammar-drills.js` (`GRAMMAR_DRILLS`, keyed by slug —
+  consumed by the `/today` grammar step via the `GrammarDrill` engine, §19), and merges
+  `locales/v2/<l>.js`'s `vocab` + `weeks` + keyed `drills` into the live `locales/<l>.js` (keeping
+  `ui` + `verbs`; `ensureKey` appends an empty `drills` slot if the live file predates it).
+  `dialogues` are generated but not yet consumed by the app (Phase 6).
 - **`scripts/band-verbs.js`** — writes the `band` field into every `data/verbs.js` entry (§7).
 - **`scripts/srs-budget.js`** (`node scripts/srs-budget.js`, `--json`) — dependency-free SRS
   due-pressure estimator: counts the four card families from the live data (words + verbs + plurals +
