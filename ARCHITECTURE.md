@@ -479,6 +479,15 @@ collection upserts **merge per id** so a create + later mastery update collapse 
   dismissing it (`ackMigration()`) writes `migratedFrom.ackAt` back into `planner_data` and re-renders,
   so it never re-appears and the ack round-trips like any other planner key. (Guarded by
   `tests/course-v2-cutover.test.js`.)
+- **Legacy lessons stay hidden after the reset.** A v1→v2 reset leaves the account's old `lessons`
+  rows in the DB, but they are keyed to the OLD day numbers (weekly summaries live under negative
+  days), so they must not surface under the unrelated new days (redesign §2 Lessons Policy, Gate 6).
+  `initApp` records the reset timestamp (`_noteMigratedAt` ← `planner_data.migratedFrom.at`, online
+  and offline), and `loadLessonsFromCloud` drops every row written **before** it
+  (`updated_at < migratedFrom.at`; ISO-8601 sorts chronologically). Rows are **ignored, not deleted**
+  (a future "legacy notes" viewer could still surface them); native / never-migrated accounts keep
+  everything. Both readers — `/planner`'s `loadLessonsThenRender` and `/today`'s `loadDayLesson` —
+  go through `loadLessonsFromCloud`, so both are covered. (Guarded by `tests/legacy-lessons.test.js`.)
 - `saveToCloud()` / `saveLangToCloud(code)` / `saveThemeToCloud(theme)` / `saveVerbsToCloud(payload)`
   / `saveVocabToCloud(payload)` / `saveOnboardingToCloud(payload)` — all route through the internal `_pushProgress(fields)`, which
   `upsert`s `{ user_id, …fields, updated_at }` on the `progress` row (`onConflict: 'user_id'`). They

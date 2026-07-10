@@ -36,6 +36,15 @@ let userOnboarding = {};
 const COURSE_V2 = 2;
 const V2_START_DAY = { A1: 1, A2: 61, B1: 121 }; // first day of each band ((week-1)*5+1, WEEK_FOR_LEVEL {A1:1,A2:13,B1:25})
 
+// ISO timestamp of this account's v1→v2 reset (planner_data.migratedFrom.at), or null when the
+// account was never migrated (native v2 / brand new). Captured from the applied planner_data on
+// initApp — see _noteMigratedAt — and used by loadLessonsFromCloud to hide legacy lesson/summary
+// rows that are keyed to the OLD day/week numbers (redesign §2 Lessons Policy, Gate 6).
+let _migratedAt = null;
+function _noteMigratedAt(pd) {
+  _migratedAt = (pd && pd.migratedFrom && typeof pd.migratedFrom.at === 'string') ? pd.migratedFrom.at : null;
+}
+
 /* Return a clean v2 planner_data for a pre-v2 payload; the same object back if it's already v2. */
 function _migratePlannerV2(d) {
   if (!d || d.courseVersion === COURSE_V2) return d;
@@ -240,6 +249,7 @@ async function initApp() {
         if (CLOUD_FIELD === 'planner_data') {
           const migrated = _migratePlannerV2(payload);
           if (migrated !== payload) { payload = migrated; _pushProgress({ planner_data: payload }); }
+          _noteMigratedAt(payload); // remember the reset timestamp so legacy lessons stay hidden
         }
         applyCloudData(payload); // skip empty default ({}::jsonb)
       }
@@ -250,6 +260,7 @@ async function initApp() {
     const p = _ownCache().progress;
     if (p) {
       if (hasField && typeof applyCloudData === 'function' && p[CLOUD_FIELD] && Object.keys(p[CLOUD_FIELD]).length) applyCloudData(p[CLOUD_FIELD]);
+      if (CLOUD_FIELD === 'planner_data' && p[CLOUD_FIELD]) _noteMigratedAt(p[CLOUD_FIELD]); // keep hiding legacy lessons offline too
       if (p.lang && LANG_NAMES[p.lang]) lang = p.lang;
     }
   }
@@ -335,16 +346,29 @@ async function logout() {
    LESSONS — per-day AI chat history (table `lessons`).
    Row key: (user_id, day). day < 0 stores the weekly summary for week (-day).
    ========================================================================== */
+/* Course v2 cutover (redesign §2 Lessons Policy, Gate 6): a v1→v2 reset keeps old AI-lesson and
+   weekly-summary rows in the DB, but they are keyed to the OLD day/week numbers, so surfacing them
+   under the unrelated new days would be wrong. Drop any row written BEFORE the reset
+   (updated_at < migratedFrom.at). ISO-8601 strings sort chronologically, so a lexical compare is
+   correct. Rows with no updated_at can't be proven legacy, so they're kept; native/never-migrated
+   accounts (_migratedAt null) keep everything. */
+function _hideLegacyLessons(rows) {
+  if (!_migratedAt || !Array.isArray(rows)) return rows;
+  return rows.filter(r => !(r && r.updated_at && r.updated_at < _migratedAt));
+}
+
 async function loadLessonsFromCloud() {
   if (!currentUser) return [];
+  let rows;
   try {
     const { data, error } = await sb.from('lessons')
-      .select('day, messages')
+      .select('day, messages, updated_at')
       .eq('user_id', currentUser.id);
     if (error) throw error;
     _cacheWrite({ lessons: data || [] });
-    return data || [];
-  } catch(e) { return _ownCache().lessons || []; } // offline — last cached lessons
+    rows = data || [];
+  } catch(e) { rows = _ownCache().lessons || []; } // offline — last cached lessons
+  return _hideLegacyLessons(rows);
 }
 
 async function saveLessonToCloud(day, messages) {
