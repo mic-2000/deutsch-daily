@@ -28,7 +28,10 @@ hosts (home + sessions, `embedded:false`); `/today` is a guided wizard that driv
 namespaced (`VocabTrainer.answer(true)`) so both engines coexist on `/today`. The grammar step also
 hosts a third shared engine, `grammar-drill.js` = `window.GrammarDrill` — a keyed-drill trainer for
 the day's `drill` slug (`cloze`/`choice`/`order` items; `embedded:true`, same
-`onSessionEnd → advance` contract). The curriculum day model (`DAYS` / `TOTAL_DAYS` /
+`onSessionEnd → advance` contract). The same engine also drives the `/today` **review step** (a
+multi-slug `startSession({ slugs, review:true })` session over the grammar topics whose Leitner card in
+`planner_data.grammarReview` has come due — soft-demotion, topic-level grading; the state lives in
+`planner_data`, owned by `/today`, not the engine). The curriculum day model (`DAYS` / `TOTAL_DAYS` /
 `getLocalizedDay`, now carrying each day's `drill` slug) is `assets/js/planner-data.js`, shared by
 `/planner` and `/today`. (Details: ARCHITECTURE.md §9–§10, §19.)
 

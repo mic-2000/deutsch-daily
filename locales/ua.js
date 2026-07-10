@@ -18,6 +18,8 @@ window.LOCALE_UA = {
     today_day_of: (n, total) => `День ${n} з ${total}`,
     today_step_grammar: 'Граматика дня',
     today_step_grammar_sub: 'Тема на сьогодні — вже обрана за вас.',
+    today_step_review: 'Повторення',
+    today_step_review_sub: 'Граматичні теми, які час повторити.',
     today_step_vocab: 'Слова',
     today_step_vocab_sub: 'Картки Лейтнера — повтор саме тоді, коли потрібно.',
     today_step_verbs: 'Артиклі й три форми',
@@ -34,6 +36,7 @@ window.LOCALE_UA = {
     today_grammar_practice: 'Потренуватися',
     // grammar-drill engine (grammar-drill.js) — інтерактивне відпрацювання теми дня
     drill_badge: 'Вправа',
+    drill_review_badge: 'Повторення',
     drill_check: 'Перевірити',
     drill_next: 'Далі →',
     drill_correct: 'Правильно!',

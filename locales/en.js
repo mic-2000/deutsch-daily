@@ -19,6 +19,8 @@ window.LOCALE_EN = {
     today_day_of: (n, total) => `Day ${n} of ${total}`,
     today_step_grammar: 'Grammar of the day',
     today_step_grammar_sub: "Today's topic — already chosen for you.",
+    today_step_review: 'Review',
+    today_step_review_sub: 'Grammar topics that are due to come back.',
     today_step_vocab: 'Words',
     today_step_vocab_sub: 'Leitner flashcards — review exactly when due.',
     today_step_verbs: 'Articles & three forms',
@@ -35,6 +37,7 @@ window.LOCALE_EN = {
     today_grammar_practice: 'Practise the drill',
     // grammar-drill engine (grammar-drill.js) — interactive practice of the day's concept
     drill_badge: 'Drill',
+    drill_review_badge: 'Review',
     drill_check: 'Check',
     drill_next: 'Next →',
     drill_correct: 'Correct!',

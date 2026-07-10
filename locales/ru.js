@@ -19,6 +19,8 @@ window.LOCALE_RU = {
     today_day_of: (n, total) => `День ${n} из ${total}`,
     today_step_grammar: 'Грамматика дня',
     today_step_grammar_sub: 'Тема на сегодня — уже выбрана за вас.',
+    today_step_review: 'Повторение',
+    today_step_review_sub: 'Грамматические темы, которые пора повторить.',
     today_step_vocab: 'Слова',
     today_step_vocab_sub: 'Карточки Лейтнера — повтор ровно тогда, когда нужно.',
     today_step_verbs: 'Артикли и три формы',
@@ -35,6 +37,7 @@ window.LOCALE_RU = {
     today_grammar_practice: 'Потренировать',
     // grammar-drill engine (grammar-drill.js) — интерактивная отработка темы дня
     drill_badge: 'Упражнение',
+    drill_review_badge: 'Повторение',
     drill_check: 'Проверить',
     drill_next: 'Дальше →',
     drill_correct: 'Верно!',

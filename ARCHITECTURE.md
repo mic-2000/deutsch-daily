@@ -400,8 +400,8 @@ Card shape: `{ box:0..5, due:ms, right:count, wrong:count, seen:count }`.
   - `seen++`; correct → `box = min(5, box+1)`.
   - wrong → configurable via `opts.wrongPolicy`: `'reset'` (default) → `box = 1`;
     `'soft'` → `box = max(1, box-2)` (a miss drops two boxes instead of wiping all progress).
-    The trainers (vocab/plural/verbs) pass `{ wrongPolicy: 'soft' }`; **collections keeps the
-    default reset** (omits `opts`).
+    The trainers (vocab/plural/verbs) and the `/today` grammar-review track (§19) pass
+    `{ wrongPolicy: 'soft' }`; **collections keeps the default reset** (omits `opts`).
   - `due = now + BOX_INTERVAL[box]` where `BOX_INTERVAL = {1:1d, 2:2d, 3:4d, 4:8d, 5:16d}`.
 
 ### `speech.js` — Web Speech API wrapper (German TTS)
@@ -1385,10 +1385,13 @@ the done screen states **"You completed Day N"** (`today_done_day`).
 **Steps** — the flow is **descriptor-driven**: `buildSteps(day, onboarding)` returns an ordered list of
 step descriptors, each `{ id, required, enabled, run(), isComplete() }`, and `.filter`s out the
 disabled ones (`flow.steps`). `id` doubles as the locale-key stem (`today_step_<id>` / `_sub`); `run()`
-paints/starts the block; `isComplete()` (backed by `flow.results`) is read at the done step. Today it
-returns the current five blocks (grammar · vocab · verbs · ai · done), all `enabled`; the descriptor
-shape is what lets later phases add review/listen/produce and tariff gating by extending `buildSteps()`
-alone. `nextStep`/`flowHeader`/the intro checklist all iterate `flow.steps` (the intro builds a preview
+paints/starts the block; `isComplete()` (backed by `flow.results`) is read at the done step. Block
+selection is **tariff-driven** (`tariff(onboarding)` → `5`/`10`/`15`/`'20+'`, default 15): the 5-min
+*light track* runs a short grammar step + exactly ONE trainer (vocab on even days, verbs on odd) and no
+AI; 10/15-min run grammar + both trainers (session length differs via `sessionCap`); 20+ adds the
+inline AI step. A **grammar-review** block slots in right after grammar on 10/15/20+ whenever a
+practised topic has come due (`hasDueGrammarReview()`). The descriptor shape is what lets later phases
+add listen/produce by extending `buildSteps()` alone. `nextStep`/`flowHeader`/the intro checklist all iterate `flow.steps` (the intro builds a preview
 list for the current day). Completion model: **AI is `required:false`** (never blocks the day); a trainer
 session worked to its end screen (`onSessionEnd`'s `summary.completed`, set from `s.pos >= s.queue.length`
 in `closeSession`) — or auto-skipped on an empty queue — marks its block complete; **closing a trainer
@@ -1405,15 +1408,22 @@ early leaves its block incomplete**.
    whose end advances the flow (`onSessionEnd → nextStep`, like the vocab/verb engines). The drill is
    optional practice: grammar's `isComplete()` stays `true`, so a drill-less day (or a skipped/empty
    drill, which auto-skips) never deadlocks. "Continue →" advances without drilling.
-2. **vocab** — `VocabTrainer.startSession({ type:'daily', week })` — the day's daily review: the due
+2. **review** — appears on 10/15/20+ (not the light track) when the **grammar-review track** has due
+   topics. `startReviewStep` re-drills up to `reviewSlugCap()` whole topics (`{10:2,15:3,'20+':5}`),
+   most-overdue-first, via the **same `GrammarDrill` engine** in a **multi-slug** session
+   (`startSession({ slugs, review:true })` — one queue across topics, each item tagged with its slug, a
+   distinct "Review" badge). Working it to the end grades each topic (see below) and advances the flow;
+   an empty due-set auto-skips (never deadlocks). `isComplete()` = nothing still due **or** the session
+   was worked to its end — closing it early with topics still due leaves the day incomplete.
+3. **vocab** — `VocabTrainer.startSession({ type:'daily', week })` — the day's daily review: the due
    backlog from every week reached so far (mastered-but-due included) + up to 12 new words from the
    current week (articles `der/die/das` ride along as a mode).
-3. **verbs** — `VerbsTrainer.startSession({ type:'due' })` (repetition first); falls back to
+4. **verbs** — `VerbsTrainer.startSession({ type:'due' })` (repetition first); falls back to
    `{ type:'filter', filter:'all', week }` (due + some new) when nothing is due. Passing `week` makes
    the engine **band-gate new verbs**: only verbs whose `band` is at or below the current week's CEFR
    band (`levelOfWeek`) are introduced as new; already-seen due verbs stay reviewable regardless of
    band. The standalone `/verbs` page passes no `week`, so it stays unrestricted.
-4. **ai** — an in-flow chat (reuses `gemini.js` / `ai-config.js` / `markdown.js` / `chat.css`),
+5. **ai** — an in-flow chat (reuses `gemini.js` / `ai-config.js` / `markdown.js` / `chat.css`),
    **persisted** to the same `lessons` row the planner uses (one per user×day). On entry it
    **auto-generates a "day summary"** (`maybeSummarize` → `askSummary`): a short recap pinned on top —
    grammar takeaways + the word/verb session results (`flow.vocabResult` / `flow.verbResult`, captured
@@ -1421,7 +1431,7 @@ early leaves its block incomplete**.
    generated once and persisted, so revisiting the day (or no key) doesn't regenerate. Below the
    pinned blocks, the same `ai` thread (`renderAiPanel()`) lets the student ask follow-ups. If no key,
    it nudges to `/settings` and offers **Skip**.
-5. **done** — gated on `dayComplete()` (every enabled `required` descriptor `isComplete()`): when the day
+6. **done** — gated on `dayComplete()` (every enabled `required` descriptor `isComplete()`): when the day
    is complete it marks `planner_data.completed[day] = true`, records `dayStats[day]`
    (`{ completedAt, blocks:[{id,required,completed}], counts:{vocab,verbs} }` — written once, on the
    completing pass only), advances `currentDay` (when finishing the current day), persists via
@@ -1431,6 +1441,20 @@ early leaves its block incomplete**.
    → "Open the planner". If a required trainer was closed early the day is **not** checked off: it shows an
    "almost there" partial screen (`today_done_partial_*`) that doesn't advance `currentDay`, with **Run the
    day again**.
+
+**Grammar-review track (Leitner by drill slug).** A grammar topic enters
+`planner_data.grammarReview` (`{ slug: {box,due,right,wrong,seen} }`) the first time its drill is worked
+— in the grammar step OR the review step. `recordGrammarReview(perSlug)` grades **one soft-demotion
+Leitner card per fully-worked slug** — topic-level, not per example: a topic passes at **≥60% first-try**
+(`GrammarDrill.reviewPassed`), fed into `leitnerApply(card, passed, {wrongPolicy:'soft'})` (reusing
+`leitner.js`, §8). A pass schedules the card forward (boxes 1→5, doubling intervals), so it comes back
+due on a later day — which is exactly what the review step consumes
+(`GrammarDrill.dueReviewSlugs(map, now, cap)`: due + still-existing slugs, most-overdue-first, capped to
+whole topics). The engine owns no state here — it only reports per-topic tallies
+(`closeSession`'s summary → `perSlug` of `{slug,right,total,answered}`) and computes due slugs; the map
+lives in `planner_data`. It's persisted immediately via `saveToCloud` (idempotent `planner_data`
+upsert) so review progress survives even if the day isn't finished, and rides along with the rest of
+the planner payload (`getCloudPayload` returns `planner` whole; seeded `{}` by the v2 migration).
 
 **Pinned blocks + follow-up chat (shared with the planner).** A lesson's `messages` carry optional
 flags: `seed:true` (the hidden prompt that elicits a pinned reply — the breakdown request / day-plan /
@@ -1453,7 +1477,8 @@ engines' `render()` is a no-op (the wizard owns the screen — intro, grammar, a
 `keydown` listener routes to whichever engine has an active session.
 
 **Cloud columns** (each written independently, §4):
-- `planner_data` — this page's `CLOUD_FIELD`; read for `currentDay`, written on finish.
+- `planner_data` — this page's `CLOUD_FIELD`; read for `currentDay`, written on finish (and mid-flow
+  when a grammar-review card is graded).
 - `verbs_data` — loaded via `applyVerbProgress` during `initApp`. The wizard wires **one shared
   mastery map** into both engines (`wireSharedVerbStore()` → `VerbsTrainer.setMasteryStore(map)` +
   `VocabTrainer.setVerbStore({ mastery: map })`), so a verb answered in either step counts once.

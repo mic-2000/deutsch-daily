@@ -4,9 +4,12 @@
 
    It is a single namespace object `window.GrammarDrill`, mirroring the vocab/verb engines so all
    three can coexist on one page (template `onclick` strings reference `GrammarDrill.check()` etc.).
-   Unlike those engines it owns NO persistent cloud state in this phase — a drill is a one-shot
-   practice of the day's concept; the Leitner grammar-review track (grammarReview[slug]) lands with a
-   later phase. So there is no serialize/applyData here.
+   The engine itself owns NO persistent cloud state (no serialize/applyData): the Leitner
+   grammar-review track lives in `planner_data.grammarReview` ({ slug: card }), owned by /today. The
+   engine only REPORTS per-topic results (closeSession's summary → `perSlug`) and computes which topics
+   are due (`dueReviewSlugs`), so the host grades one topic-level card per slug. A session runs ONE
+   slug (`scope.slug`, the day's drill in the grammar step) or SEVERAL (`scope.slugs`, the review
+   step's due topics).
 
    Drill data model (data/grammar-drills.js, keyed by slug, NOT index-matched):
      GRAMMAR_DRILLS[slug] = { level, week, concept, items: [ item, … ] }
@@ -44,7 +47,8 @@ window.GrammarDrill = (function () {
 
   function shuffled(arr) { return arr.slice().sort(() => Math.random() - 0.5); }
 
-  /* Build a live queue item from a raw drill item (freezes a shuffled option order / token bank). */
+  /* Build a live queue item from a raw drill item (freezes a shuffled option order / token bank). The
+     owning slug is tagged on afterwards (startSession), so multi-slug sessions can be graded per topic. */
   function makeItem(raw) {
     const item = { type: raw.type, de: raw.de || '', answer: raw.answer, firstTry: null };
     if (raw.type === 'choice') item.options = shuffled(raw.options || []);
@@ -52,26 +56,77 @@ window.GrammarDrill = (function () {
     return item;
   }
 
-  /* Start a drill session for scope.slug. Leaves state.session null (renders nothing) when the slug
-     is unknown or empty, so the /today host can auto-skip the grammar practice without a deadlock. */
+  /* Start a drill session. Accepts ONE slug (`scope.slug`, the grammar step) or an ORDERED list
+     (`scope.slugs`, the review step); each queue item is tagged with its owning slug. `scope.review`
+     flags a review session (badge + host routing). Leaves state.session null (renders nothing) when no
+     given slug resolves to a non-empty drill, so the /today host can auto-skip without a deadlock. */
   function startSession(scope) {
-    const slug = scope && scope.slug;
-    const dr = drillOf(slug);
-    if (!dr || !Array.isArray(dr.items) || dr.items.length === 0) { state.session = null; return; }
-    const queue = dr.items.map(makeItem);
-    state.session = { slug, queue, pos: 0, answered: false, lastCorrect: null,
-                      uniqueRight: 0, uniqueTotal: queue.length, inputValue: '' };
+    scope = scope || {};
+    const slugs = Array.isArray(scope.slugs) ? scope.slugs.slice() : (scope.slug ? [scope.slug] : []);
+    const queue = [];
+    const used = [];
+    slugs.forEach((slug) => {
+      const dr = drillOf(slug);
+      if (!dr || !Array.isArray(dr.items) || dr.items.length === 0) return;
+      used.push(slug);
+      dr.items.forEach((raw) => { const item = makeItem(raw); item.slug = slug; queue.push(item); });
+    });
+    if (queue.length === 0) { state.session = null; return; }
+    state.session = { slugs: used, queue, pos: 0, answered: false, lastCorrect: null,
+                      uniqueRight: 0, uniqueTotal: queue.length, inputValue: '', review: !!scope.review };
     render();
   }
 
   function closeSession() {
     const s = state.session;
-    // `completed` = the queue was worked to the end; false when closed early via ×. The /today host
-    // uses it exactly as it does for the vocab/verb engines.
-    const summary = s ? { right: s.uniqueRight || 0, total: s.uniqueTotal || 0, completed: s.pos >= s.queue.length } : null;
+    const summary = s ? summarize(s) : null;
     state.session = null;
     if (cfg.embedded && typeof cfg.onSessionEnd === 'function') cfg.onSessionEnd(summary);
     else render();
+  }
+
+  /* Session summary for the host. `completed` = the queue was worked to the end (false when closed
+     early via ×) — used exactly as for the vocab/verb engines. `perSlug` tallies each drill topic
+     (first-try `right` / `total` / `answered`), so /today can grade ONE topic-level grammar-review
+     Leitner card per FULLY worked slug (answered === total). `review` echoes the session kind. */
+  function summarize(s) {
+    const per = {};
+    s.queue.forEach((it) => {
+      const p = per[it.slug] || (per[it.slug] = { slug: it.slug, right: 0, total: 0, answered: 0 });
+      p.total++;
+      if (it.firstTry !== null) { p.answered++; if (it.firstTry) p.right++; }
+    });
+    return {
+      right: s.uniqueRight || 0,
+      total: s.uniqueTotal || 0,
+      completed: s.pos >= s.queue.length,
+      review: !!s.review,
+      perSlug: Object.keys(per).map((k) => per[k]),
+    };
+  }
+
+  /* ---- grammar-review track helpers (state itself lives in planner_data.grammarReview on /today) ---- */
+  /* Topic-level pass for a grammar-review card (Plan §8: grade the topic, not each example): the topic
+     counts as "known" this session when ≥60% of its items were right on the FIRST try — the same bar
+     as the engine's "good" end screen. Only meaningful for a fully worked topic; the host grades only
+     those (answered === total). */
+  const REVIEW_PASS_RATIO = 0.6;
+  function reviewPassed(entry) { return !!(entry && entry.total > 0 && (entry.right / entry.total) >= REVIEW_PASS_RATIO); }
+
+  /* Which grammar-review slugs are DUE. `reviewMap` = planner_data.grammarReview ({ slug: card }); a
+     slug is due when its card's `due` is at/behind `now`. Filtered to slugs that still resolve in
+     GRAMMAR_DRILLS (a dropped course slug simply stops appearing), ordered most-overdue-first, and
+     capped to `limit` WHOLE topics (so every reviewed topic is worked end-to-end and thus gradeable). */
+  function dueReviewSlugs(reviewMap, now, limit) {
+    if (!reviewMap || typeof reviewMap !== 'object') return [];
+    const t = (typeof now === 'number') ? now : Date.now();
+    const due = Object.keys(reviewMap)
+      .filter((slug) => hasDrill(slug))
+      .map((slug) => ({ slug, card: reviewMap[slug] }))
+      .filter((x) => x.card && typeof x.card === 'object' && (x.card.due || 0) <= t)
+      .sort((a, b) => (a.card.due || 0) - (b.card.due || 0))
+      .map((x) => x.slug);
+    return (typeof limit === 'number' && limit >= 0) ? due.slice(0, limit) : due;
   }
 
   /* ---- answering ---- */
@@ -127,7 +182,7 @@ window.GrammarDrill = (function () {
     if (!s) return;                              // embedded: host owns the screen between drills
     if (s.pos >= s.queue.length) { renderEnd(); return; }
     const item = s.queue[s.pos];
-    const meta = drillLocale(s.slug);
+    const meta = drillLocale(item.slug);          // per-item: a review session mixes topics
     const progress = (s.pos / s.queue.length) * 100;
     let body = '';
     if (item.type === 'cloze') body = renderCloze(item, s);
@@ -137,7 +192,7 @@ window.GrammarDrill = (function () {
     appEl().innerHTML = `
 <div class="session-bg">
   <div class="session-top"><div class="container session-top-row">
-    <span class="session-mode-badge">${T('drill_badge')}</span>
+    <span class="session-mode-badge">${T(s.review ? 'drill_review_badge' : 'drill_badge')}</span>
     <span class="session-counter">${s.pos + 1} / ${s.queue.length}</span>
     <button class="session-close" onclick="GrammarDrill.closeSession()">×</button>
   </div>
@@ -253,8 +308,10 @@ window.GrammarDrill = (function () {
     startSession, closeSession, render,
     choose, check, next, setInput, pickToken, unpickToken, handleKeydown,
     hasDrill, drillOf, drillLocale,
+    /* grammar-review track (state owned by /today's planner_data.grammarReview) */
+    dueReviewSlugs, reviewPassed,
     /* introspection (tests) */
-    makeItem, assembled,
+    makeItem, assembled, summarize,
     get state() { return state; },
   };
 })();

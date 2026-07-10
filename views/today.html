@@ -104,8 +104,17 @@ function saveVerbsNow(){ if (typeof saveVerbsToCloud === 'function') saveVerbsTo
 function saveVocabNow(){ if (typeof saveVocabToCloud === 'function') saveVocabToCloud(VocabTrainer.serialize()); }
 VocabTrainer.init({ embedded: true, onSessionEnd: (r) => { flow.vocabResult = r; flow.results.vocab = { completed: !!(r && r.completed) }; nextStep(); }, onSaveVocab: saveVocabNow, onSaveVerbs: saveVerbsNow });
 VerbsTrainer.init({ embedded: true, onSessionEnd: (r) => { flow.verbResult = r; flow.results.verbs = { completed: !!(r && r.completed) }; nextStep(); }, onSave: saveVerbsNow });
-/* GrammarDrill runs a keyed drill inside the grammar step; its end advances the flow like the other engines. */
-GrammarDrill.init({ embedded: true, onSessionEnd: (r) => { flow.grammarResult = r; flow.results.grammar = { completed: !!(r && r.completed) }; nextStep(); } });
+/* GrammarDrill runs a keyed drill in the grammar step (the day's slug) AND in the review step (all due
+   review topics). Its end advances the flow like the other engines; per-topic results feed the same
+   grammar-review Leitner track (recordGrammarReview), and the result is filed under whichever step is
+   active so the done step gates on it. */
+GrammarDrill.init({ embedded: true, onSessionEnd: (r) => {
+  if (r && Array.isArray(r.perSlug)) recordGrammarReview(r.perSlug);
+  const id = (currentStep() && currentStep().id) || 'grammar';
+  if (id === 'grammar') flow.grammarResult = r;
+  flow.results[id] = { completed: !!(r && r.completed) };
+  nextStep();
+} });
 
 /* ==========================================================================
    FLOW — descriptor-driven. buildSteps() returns an ordered list of step
@@ -139,25 +148,30 @@ function tariff(onboarding){
      isComplete()— completion predicate, read at the done step (backed by flow.results)
    Per-tariff block selection (Plan §4):
      • 5-min (light track): short grammar + exactly ONE trainer, alternating vocab on even days /
-       verbs on odd days (never both), no AI step.
-     • 10 / 15-min: full grammar + both trainers, no AI step (session length differs via sessionCap).
-     • 20+ (full path): both trainers + the inline AI tutor step.
-   (Listen / produce / review blocks arrive with Phase 6; the light track's "skip listening unless
+       verbs on odd days (never both), no review, no AI step.
+     • 10 / 15-min: full grammar + a due-grammar review + both trainers, no AI step (session length
+       differs via sessionCap).
+     • 20+ (full path): grammar + review + both trainers + the inline AI tutor step.
+   The `review` block re-drills the grammar topics whose Leitner card (planner_data.grammarReview) has
+   come due; it appears only when something is due (hasDueGrammarReview) and never on the light track.
+   (Listen / produce blocks arrive with later Phase 6 items; the light track's "skip listening unless
    hardest === 'listening'" rule lands there.)
-   Completion rules: AI never blocks the day; a trainer session worked to the end (or auto-skipped
-   on an empty queue) counts complete; closing a trainer early leaves its block incomplete. */
+   Completion rules: AI never blocks the day; a trainer/review session worked to the end (or auto-skipped
+   on an empty queue) counts complete; closing one early leaves its block incomplete. */
 function buildSteps(day, onboarding){
   const t = tariff(onboarding);
   const light = t === 5;
   // Light track runs one trainer per day: vocab on even days, verbs on odd days.
   const vocabEnabled = !light || day % 2 === 0;
   const verbsEnabled = !light || day % 2 === 1;
+  const reviewEnabled = !light && hasDueGrammarReview();   // 10/15/20+ only, when a practised topic is due
   return [
-    { id: 'grammar', required: true,          enabled: true,         run: renderGrammar,  isComplete: () => true },
-    { id: 'vocab',   required: vocabEnabled,  enabled: vocabEnabled, run: startVocabStep, isComplete: () => !!(flow.results.vocab && flow.results.vocab.completed) },
-    { id: 'verbs',   required: verbsEnabled,  enabled: verbsEnabled, run: startVerbsStep, isComplete: () => !!(flow.results.verbs && flow.results.verbs.completed) },
-    { id: 'ai',      required: false,         enabled: t === '20+',  run: runAiStep,      isComplete: () => true },
-    { id: 'done',    required: true,          enabled: true,         run: renderDone,     isComplete: () => true },
+    { id: 'grammar', required: true,          enabled: true,          run: renderGrammar,   isComplete: () => true },
+    { id: 'review',  required: reviewEnabled, enabled: reviewEnabled, run: startReviewStep, isComplete: () => !hasDueGrammarReview() || !!(flow.results.review && flow.results.review.completed) },
+    { id: 'vocab',   required: vocabEnabled,  enabled: vocabEnabled,  run: startVocabStep,  isComplete: () => !!(flow.results.vocab && flow.results.vocab.completed) },
+    { id: 'verbs',   required: verbsEnabled,  enabled: verbsEnabled,  run: startVerbsStep,  isComplete: () => !!(flow.results.verbs && flow.results.verbs.completed) },
+    { id: 'ai',      required: false,         enabled: t === '20+',   run: runAiStep,       isComplete: () => true },
+    { id: 'done',    required: true,          enabled: true,          run: renderDone,      isComplete: () => true },
   ].filter(step => step.enabled);
 }
 
@@ -215,6 +229,40 @@ function startVerbsStep(){
   if (!VerbsTrainer.state.session) VerbsTrainer.startSession({ type: 'filter', filter: 'all', week: localizedToday().week, dailyNew: true }); // else due + some new (band-gated to today's week + capped to today's new-verb budget)
   if (!VerbsTrainer.state.session) { flow.results.verbs = { completed: true, skipped: true }; nextStep(); return; }   // nothing to train → auto-skip
   trimSession(VerbsTrainer); VerbsTrainer.render();
+}
+
+/* ---- grammar-review track (planner_data.grammarReview: { slug: Leitner card }) ----
+   A grammar topic ENTERS the track the first time its drill is worked (grammar or review step): a
+   soft-demotion Leitner card scheduled forward, so it comes back for review on later days. The review
+   step re-drills whatever is due; each pass regrades the card topic-level (§8). */
+function hasDueGrammarReview(){ return GrammarDrill.dueReviewSlugs(planner.grammarReview, Date.now()).length > 0; }
+/* How many WHOLE due topics one review session re-drills — kept short (Plan §4), scaled by tariff. */
+function reviewSlugCap(){ return ({ 5: 0, 10: 2, 15: 3, '20+': 5 })[tariff()] || 3; }
+/* Grade a finished drill session's topics into the track. One card per FULLY worked slug (topic-level,
+   not per example); soft demotion so a single slip doesn't wipe a topic. Persisted right away so
+   progress survives even if the day isn't finished. */
+function recordGrammarReview(perSlug){
+  if (!Array.isArray(perSlug) || !perSlug.length) return;
+  if (!planner.grammarReview || typeof planner.grammarReview !== 'object') planner.grammarReview = {};
+  let touched = false;
+  perSlug.forEach(entry => {
+    if (!entry || entry.total <= 0 || entry.answered < entry.total) return;   // only fully worked topics
+    const card = planner.grammarReview[entry.slug] || (planner.grammarReview[entry.slug] = leitnerBlank());
+    leitnerApply(card, GrammarDrill.reviewPassed(entry), { wrongPolicy: 'soft' });
+    touched = true;
+  });
+  if (touched) saveToCloud();   // idempotent planner_data upsert — keeps grammarReview even mid-flow
+}
+
+/* ---- step: review — re-drill the due grammar topics (most-overdue first, reviewSlugCap of them). An
+   empty set auto-skips (marks review done) rather than deadlocking, mirroring the trainer empty-queue
+   skips. Working the drill to its end grades the cards (via onSessionEnd → recordGrammarReview). ---- */
+function startReviewStep(){
+  const slugs = GrammarDrill.dueReviewSlugs(planner.grammarReview, Date.now(), reviewSlugCap());
+  if (!slugs.length) { flow.results.review = { completed: true, skipped: true }; nextStep(); return; }
+  GrammarDrill.startSession({ slugs, review: true });
+  if (!GrammarDrill.state.session) { flow.results.review = { completed: true, skipped: true }; nextStep(); return; }
+  GrammarDrill.render();
 }
 
 /* ---- shared in-flow header (progress) ---- */
