@@ -57,8 +57,9 @@ document.addEventListener('keydown', VocabTrainer.handleKeydown);
 
 // Paint the shell right away in the saved language (locale is a fast static file) so the
 // header/nav don't blank out on every section switch; initApp() re-renders with cloud data.
-loadLocale(getLang()).then(() => { try { render(); } catch (_) {} });
-initApp();
+// Gate 3: mixed-course-version cache → reload prompt instead of a drifted render.
+loadLocale(getLang()).then(() => { try { if (courseVersionBlocked()) return; render(); } catch (_) {} });
+if (courseVersionConsistent()) initApp();
 </script>
 </body>
 </html>

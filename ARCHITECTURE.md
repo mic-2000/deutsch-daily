@@ -65,6 +65,16 @@ The band boundaries live in one dependency-free module, **`assets/js/course-cons
 course's shape, kept independent from `weeks.js` so the vocab/verbs trainer pages (which don't load
 the curriculum) can still map a week to its CEFR band.
 
+`course-consts.js` also owns the **mixed-cache-version guard** (Gate 3). The PWA caches each course
+data file independently (stale-while-revalidate), so a half-updated cache could serve `weeks.js` and
+`vocab.js` from different `COURSE_VERSION`s — an index-matched drift that renders a broken course.
+Each generated, index-matched data file self-registers the version it was built for into
+`window.__courseAssets` (emitted by `gen-course.js`'s `assetReg`); `courseVersionConsistent()` compares
+those to `COURSE_VERSION`, and every curriculum-coupled page (`/today`, `/planner`, `/vocab`,
+`/welcome`) calls `courseVersionBlocked()` at bootstrap — on a mismatch it paints a localized reload
+prompt (`version_reload_*`) whose button (`bustCachesAndReload()`) wipes caches + SW registrations and
+hard-reloads, instead of rendering the drifted course.
+
 UI languages: **RU / UA / EN**. Learning content is German with a translation in the active UI
 language.
 

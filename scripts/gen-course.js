@@ -144,6 +144,13 @@ const BANNER = (extra) =>
   `   Source of truth: authoring/. Regenerate with: npm run gen:course\n` +
   (extra ? `   ${extra}\n` : '') + `*/\n`;
 
+/* Self-registered course-version marker (Gate 3, curriculum-redesign-2026-07-v2.md §12). Each
+   independently-cached, index-matched data file stamps the COURSE_VERSION it was built for into a
+   shared window registry; course-consts.js compares them so a half-updated PWA cache (some assets
+   from an older course version) can prompt a reload instead of rendering a broken, drifted course. */
+const assetReg = (name) =>
+  `if (typeof window !== 'undefined') (window.__courseAssets = window.__courseAssets || {})[${JSON.stringify(name)}] = ${course.COURSE_VERSION};\n`;
+
 function j(v) { return JSON.stringify(v, null, 2); }
 
 function emit(weeks) {
@@ -278,13 +285,13 @@ if (unbanded.length) console.warn(`⚠ ${unbanded.length} VERBS entries missing 
 
 if (CHECK_ONLY) { console.log('--check: no files written.'); process.exit(0); }
 
-writeFile('data/v2/weeks.js', BANNER('const WEEKS — object tasks; base text is English (the T() default).') + 'const WEEKS = ' + j(out.weeksBase) + ';\n');
+writeFile('data/v2/weeks.js', BANNER('const WEEKS — object tasks; base text is English (the T() default).') + 'const WEEKS = ' + j(out.weeksBase) + ';\n' + assetReg('weeks'));
 const PLURALS_DOC =
   '/* PLURALS — plural form for the countable nouns above, keyed by the EXACT singular string used\n' +
   '   in VOCAB (incl. its article). German-only (no locale alignment needed). Generated from\n' +
   '   authoring/plurals.js by gen-course.js; nouns without an entry get no plural card. */\n';
 writeFile('data/v2/vocab.js',
-  BANNER() + 'const VOCAB = ' + j(out.vocabBase) + ';\n\n' + PLURALS_DOC + 'const PLURALS = ' + j(out.pluralsBase) + ';\n');
+  BANNER() + 'const VOCAB = ' + j(out.vocabBase) + ';\n\n' + PLURALS_DOC + 'const PLURALS = ' + j(out.pluralsBase) + ';\n' + assetReg('vocab'));
 writeFile('data/v2/grammar-drills.js', BANNER() + 'const GRAMMAR_DRILLS = ' + j(out.drillsBase) + ';\n');
 writeFile('data/v2/dialogues.js', BANNER() + 'const DIALOGUES = ' + j(out.dialoguesBase) + ';\n');
 writeFile('data/v2/manifest.js', BANNER() + 'const COURSE_MANIFEST = ' + j(out.manifest) + ';\n');

@@ -204,8 +204,9 @@ document.addEventListener('keydown', e => {
   if (VerbsTrainer.state.session) { VerbsTrainer.handleKeydown(e); return; }
 });
 
-loadLocale(getLang()).then(() => { try { render(); } catch (_) {} });
-initApp();   // confirms the session; on /welcome the new-user gate is skipped, so it just renders us
+// Gate 3: mixed-course-version cache → reload prompt instead of a drifted onboarding.
+loadLocale(getLang()).then(() => { try { if (courseVersionBlocked()) return; render(); } catch (_) {} });
+if (courseVersionConsistent()) initApp();   // confirms the session; on /welcome the new-user gate is skipped, so it just renders us
 </script>
 </body>
 </html>

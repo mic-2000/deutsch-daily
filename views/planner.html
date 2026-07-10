@@ -34,6 +34,7 @@
 <script src="/assets/js/markdown.js"></script>
 <script src="/assets/js/header.js"></script>
 <script src="/data/weeks.js"></script>
+<script src="/assets/js/course-consts.js"></script>
 <script src="/assets/js/planner-data.js"></script>
 </head>
 <body>
@@ -440,8 +441,9 @@ document.addEventListener('keydown', e => {
 
 // Paint the shell right away in the saved language (locale is a fast static file) so the
 // header/nav don't blank out on every section switch; initApp() re-renders with cloud data.
-loadLocale(getLang()).then(() => { try { render(); } catch (_) {} });
-initApp().then(loadLessonsThenRender);
+// Gate 3: mixed-course-version cache → reload prompt instead of a drifted week table.
+loadLocale(getLang()).then(() => { try { if (courseVersionBlocked()) return; render(); } catch (_) {} });
+if (courseVersionConsistent()) initApp().then(loadLessonsThenRender);
 </script>
 </body>
 </html>

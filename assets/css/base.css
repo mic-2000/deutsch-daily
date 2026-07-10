@@ -40,6 +40,10 @@ input, textarea, select { font-family: inherit; color: var(--ink); }
 input::placeholder, textarea::placeholder { color: var(--ink-soft); opacity: 1; }
 .serif { font-family: var(--serif); }
 .container { max-width: var(--page-max); margin: 0 auto; padding: 0 24px; }
+
+/* Mixed-cache-version reload prompt (course-consts.js mountCourseVersionPrompt). */
+.version-reload { max-width: 520px; text-align: center; padding: 64px 24px; }
+.version-reload p { color: var(--ink-soft); line-height: 1.6; margin: 12px 0 28px; }
 .uppercase-mini { font-size: 10px; text-transform: uppercase; letter-spacing: 0.3em; color: var(--ink-soft); }
 .num { font-variant-numeric: tabular-nums; }
 

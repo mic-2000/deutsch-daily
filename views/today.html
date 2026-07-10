@@ -51,9 +51,11 @@
 
 <script>
 /* ==========================================================================
-   /today — the daily-flow wizard. Walks the user through ONE study day in order:
-   grammar → words → verbs → AI tutor → done, with no manual navigation between
-   sections. It hosts the SHARED engines (vocab-trainer.js / verbs-trainer.js) in
+   /today — the daily-flow wizard. Walks the user through ONE study day in order,
+   with no manual navigation between sections. The block set depends on the user's
+   daily-minutes tariff (see buildSteps / tariff): 5-min = short grammar + one trainer
+   (vocab even days / verbs odd days); 10 & 15-min = grammar + both trainers; 20+ = the
+   full path with the inline AI tutor. It hosts the SHARED engines (vocab-trainer.js / verbs-trainer.js) in
    `embedded` mode (sessions only, end screen advances the flow) and reuses the
    curriculum day model (planner-data.js). "Today" = the planner's currentDay.
 
@@ -111,21 +113,45 @@ VerbsTrainer.init({ embedded: true, onSessionEnd: (r) => { flow.verbResult = r; 
 /* The user's onboarding profile (level / goal / minutes / hardest / language), or {} before it loads. */
 function onboardingProfile(){ return (typeof userOnboarding !== 'undefined' && userOnboarding) ? userOnboarding : {}; }
 
+/* The active daily-minutes tariff, normalized to 5 | 10 | 15 | '20+'. Onboarding stores minutes as
+   the strings '5'/'10'/'15'/'20+'; this tolerates numbers too and defaults to 15 (the default path)
+   when unset (e.g. grandfathered accounts with no onboarding). Drives both buildSteps() block
+   selection and the per-session length cap, so the two never disagree. (Plan §4.) */
+function tariff(onboarding){
+  const m = (onboarding || onboardingProfile()).minutes;
+  if (m === 5 || m === '5') return 5;
+  if (m === 10 || m === '10') return 10;
+  if (m === '20+' || m === 20 || m === '20') return '20+';
+  return 15;
+}
+
 /* buildSteps(day, onboarding) → ordered step descriptors, filtered to the enabled ones. Each:
      id          — stable block id; doubles as the locale-key stem (today_step_<id> / _sub)
      required    — the day counts as done only when every enabled required block isComplete()
      enabled     — whether the block appears in the flow at all (filtered out below when false)
      run()       — paints/starts the block; advances via nextStep() (or a trainer's onSessionEnd)
      isComplete()— completion predicate, read at the done step (backed by flow.results)
+   Per-tariff block selection (Plan §4):
+     • 5-min (light track): short grammar + exactly ONE trainer, alternating vocab on even days /
+       verbs on odd days (never both), no AI step.
+     • 10 / 15-min: full grammar + both trainers, no AI step (session length differs via sessionCap).
+     • 20+ (full path): both trainers + the inline AI tutor step.
+   (Listen / produce / review blocks arrive with Phase 6; the light track's "skip listening unless
+   hardest === 'listening'" rule lands there.)
    Completion rules: AI never blocks the day; a trainer session worked to the end (or auto-skipped
    on an empty queue) counts complete; closing a trainer early leaves its block incomplete. */
 function buildSteps(day, onboarding){
+  const t = tariff(onboarding);
+  const light = t === 5;
+  // Light track runs one trainer per day: vocab on even days, verbs on odd days.
+  const vocabEnabled = !light || day % 2 === 0;
+  const verbsEnabled = !light || day % 2 === 1;
   return [
-    { id: 'grammar', required: true,  enabled: true, run: renderGrammar,  isComplete: () => true },
-    { id: 'vocab',   required: true,  enabled: true, run: startVocabStep, isComplete: () => !!(flow.results.vocab && flow.results.vocab.completed) },
-    { id: 'verbs',   required: true,  enabled: true, run: startVerbsStep, isComplete: () => !!(flow.results.verbs && flow.results.verbs.completed) },
-    { id: 'ai',      required: false, enabled: true, run: runAiStep,      isComplete: () => true },
-    { id: 'done',    required: true,  enabled: true, run: renderDone,     isComplete: () => true },
+    { id: 'grammar', required: true,          enabled: true,         run: renderGrammar,  isComplete: () => true },
+    { id: 'vocab',   required: vocabEnabled,  enabled: vocabEnabled, run: startVocabStep, isComplete: () => !!(flow.results.vocab && flow.results.vocab.completed) },
+    { id: 'verbs',   required: verbsEnabled,  enabled: verbsEnabled, run: startVerbsStep, isComplete: () => !!(flow.results.verbs && flow.results.verbs.completed) },
+    { id: 'ai',      required: false,         enabled: t === '20+',  run: runAiStep,      isComplete: () => true },
+    { id: 'done',    required: true,          enabled: true,         run: renderDone,     isComplete: () => true },
   ].filter(step => step.enabled);
 }
 
@@ -167,11 +193,8 @@ function renderStep(){
 }
 /* AI step run(): paint the chat, then auto-generate the once-per-day summary if a key is present. */
 function runAiStep(){ renderAi(); maybeSummarize(); }
-/* Cap a session to the user's daily time budget (onboarding "minutes/day"); default = full 25. */
-function sessionCap(){
-  const m = (typeof userOnboarding !== 'undefined' && userOnboarding) ? userOnboarding.minutes : null;
-  return { 5: 6, 10: 12, 15: 18, '20+': 25 }[m] || 25;
-}
+/* Cap a session to the active tariff's daily time budget (onboarding "minutes/day"). */
+function sessionCap(){ return { 5: 6, 10: 12, 15: 18, '20+': 25 }[tariff()]; }
 function trimSession(engine){ const s = engine.state.session; if (s && s.queue) { s.queue = s.queue.slice(0, sessionCap()); s.uniqueTotal = s.queue.length; } }
 function startVocabStep(){
   // Daily review: due backlog from every reached week (incl. mastered-but-due) + new words from today's week.
@@ -370,6 +393,8 @@ function renderDone(){
     <div class="done-stat"><div class="done-stat-label">${T('today_done_verbs')}</div><div class="done-stat-val num">${fmt(flow.verbResult)}</div></div>
     <div class="done-stat-note">${T('today_done_score')}</div>
   </div>` : '';
+  // 5-min light track: remind the learner this is a maintenance pace, not the full B1 path. (Plan §4.)
+  const lightNote = tariff() === 5 ? `<div class="done-light">${T('today_light_pace')}</div>` : '';
   const canDo = weekCanDo();
   const canDoBlock = canDo.length ? `
   <div class="done-cando">
@@ -385,6 +410,7 @@ function renderDone(){
   ${dayLine}
   <p>${complete ? T('today_done_msg') : T('today_done_partial_msg')}</p>
   ${stats}
+  ${lightNote}
   ${canDoBlock}
   <div class="flow-actions"><a class="btn accent big" href="/planner">${T('today_done_to_planner')}</a></div>
   <button class="restart" onclick="startFlow()">↻ ${T('today_restart_day')}</button>
@@ -471,8 +497,9 @@ function resumeFlow(saved){
 }
 
 // Paint the shell right away in the saved language; initApp() re-renders with cloud data.
-loadLocale(getLang()).then(() => { try { render(); } catch (_) {} });
-initApp().then(afterInit);
+// Gate 3: if the PWA cache is serving mixed course versions, prompt a reload instead of rendering.
+loadLocale(getLang()).then(() => { try { if (courseVersionBlocked()) return; render(); } catch (_) {} });
+if (courseVersionConsistent()) initApp().then(afterInit);
 </script>
 </body>
 </html>

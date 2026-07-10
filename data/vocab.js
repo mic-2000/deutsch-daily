@@ -1126,3 +1126,4 @@ const PLURALS = {
   "die Einleitung": "die Einleitungen",
   "der Schluss": "die Schlüsse"
 };
+if (typeof window !== 'undefined') (window.__courseAssets = window.__courseAssets || {})["vocab"] = 2;

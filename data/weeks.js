@@ -1731,3 +1731,4 @@ const WEEKS = [
     ]
   }
 ];
+if (typeof window !== 'undefined') (window.__courseAssets = window.__courseAssets || {})["weeks"] = 2;

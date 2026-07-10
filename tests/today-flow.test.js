@@ -77,18 +77,33 @@ function finishSession(engine) {
   engine.closeSession();
 }
 
-test('buildSteps returns descriptor objects for the current blocks', () => {
+test('buildSteps returns descriptor objects; the default tariff has no AI step', () => {
   const t = fresh(['buildSteps']);
-  const steps = t.buildSteps(1, {});
-  assert.equal(steps.map((s) => s.id).join(','), 'grammar,vocab,verbs,ai,done', 'the current five blocks, in order');
+  const steps = t.buildSteps(1, {});   // no minutes → default 15-min path: both trainers, no AI
+  assert.equal(steps.map((s) => s.id).join(','), 'grammar,vocab,verbs,done', 'default path blocks, in order');
   for (const s of steps) {
     assert.equal(typeof s.run, 'function', `${s.id}.run is a function`);
     assert.equal(typeof s.isComplete, 'function', `${s.id}.isComplete is a function`);
     assert.equal(typeof s.required, 'boolean');
     assert.equal(s.enabled, true, 'buildSteps only returns enabled steps');
   }
-  assert.equal(steps.find((s) => s.id === 'ai').required, false, 'AI never blocks the day');
   assert.equal(steps.find((s) => s.id === 'grammar').required, true);
+});
+
+test('the 20+ tariff adds the inline AI step, and AI never blocks the day', () => {
+  const t = fresh(['buildSteps']);
+  const steps = t.buildSteps(1, { minutes: '20+' });
+  assert.equal(steps.map((s) => s.id).join(','), 'grammar,vocab,verbs,ai,done', 'full path includes AI');
+  assert.equal(steps.find((s) => s.id === 'ai').required, false, 'AI never blocks the day');
+});
+
+test('the 5-min light track runs exactly one trainer, alternating by day parity, with no AI', () => {
+  const t = fresh(['buildSteps']);
+  const odd = t.buildSteps(1, { minutes: '5' });   // odd day → verbs only
+  assert.equal(odd.map((s) => s.id).join(','), 'grammar,verbs,done', 'odd day: verbs, not vocab');
+  const even = t.buildSteps(2, { minutes: '5' });  // even day → vocab only
+  assert.equal(even.map((s) => s.id).join(','), 'grammar,vocab,done', 'even day: vocab, not verbs');
+  assert.equal(odd.find((s) => s.id === 'verbs').required, true, "the day's single trainer is still required");
 });
 
 test('finishing every required block completes the day and advances currentDay', () => {
@@ -97,8 +112,8 @@ test('finishing every required block completes the day and advances currentDay',
   const before = t.planner.currentDay;
   t.nextStep();                // → vocab session
   finishSession(t.VocabTrainer); // → verb session (onSessionEnd advances)
-  finishSession(t.VerbsTrainer); // → AI step
-  t.nextStep();                // AI → done (renderDone)
+  finishSession(t.VerbsTrainer); // → done (default tariff has no AI step)
+  t.nextStep();                // clamp on the done step (renderDone)
   assert.equal(t.planner.completed[before], true, 'today marked complete');
   assert.equal(t.planner.currentDay, before + 1, 'currentDay advanced');
   assert.match(t.app.innerHTML, /flow-done/);
@@ -111,13 +126,13 @@ test('completing the day records a dayStats entry (completedAt + blocks + counts
   const day = t.planner.currentDay;
   t.nextStep();                    // → vocab session
   finishSession(t.VocabTrainer);   // → verb session
-  finishSession(t.VerbsTrainer);   // → AI step
-  t.nextStep();                    // AI → done (records stats)
+  finishSession(t.VerbsTrainer);   // → done (default tariff has no AI step)
+  t.nextStep();                    // clamp on the done step (records stats)
   const st = t.planner.dayStats[day];
   assert.ok(st, 'a dayStats entry was written for the finished day');
   assert.match(st.completedAt, /^\d{4}-\d{2}-\d{2}T/, 'completedAt is an ISO timestamp');
   const ids = st.blocks.map((b) => b.id).join(',');
-  assert.equal(ids, 'grammar,vocab,verbs,ai', 'records the enabled non-done blocks in order');
+  assert.equal(ids, 'grammar,vocab,verbs', 'records the enabled non-done blocks in order');
   assert.ok(st.blocks.every((b) => typeof b.completed === 'boolean' && typeof b.required === 'boolean'));
   assert.ok('vocab' in st.counts && 'verbs' in st.counts, 'trainer scores captured under counts');
 });
@@ -168,6 +183,25 @@ test('closing a required trainer early leaves the day incomplete (not checked of
   assert.doesNotMatch(t.app.innerHTML, /You completed Day/, 'no false completion claim');
 });
 
+test('5-min light track: one trainer carries the day, with a light-pace note on done', () => {
+  const t = loadPage({
+    page: 'today.html', extraFiles: ['locales/en.js'],
+    exports: ['startFlow', 'nextStep', 'VocabTrainer', 'VerbsTrainer', 'planner'],
+    shims: { userOnboarding: { minutes: '5' } },
+  });
+  t.startFlow();                   // day 1 (odd) → grammar
+  assert.match(t.app.innerHTML, /grammar-card/, 'grammar step first');
+  t.nextStep();                    // → the single trainer (verbs on odd days)
+  assert.ok(t.VerbsTrainer.state.session, 'the verbs trainer started on an odd day');
+  assert.ok(!t.VocabTrainer.state.session, 'the vocab trainer does NOT run on an odd light-track day');
+  finishSession(t.VerbsTrainer);   // → done (no AI on the light track)
+  const html = t.app.innerHTML;
+  assert.equal(t.planner.completed[1], true, 'the day completes on the single required trainer');
+  assert.match(html, /done-light/, 'a light-pace note is rendered');
+  assert.match(html, /Light pace/, 'the localized light-pace copy is shown');
+  assert.doesNotMatch(html, /today_light_pace/, 'no raw i18n key leaks');
+});
+
 /* A localStorage that reports a saved Gemini key, so the AI panel renders (not the no-key nudge). */
 function keyStore() {
   const m = new Map([['gemini_key', 'testkey'], ['ui_lang', 'en']]);
@@ -205,7 +239,8 @@ test('the AI step shows the day summary pinned (own label) alongside the topic b
   const t = loadPage({
     page: 'today.html', extraFiles: ['locales/en.js'],
     exports: ['startFlow', 'nextStep', 'VocabTrainer', 'VerbsTrainer'],
-    shims: { localStorage: keyStore(), loadLessonsFromCloud: async () => rows, saveLessonToCloud: async () => {} },
+    // the AI step only exists on the full (20+) tariff
+    shims: { localStorage: keyStore(), userOnboarding: { minutes: '20+' }, loadLessonsFromCloud: async () => rows, saveLessonToCloud: async () => {} },
   });
   t.startFlow();
   await new Promise((r) => setImmediate(r));   // loadDayLesson settles
@@ -232,7 +267,8 @@ test('renderStep persists the position and resumeFlow restores it (refresh → s
   const t = loadPage({
     page: 'today.html', extraFiles: ['locales/en.js'],
     exports: ['startFlow', 'nextStep', 'resumeFlow'],
-    shims: { localStorage: keyStore(), loadLessonsFromCloud: async () => rows, saveLessonToCloud: async () => {}, saveToCloud: () => {} },
+    // resume lands on the AI step (step index 3), which only exists on the full (20+) tariff
+    shims: { localStorage: keyStore(), userOnboarding: { minutes: '20+' }, loadLessonsFromCloud: async () => rows, saveLessonToCloud: async () => {}, saveToCloud: () => {} },
   });
   // Drive into the flow, then read what was persisted for a refresh.
   t.startFlow();           // grammar (step 0)
