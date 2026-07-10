@@ -273,6 +273,97 @@ test('the 5-min light track skips listening unless listening is the hardest part
     'listen runs on the light track when hardest === listening');
 });
 
+/* ---- produce block (renderProduce; Plan §3/§4/§10, Gate 5) ---- */
+
+test('the produce block is required on a write/speak day, absent otherwise, and sits after listen', () => {
+  const t = fresh(['buildSteps', 'isProduceDay']);
+  assert.ok(t.isProduceDay(4), 'day 4 (week 1) is a write day');
+  assert.ok(!t.isProduceDay(1), 'day 1 is a grammar day');
+  const prod = t.buildSteps(4, {}).find((s) => s.id === 'produce');
+  assert.ok(prod, 'the produce block is enabled on a produce day');
+  assert.equal(prod.required, true, 'an enabled produce block is required');
+  assert.ok(!t.buildSteps(1, {}).some((s) => s.id === 'produce'), 'no produce block on a non-produce day');
+  assert.equal(t.buildSteps(4, { minutes: '20+' }).map((s) => s.id).join(','),
+    'grammar,vocab,verbs,listen,produce,ai,done', 'produce sits between listen and the AI step');
+});
+
+/* Drive the flow to the produce step of a write day (finishing the blocks before it). */
+function driveToProduce(t, day) {
+  t.planner.currentDay = day;
+  t.startFlow();                   // grammar
+  t.nextStep();                    // → vocab session
+  finishSession(t.VocabTrainer);   // → verb session
+  finishSession(t.VerbsTrainer);   // → listen block (week 1 has a dialogue + TTS)
+  t.finishListen();                // → produce block
+}
+
+test('produce shows the prompt + static self-check; ticking it unlocks continue and completes the day', () => {
+  const t = fresh(['startFlow', 'nextStep', 'VocabTrainer', 'VerbsTrainer', 'finishListen',
+    'produceToggle', 'finishProduce', 'planner']);
+  driveToProduce(t, 4);
+  const html = t.app.innerHTML;
+  assert.match(html, /produce-wrap/, 'the produce card is shown');
+  assert.match(html, /Write a Steckbrief/, 'the localized production prompt is shown');
+  assert.match(html, /produce-selfcheck/, 'a self-check is shown');
+  assert.match(html, /produce-input/, 'a draft box is offered');
+  assert.doesNotMatch(html, /produce-ai/, 'no AI feedback on the static (non-20+) path');
+  assert.match(html, /disabled onclick="finishProduce/, 'continue is gated on the self-check');
+  assert.doesNotMatch(html, /produce_[a-z_]+/, 'no raw produce i18n keys leak');
+  assert.doesNotMatch(html, /today_[a-z_]+/);
+
+  const before = t.planner.currentDay;
+  [0, 1, 2].forEach((i) => t.produceToggle(i));   // default tariff → three self-check items
+  assert.doesNotMatch(t.app.innerHTML, /disabled onclick="finishProduce/, 'continue unlocks once self-checked');
+  t.finishProduce();               // → done
+  assert.match(t.app.innerHTML, /flow-done/, 'finishing the produce block advances to done');
+  assert.equal(t.planner.completed[before], true, 'the produce day completes on the self-check (never on quality)');
+  assert.equal(t.planner.currentDay, before + 1, 'currentDay advanced');
+});
+
+test('5-min light track: produce is micro-output with a single self-check, and completes (Gate 5)', () => {
+  const t = loadPage({
+    page: 'today.html', extraFiles: ['locales/en.js'],
+    exports: ['buildSteps', 'startFlow', 'nextStep', 'VocabTrainer', 'produceToggle', 'finishProduce', 'planner'],
+    shims: { userOnboarding: { minutes: '5' } },
+  });
+  // day 4 (even) light track: grammar + the one trainer (vocab) + produce — no verbs, no listen, no AI
+  assert.equal(t.buildSteps(4, { minutes: '5' }).map((s) => s.id).join(','),
+    'grammar,vocab,produce,done', 'light-track produce day: one trainer + produce');
+  t.planner.currentDay = 4;
+  t.startFlow();                   // grammar
+  t.nextStep();                    // → vocab (even day)
+  finishSession(t.VocabTrainer);   // → produce
+  const html = t.app.innerHTML;
+  assert.match(html, /produce-wrap/, 'produce runs on the light track too');
+  assert.match(html, /Keep it short/, 'the micro-output hint is shown');
+  assert.match(html, /disabled onclick="finishProduce/, 'continue gated until the single self-check');
+  t.produceToggle(0);              // one self-check on the light track
+  assert.doesNotMatch(t.app.innerHTML, /disabled onclick="finishProduce/, 'one tick unlocks continue');
+  t.finishProduce();               // → done
+  assert.equal(t.planner.completed[4], true, 'the light-track produce day completes with no key and no TTS');
+});
+
+test('20+ produce day offers optional AI feedback that renders inline', async () => {
+  const t = loadPage({
+    page: 'today.html', extraFiles: ['locales/en.js'],
+    exports: ['startFlow', 'nextStep', 'VocabTrainer', 'VerbsTrainer', 'finishListen',
+      'produceType', 'produceFeedback', 'planner'],
+    shims: { localStorage: keyStore(), userOnboarding: { minutes: '20+' } },
+  });
+  // geminiRequest is a loaded function declaration — override the global post-load for a deterministic reply.
+  let sawMessages = null;
+  t.sandbox.geminiRequest = async (_model, _sys, msgs) => { sawMessages = msgs; return 'Good start! Fix: **Ich bin** …'; };
+  driveToProduce(t, 4);            // 20+ path: produce shows the AI-feedback control
+  assert.match(t.app.innerHTML, /produce-ai/, 'the AI-feedback control appears on the 20+ path with a key');
+
+  t.produceType('Ich heiße Anna. Ich komme aus der Ukraine. Ich spreche Ukrainisch.');
+  await t.produceFeedback();
+  const html = t.app.innerHTML;
+  assert.match(html, /produce-ai-out/, 'the feedback panel is rendered');
+  assert.match(html, /Good start/, 'the AI reply is shown inline');
+  assert.ok(Array.isArray(sawMessages) && /Ich heiße Anna/.test(sawMessages[0].text), 'the learner draft is sent to the model');
+});
+
 /* A localStorage that reports a saved Gemini key, so the AI panel renders (not the no-key nudge). */
 function keyStore() {
   const m = new Map([['gemini_key', 'testkey'], ['ui_lang', 'en']]);

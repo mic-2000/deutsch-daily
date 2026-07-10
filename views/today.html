@@ -100,6 +100,10 @@ function dialogueForWeek(week){
 }
 /* The week number of a study day (defaults to the flow's active day). */
 function weekOfDay(day){ return getLocalizedDay(DAYS[Math.min((day != null ? day : activeDay()), TOTAL_DAYS) - 1]).week; }
+/* A study day's task type (stable enum, not localized). Produce days are the productive write/speak
+   tasks — they get the produce block (a short self-checked output task; Plan §3/§10). */
+function dayType(day){ return DAYS[Math.min((day != null ? day : activeDay()), TOTAL_DAYS) - 1].type; }
+function isProduceDay(day){ const tp = dayType(day); return tp === 'write' || tp === 'speak'; }
 /* Today's listening dialogue (its week's), or null when the week has none. */
 function dialogueForDay(day){ return dialogueForWeek(weekOfDay(day)); }
 /* Localised { title } for a dialogue slug (active locale's dialogues block, EN fallback). Lines and
@@ -194,8 +198,13 @@ function tariff(onboarding){
    when TTS is usable AND the week has a dialogue AND shouldRunListening allows it for the tariff/day
    (light track skips listening unless hardest === 'listening'). Missing TTS/dialogue → it never
    appears (and, if it somehow did, isComplete short-circuits), so it can't deadlock the day (Gate 5).
+   The `produce` block is a short productive write/speak task; it appears on produce days (write/speak
+   tasks) at every tariff — micro-output on the light track, a static self-check on 10/15, and an
+   optional AI-feedback turn on 20+ (Plan §4/§10). It never depends on TTS or a key (the static
+   self-check always works), so it can't deadlock the day (Gate 5).
    Completion rules: AI never blocks the day; a trainer/review/listen block worked to the end (or
-   auto-skipped on empty content) counts complete; closing one early leaves its block incomplete. */
+   auto-skipped on empty content) counts complete; the produce block completes on the learner's own
+   self-check (never gated on writing/speech quality); closing one early leaves its block incomplete. */
 function buildSteps(day, onboarding){
   const t = tariff(onboarding);
   const light = t === 5;
@@ -204,14 +213,16 @@ function buildSteps(day, onboarding){
   const verbsEnabled = !light || day % 2 === 1;
   const reviewEnabled = !light && hasDueGrammarReview();   // 10/15/20+ only, when a practised topic is due
   const listenEnabled = shouldRunListening(day, onboarding);
+  const produceEnabled = isProduceDay(day);                // write/speak days, at every tariff
   return [
-    { id: 'grammar', required: true,          enabled: true,          run: renderGrammar,   isComplete: () => true },
-    { id: 'review',  required: reviewEnabled, enabled: reviewEnabled, run: startReviewStep, isComplete: () => !hasDueGrammarReview() || !!(flow.results.review && flow.results.review.completed) },
-    { id: 'vocab',   required: vocabEnabled,  enabled: vocabEnabled,  run: startVocabStep,  isComplete: () => !!(flow.results.vocab && flow.results.vocab.completed) },
-    { id: 'verbs',   required: verbsEnabled,  enabled: verbsEnabled,  run: startVerbsStep,  isComplete: () => !!(flow.results.verbs && flow.results.verbs.completed) },
-    { id: 'listen',  required: listenEnabled, enabled: listenEnabled, run: renderListen,    isComplete: () => !ttsAvailable() || !dialogueForDay(day) || !!(flow.results.listen && flow.results.listen.completed) },
-    { id: 'ai',      required: false,         enabled: t === '20+',   run: runAiStep,       isComplete: () => true },
-    { id: 'done',    required: true,          enabled: true,          run: renderDone,      isComplete: () => true },
+    { id: 'grammar', required: true,           enabled: true,           run: renderGrammar,   isComplete: () => true },
+    { id: 'review',  required: reviewEnabled,  enabled: reviewEnabled,  run: startReviewStep, isComplete: () => !hasDueGrammarReview() || !!(flow.results.review && flow.results.review.completed) },
+    { id: 'vocab',   required: vocabEnabled,   enabled: vocabEnabled,   run: startVocabStep,  isComplete: () => !!(flow.results.vocab && flow.results.vocab.completed) },
+    { id: 'verbs',   required: verbsEnabled,   enabled: verbsEnabled,   run: startVerbsStep,  isComplete: () => !!(flow.results.verbs && flow.results.verbs.completed) },
+    { id: 'listen',  required: listenEnabled,  enabled: listenEnabled,  run: renderListen,    isComplete: () => !ttsAvailable() || !dialogueForDay(day) || !!(flow.results.listen && flow.results.listen.completed) },
+    { id: 'produce', required: produceEnabled, enabled: produceEnabled, run: renderProduce,   isComplete: () => !isProduceDay(day) || !!(flow.results.produce && flow.results.produce.completed) },
+    { id: 'ai',      required: false,          enabled: t === '20+',    run: runAiStep,       isComplete: () => true },
+    { id: 'done',    required: true,           enabled: true,           run: renderDone,      isComplete: () => true },
   ].filter(step => step.enabled);
 }
 
@@ -219,6 +230,7 @@ let flow = { running: false, step: 0, day: 1, steps: [], results: {} };
 let ai = { messages: [], loading: false };
 let grammarExplain = false;   // grammar step: AI breakdown panel expanded under the day card
 let listen = { checked: false, answers: [] };   // listen step: per-question true/false picks + graded flag
+let produce = { text: '', checks: {}, feedback: '', loading: false };   // produce step: draft + self-check ticks + optional AI feedback
 
 function render(){ if (flow.running) renderStep(); else renderIntro(); }
 function currentStep(){ return flow.steps[flow.step] || null; }
@@ -230,6 +242,7 @@ function startFlow(){
   ai = { messages: [], loading: false };
   grammarExplain = false;
   listen = { checked: false, answers: [] };
+  produce = { text: '', checks: {}, feedback: '', loading: false };
   flow = { running: true, step: 0, day: dayOf(), steps: buildSteps(dayOf(), onboardingProfile()), results: {}, vocabResult: null, verbResult: null };
   renderStep();
   loadDayLesson(flow.day);   // pull any saved explanation/chat for this day (shared with the planner)
@@ -390,6 +403,79 @@ function finishListen(){
   if (window.speechSynthesis) window.speechSynthesis.cancel();
   nextStep();
 }
+
+/* ---- step: produce — a short productive task on a write/speak day. The learner produces their own
+   German from the day's prompt; there is NO auto-grading (Plan §10 — never gate on writing/speech
+   quality). Completion is the learner's own SELF-CHECK: a short self-assessment they tick off (the
+   draft box is optional scaffolding). On the full 20+ path with a key, an optional "Get feedback"
+   turn sends the draft to the AI for quick, non-blocking tips — NOT persisted (the planner owns the
+   day's lesson row, so this in-flow call can't clobber it). Inline block (like listen), so its
+   handlers are page globals for the onclick strings and exiting mid-block leaves it incomplete. The
+   static self-check needs neither TTS nor a key, so the block can never deadlock the day (Gate 5).
+   Tariff (Plan §4): light track = micro-output (1–3 sentences, single self-check); 10/15 = static
+   self-check; 20+ adds the AI-feedback turn. ---- */
+/* AI feedback is a 20+-only extra and needs a key (else the static self-check stands alone). */
+function produceAiOn(){ return (typeof getGeminiKey === 'function') && !!getGeminiKey() && tariff() === '20+'; }
+/* The self-check items for this day: first line matches the task mode (write vs speak); the light
+   track keeps just that one micro-check, fuller tariffs add "used the week's language" + "proofed". */
+function produceChecks(){
+  const first = dayType() === 'speak' ? 'produce_check_speak' : 'produce_check_write';
+  return tariff() === 5 ? [first] : [first, 'produce_check_use', 'produce_check_proof'];
+}
+function renderProduce(){
+  const d = localizedToday();
+  const light = tariff() === 5;
+  const checks = produceChecks();
+  const allChecked = checks.every((_, i) => !!produce.checks[i]);
+  const checksHtml = checks.map((key, i) => `
+    <label class="produce-check${produce.checks[i] ? ' on' : ''}">
+      <input type="checkbox" ${produce.checks[i] ? 'checked' : ''} onchange="produceToggle(${i})">
+      <span>${T(key)}</span>
+    </label>`).join('');
+  let aiOut = '';
+  if (produce.loading) aiOut = `<div class="produce-ai-out">${esc(T('produce_ai_thinking'))}</div>`;
+  else if (produce.feedback) aiOut = `<div class="produce-ai-out"><div class="produce-ai-label">${T('produce_ai_label')}</div>${renderMd(produce.feedback)}</div>`;
+  const aiBlock = produceAiOn() ? `
+  <div class="produce-ai">
+    <div class="produce-ai-hint">${T('produce_ai_hint')}</div>
+    <button class="btn" ${produce.loading ? 'disabled' : ''} onclick="produceFeedback()">${produce.feedback ? T('produce_ai_again') : T('produce_ai_get')}</button>
+    ${aiOut}
+  </div>` : '';
+  document.getElementById('app').innerHTML = flowHeader() + `
+<main class="container flow-body"><div class="produce-wrap">
+  <div class="produce-head">
+    <div class="produce-kicker">${T('today_step_produce')}</div>
+    <h2 class="produce-title">${esc(d.weekTheme)}</h2>
+    <div class="produce-prompt"><span class="task-type">${T('type_' + d.type)}</span><br>${esc(d.text)}</div>
+  </div>
+  <p class="produce-hint">${light ? T('produce_hint_light') : T('produce_hint')}</p>
+  <textarea class="produce-input" id="produceInput" rows="${light ? 3 : 6}" placeholder="${esc(T('produce_placeholder'))}" oninput="produceType(this.value)">${esc(produce.text)}</textarea>
+  ${aiBlock}
+  <div class="produce-selfcheck">
+    <div class="produce-selfcheck-title">${T('produce_selfcheck_title')}</div>
+    ${checksHtml}
+  </div>
+  <div class="flow-actions"><button class="btn accent big" ${allChecked ? '' : 'disabled'} onclick="finishProduce()">${T('today_continue')}</button></div>
+</div></main>`;
+}
+/* Keep the draft in state on every keystroke, so a re-render (self-check tick / feedback) preserves it. */
+function produceType(v){ produce.text = v; }
+function produceToggle(i){ produce.checks[i] = !produce.checks[i]; renderProduce(); }
+/* Optional AI feedback (20+ with a key). One-shot request off the current draft; the reply is shown
+   inline and NOT saved to the lessons row. Never blocks — a failure just toasts. */
+async function produceFeedback(){
+  const text = (produce.text || '').trim();
+  if (!text) { showToast(T('produce_ai_empty')); return; }
+  if (produce.loading) return;
+  produce.loading = true; renderProduce();
+  try {
+    const reply = await geminiRequest(AI_MODEL_ID, getAiSystemPrompt(), [{ role: 'user', text: T('produce_ai_req', localizedToday().text, text) }]);
+    produce.feedback = reply;
+  } catch (e) { showToast(GeminiKey.friendlyError(e)); }
+  produce.loading = false; renderProduce();
+}
+/* Finish the produce block on the learner's self-check (quality is never graded); advance the flow. */
+function finishProduce(){ flow.results.produce = { completed: true }; nextStep(); }
 
 /* ---- shared in-flow header (progress) ---- */
 function flowHeader(){
@@ -692,6 +778,7 @@ function resumeFlow(saved){
   ai = { messages: [], loading: false };
   grammarExplain = false;
   listen = { checked: false, answers: [] };
+  produce = { text: '', checks: {}, feedback: '', loading: false };
   const steps = buildSteps(saved.day, onboardingProfile());
   flow = { running: true, step: Math.min(saved.step, steps.length - 1), day: saved.day, steps: steps, results: {}, vocabResult: null, verbResult: null };
   loadDayLesson(flow.day);   // its trailing render() paints the resumed step with the lesson loaded

@@ -32,6 +32,7 @@
 .step-row.c5 .step-badge { border-color: var(--accent); color: var(--accent); }
 .step-row.c6 .step-badge { border-color: var(--die); color: var(--die); }
 .step-row.c7 .step-badge { border-color: var(--green); color: var(--green); }
+.step-row.c8 .step-badge { border-color: var(--gold); color: var(--gold); }
 .step-text h3 { margin: 2px 0 4px; font-size: 17px; font-weight: 600; }
 .step-text p { margin: 0; color: var(--ink-soft); font-size: 14px; line-height: 1.5; }
 
@@ -119,6 +120,25 @@
 .listen-tf.wrong { border-color: var(--der); color: var(--der); }
 .listen-tf:disabled { cursor: default; }
 .listen-score { text-align: center; font-size: 16px; color: var(--ink-soft); margin: 22px 0 4px; }
+
+/* ---- produce step (renderProduce; a short productive write/speak task, self-checked, no auto-grading) ---- */
+.produce-wrap { max-width: 640px; margin: 0 auto; }
+.produce-kicker { font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--accent); }
+.produce-title { font-family: var(--serif); font-weight: 300; font-size: clamp(24px, 4vw, 34px); line-height: 1.12; margin: 8px 0 14px; }
+.produce-prompt { font-size: 16px; color: var(--ink); line-height: 1.6; }
+.produce-prompt .task-type { display: inline-block; font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-soft); border: 1px solid var(--line); border-radius: 3px; padding: 2px 8px; margin-bottom: 8px; }
+.produce-hint { color: var(--ink-soft); font-size: 14px; line-height: 1.55; margin: 18px 0 10px; }
+.produce-input { width: 100%; box-sizing: border-box; font: inherit; font-size: 16px; line-height: 1.6; padding: 14px 16px; border: 1px solid var(--line); border-radius: 8px; background: var(--paper); color: var(--ink); resize: vertical; }
+.produce-input:focus { outline: none; border-color: var(--accent); }
+.produce-ai { margin-top: 16px; }
+.produce-ai-hint { font-size: 13px; color: var(--ink-soft); margin-bottom: 10px; }
+.produce-ai-out { margin-top: 14px; border: 1px solid var(--line); border-left: 3px solid var(--accent); border-radius: 6px; background: var(--paper-3); padding: 14px 16px; font-size: 15px; line-height: 1.6; }
+.produce-ai-label { font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--accent); margin-bottom: 8px; }
+.produce-selfcheck { margin-top: 24px; border-top: 1px solid var(--line); padding-top: 16px; }
+.produce-selfcheck-title { font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-soft); margin-bottom: 6px; }
+.produce-check { display: flex; gap: 12px; align-items: flex-start; padding: 9px 0; cursor: pointer; font-size: 15px; line-height: 1.5; color: var(--ink-soft); }
+.produce-check.on { color: var(--ink); }
+.produce-check input { margin-top: 3px; width: 18px; height: 18px; flex: 0 0 auto; accent-color: var(--accent); cursor: pointer; }
 
 /* ---- grammar drill (grammar-drill.js; runs inside the grammar step, reuses vocab.css session chrome) ---- */
 .drill-sentence { font-size: 22px; line-height: 1.6; color: var(--ink); margin: 4px 0 20px; text-align: center; }

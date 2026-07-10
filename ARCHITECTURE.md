@@ -46,7 +46,8 @@ and a built-in AI tutor:
 7. **Today** (`today.html`, `/today`) — a **daily-flow wizard** (the header's primary CTA button —
    "▶ Начать урок" / "Start lesson" — the recommended starting point).
    The user presses one "Learn" button and is walked through the whole study day in order —
-   grammar → words → verbs → AI tutor → done — with no manual section-switching. It hosts the
+   grammar → review → words → verbs → listen → produce → AI tutor → done (blocks vary by tariff/day) —
+   with no manual section-switching. It hosts the
    shared trainer engines in `embedded` mode and reuses the planner's day model. (See §19.)
 
 The curriculum runs **36 weeks (180 study days)** in 3 CEFR bands — this is the Course v2 content,
@@ -115,7 +116,7 @@ deutsch-daily/
 ├── views/              # login + all authenticated app pages live here; served via pretty-URL rewrites
 │   ├── login.html       # LOGIN / REGISTER (email + Google OAuth).    ( /login ) §5
 │   ├── welcome.html     # First-run onboarding wizard (5 questions → mini-lesson). ( /welcome ) §20
-│   ├── today.html       # Daily-flow wizard (grammar→words→verbs→AI→done). ( /today ) §19
+│   ├── today.html       # Daily-flow wizard (descriptor steps → …→produce→AI→done). ( /today ) §19
 │   ├── planner.html     # Daily planner + AI Lehrer chat.            ( /planner )
 │   ├── vocab.html       # Vocabulary trainer (thin host → VocabTrainer). ( /vocab )
 │   ├── verbs.html       # Irregular-verb trainer (thin host → VerbsTrainer). ( /verbs )
@@ -1398,8 +1399,10 @@ inline AI step. A **grammar-review** block slots in right after grammar on 10/15
 practised topic has come due (`hasDueGrammarReview()`). A **listen** block (after the trainers) appears
 when TTS is usable *and* the current week has a dialogue *and* `shouldRunListening(day, onboarding)`
 allows it for the tariff (light track skips listening unless `hardest === 'listening'`; 10-min every
-other day; 15/20+ always). The descriptor shape is what lets later phases
-add produce by extending `buildSteps()` alone. `nextStep`/`flowHeader`/the intro checklist all iterate `flow.steps` (the intro builds a preview
+other day; 15/20+ always). A **produce** block (after listen, before the AI step) appears on **produce
+days** — the productive `write`/`speak` tasks (`isProduceDay(day)`) — at every tariff: micro-output on
+the light track, a static self-check on 10/15, and an optional AI-feedback turn on 20+.
+`nextStep`/`flowHeader`/the intro checklist all iterate `flow.steps` (the intro builds a preview
 list for the current day). Completion model: **AI is `required:false`** (never blocks the day); a trainer
 session worked to its end screen (`onSessionEnd`'s `summary.completed`, set from `s.pos >= s.queue.length`
 in `closeSession`) — or auto-skipped on an empty queue — marks its block complete; **closing a trainer
@@ -1440,7 +1443,18 @@ early leaves its block incomplete**.
    files `flow.results.listen` and advances. Gated on `ttsAvailable()`: no TTS or no dialogue → the block
    never appears (and `isComplete()` short-circuits) so it can't deadlock the day (Gate 5). Lines and
    checks are German-only (understanding the German *is* the task); only the title is localized.
-6. **ai** — an in-flow chat (reuses `gemini.js` / `ai-config.js` / `markdown.js` / `chat.css`),
+6. **produce** — a short **productive** task on a `write`/`speak` day (`isProduceDay(day)`; `dayType` is
+   the day's stable task type), rendered **inline** by the page. Shows the day's localized prompt
+   (`localizedToday().text` + its `type_<type>` label), an optional draft box, and a short **self-check**
+   the learner ticks (`produceChecks()` — one micro-check on the light track, three on 10/15/20+).
+   Completion is that **self-check** signal — never gated on writing/speech quality (Plan §10):
+   `finishProduce` files `flow.results.produce` and advances once the learner has ticked their
+   self-assessment (the draft box is optional scaffolding, kept in `produce.text` via `produceType`).
+   **20+ with a key** adds an optional **"Get feedback"** turn (`produceFeedback` → a one-shot
+   `geminiRequest` off the draft, shown inline via `renderMd`) that is **not persisted** — the planner
+   owns the day's `lessons` row — and never blocks. Needs neither TTS nor a key (the static self-check
+   always works), so it can't deadlock the day (Gate 5).
+7. **ai** — an in-flow chat (reuses `gemini.js` / `ai-config.js` / `markdown.js` / `chat.css`),
    **persisted** to the same `lessons` row the planner uses (one per user×day). On entry it
    **auto-generates a "day summary"** (`maybeSummarize` → `askSummary`): a short recap pinned on top —
    grammar takeaways + the word/verb session results (`flow.vocabResult` / `flow.verbResult`, captured
@@ -1448,7 +1462,7 @@ early leaves its block incomplete**.
    generated once and persisted, so revisiting the day (or no key) doesn't regenerate. Below the
    pinned blocks, the same `ai` thread (`renderAiPanel()`) lets the student ask follow-ups. If no key,
    it nudges to `/settings` and offers **Skip**.
-7. **done** — gated on `dayComplete()` (every enabled `required` descriptor `isComplete()`): when the day
+8. **done** — gated on `dayComplete()` (every enabled `required` descriptor `isComplete()`): when the day
    is complete it marks `planner_data.completed[day] = true`, records `dayStats[day]`
    (`{ completedAt, blocks:[{id,required,completed}], counts:{vocab,verbs,listen} }` — written once, on the
    completing pass only), advances `currentDay` (when finishing the current day), persists via
