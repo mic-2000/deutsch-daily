@@ -7,7 +7,8 @@
  *   data/v2/weeks.js          → data/weeks.js          const WEEKS  (object tasks, 36 weeks / 180 days)
  *   data/v2/vocab.js          → data/vocab.js          const VOCAB + PLURALS (both from authoring/)
  *   data/v2/grammar-drills.js → data/grammar-drills.js const GRAMMAR_DRILLS (keyed by slug, verbatim)
- *   locales/v2/<l>.js         → locales/<l>.js         vocab + weeks + drills REPLACED; ui + verbs KEPT
+ *   data/v2/dialogues.js      → data/dialogues.js      const DIALOGUES (keyed by slug, verbatim)
+ *   locales/v2/<l>.js         → locales/<l>.js         vocab + weeks + drills + dialogues REPLACED; ui + verbs KEPT
  *
  * Idempotent: re-run after `npm run gen:course` to refresh the live course. The swap keeps the live
  * file set (which the tests target) as the single source, rather than dual-loading data/v2 at runtime.
@@ -90,7 +91,11 @@ function main() {
   fs.writeFileSync(p('data/grammar-drills.js'), read(p('data/v2/grammar-drills.js')));
   console.log('✓ data/grammar-drills.js ← data/v2/grammar-drills.js (GRAMMAR_DRILLS)');
 
-  // 4) locales — replace vocab + weeks + drills, keep ui + verbs.
+  // 4) dialogues — DIALOGUES keyed by slug, verbatim (the /today listen step reads it).
+  fs.writeFileSync(p('data/dialogues.js'), read(p('data/v2/dialogues.js')));
+  console.log('✓ data/dialogues.js ← data/v2/dialogues.js (DIALOGUES)');
+
+  // 5) locales — replace vocab + weeks + drills + dialogues, keep ui + verbs.
   for (const lang of LANGS) {
     const overlay = loadOverlay(lang);
     let text = read(p('locales', lang + '.js'));
@@ -98,8 +103,10 @@ function main() {
     text = spliceValue(text, 'weeks', overlay.weeks);
     text = ensureKey(text, 'drills');
     text = spliceValue(text, 'drills', overlay.drills || {});
+    text = ensureKey(text, 'dialogues');
+    text = spliceValue(text, 'dialogues', overlay.dialogues || {});
     fs.writeFileSync(p('locales', lang + '.js'), text);
-    console.log('✓ locales/' + lang + '.js ← locales/v2/' + lang + '.js (vocab + weeks + drills)');
+    console.log('✓ locales/' + lang + '.js ← locales/v2/' + lang + '.js (vocab + weeks + drills + dialogues)');
   }
 
   console.log('\nCourse v2 cutover complete. Run `npm test` to verify.');

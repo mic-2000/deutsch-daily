@@ -41,6 +41,7 @@
 <script src="/data/vocab.js"></script>
 <script src="/data/verbs.js"></script>
 <script src="/data/grammar-drills.js"></script>
+<script src="/data/dialogues.js"></script>
 <script src="/assets/js/course-consts.js"></script>
 <script src="/assets/js/planner-data.js"></script>
 <script src="/assets/js/vocab-trainer.js"></script>
@@ -84,6 +85,41 @@ function activeDay(){ return flow.running ? flow.day : dayOf(); }   // the day t
 function localizedToday(){ return getLocalizedDay(DAYS[Math.min(activeDay(), TOTAL_DAYS) - 1]); }
 /* The day's grammar-drill slug, or null when the day has none or it doesn't resolve in GRAMMAR_DRILLS. */
 function drillForDay(){ const slug = localizedToday().drill; return (slug && GrammarDrill.hasDrill(slug)) ? slug : null; }
+
+/* ---- dialogue lookup (data/dialogues.js: DIALOGUES keyed by slug, each with a `week`) ----
+   Dialogues aren't index-matched to days: each is keyed by slug and tagged with its week, and not
+   every week has one. The listen block uses the CURRENT week's dialogue (re-listening across the
+   week's days is fine for comprehension). */
+function dialogueForWeek(week){
+  if (typeof DIALOGUES === 'undefined' || !DIALOGUES) return null;
+  for (const slug in DIALOGUES){
+    const d = DIALOGUES[slug];
+    if (d && d.week === week && Array.isArray(d.lines) && d.lines.length) return Object.assign({ slug }, d);
+  }
+  return null;
+}
+/* The week number of a study day (defaults to the flow's active day). */
+function weekOfDay(day){ return getLocalizedDay(DAYS[Math.min((day != null ? day : activeDay()), TOTAL_DAYS) - 1]).week; }
+/* Today's listening dialogue (its week's), or null when the week has none. */
+function dialogueForDay(day){ return dialogueForWeek(weekOfDay(day)); }
+/* Localised { title } for a dialogue slug (active locale's dialogues block, EN fallback). Lines and
+   comprehension checks stay German-only — understanding the German IS the listening task. */
+function dialogueLocale(slug){
+  const pick = (loc) => (loc && loc.dialogues && loc.dialogues[slug]) || null;
+  return pick(window['LOCALE_' + getLang().toUpperCase()]) || pick(window.LOCALE_EN) || {};
+}
+/* Should the listen block run for a day? Needs TTS + a dialogue, then per-tariff (Plan §4): the light
+   track (5-min) only when hardest === 'listening'; 10-min every other day (or when hardest); 15/20+
+   always. Parameterised by the passed onboarding so buildSteps stays pure/testable. */
+function shouldRunListening(day, onboarding){
+  if (!ttsAvailable() || !dialogueForDay(day)) return false;
+  const ob = onboarding || onboardingProfile();
+  const hardest = ob.hardest || '';
+  const t = tariff(ob);
+  if (t === 5) return hardest === 'listening';
+  if (t === 10) return (day % 2 === 0) || hardest === 'listening';
+  return true;
+}
 
 /* Resume position across a page refresh — transient per-tab nav state (NOT progress; progress lives
    in the cloud). sessionStorage survives reload, clears on tab close — exactly "same step on refresh". */
@@ -154,10 +190,12 @@ function tariff(onboarding){
      • 20+ (full path): grammar + review + both trainers + the inline AI tutor step.
    The `review` block re-drills the grammar topics whose Leitner card (planner_data.grammarReview) has
    come due; it appears only when something is due (hasDueGrammarReview) and never on the light track.
-   (Listen / produce blocks arrive with later Phase 6 items; the light track's "skip listening unless
-   hardest === 'listening'" rule lands there.)
-   Completion rules: AI never blocks the day; a trainer/review session worked to the end (or auto-skipped
-   on an empty queue) counts complete; closing one early leaves its block incomplete. */
+   The `listen` block is a short listening-comprehension task on the week's dialogue; it appears only
+   when TTS is usable AND the week has a dialogue AND shouldRunListening allows it for the tariff/day
+   (light track skips listening unless hardest === 'listening'). Missing TTS/dialogue → it never
+   appears (and, if it somehow did, isComplete short-circuits), so it can't deadlock the day (Gate 5).
+   Completion rules: AI never blocks the day; a trainer/review/listen block worked to the end (or
+   auto-skipped on empty content) counts complete; closing one early leaves its block incomplete. */
 function buildSteps(day, onboarding){
   const t = tariff(onboarding);
   const light = t === 5;
@@ -165,11 +203,13 @@ function buildSteps(day, onboarding){
   const vocabEnabled = !light || day % 2 === 0;
   const verbsEnabled = !light || day % 2 === 1;
   const reviewEnabled = !light && hasDueGrammarReview();   // 10/15/20+ only, when a practised topic is due
+  const listenEnabled = shouldRunListening(day, onboarding);
   return [
     { id: 'grammar', required: true,          enabled: true,          run: renderGrammar,   isComplete: () => true },
     { id: 'review',  required: reviewEnabled, enabled: reviewEnabled, run: startReviewStep, isComplete: () => !hasDueGrammarReview() || !!(flow.results.review && flow.results.review.completed) },
     { id: 'vocab',   required: vocabEnabled,  enabled: vocabEnabled,  run: startVocabStep,  isComplete: () => !!(flow.results.vocab && flow.results.vocab.completed) },
     { id: 'verbs',   required: verbsEnabled,  enabled: verbsEnabled,  run: startVerbsStep,  isComplete: () => !!(flow.results.verbs && flow.results.verbs.completed) },
+    { id: 'listen',  required: listenEnabled, enabled: listenEnabled, run: renderListen,    isComplete: () => !ttsAvailable() || !dialogueForDay(day) || !!(flow.results.listen && flow.results.listen.completed) },
     { id: 'ai',      required: false,         enabled: t === '20+',   run: runAiStep,       isComplete: () => true },
     { id: 'done',    required: true,          enabled: true,          run: renderDone,      isComplete: () => true },
   ].filter(step => step.enabled);
@@ -178,6 +218,7 @@ function buildSteps(day, onboarding){
 let flow = { running: false, step: 0, day: 1, steps: [], results: {} };
 let ai = { messages: [], loading: false };
 let grammarExplain = false;   // grammar step: AI breakdown panel expanded under the day card
+let listen = { checked: false, answers: [] };   // listen step: per-question true/false picks + graded flag
 
 function render(){ if (flow.running) renderStep(); else renderIntro(); }
 function currentStep(){ return flow.steps[flow.step] || null; }
@@ -188,6 +229,7 @@ function startFlow(){
   if (dayOf() > TOTAL_DAYS) return;
   ai = { messages: [], loading: false };
   grammarExplain = false;
+  listen = { checked: false, answers: [] };
   flow = { running: true, step: 0, day: dayOf(), steps: buildSteps(dayOf(), onboardingProfile()), results: {}, vocabResult: null, verbResult: null };
   renderStep();
   loadDayLesson(flow.day);   // pull any saved explanation/chat for this day (shared with the planner)
@@ -263,6 +305,90 @@ function startReviewStep(){
   GrammarDrill.startSession({ slugs, review: true });
   if (!GrammarDrill.state.session) { flow.results.review = { completed: true, skipped: true }; nextStep(); return; }
   GrammarDrill.render();
+}
+
+/* ---- step: listen — a short listening-comprehension block on the current week's dialogue. Play the
+   German lines via TTS (▶ normal / 🐢 slow), optionally reveal the transcript, then judge the German
+   true/false comprehension checks. No dialogue or no TTS auto-skips (completed) so the block never
+   deadlocks the day (Gate 5). The block is inline (like the grammar/AI steps), not a shared engine:
+   listening is a /today-only feature, so exiting mid-block = exiting the whole flow (leaves it
+   incomplete), and its handlers live here as page globals for the inline onclick strings. ---- */
+function renderListen(){
+  const dia = dialogueForDay();
+  if (!dia || !ttsAvailable()) { flow.results.listen = { completed: true, skipped: true }; nextStep(); return; }
+  const qs = Array.isArray(dia.questions) ? dia.questions : [];
+  if (listen.answers.length !== qs.length) listen.answers = qs.map(() => null);
+  const title = dialogueLocale(dia.slug).title || dia.slug;
+  const transcript = dia.lines.map(l =>
+    `<div class="listen-line"><span class="listen-speaker">${esc(l.speaker || '')}</span><span>${esc(l.de)}</span></div>`).join('');
+  const allAnswered = qs.length > 0 && listen.answers.every(a => a !== null);
+  const tfClass = (i, q, val) => {
+    let c = 'listen-tf' + (listen.answers[i] === val ? ' picked' : '');
+    if (listen.checked) {
+      if (val === q.answer) c += ' correct';
+      else if (listen.answers[i] === val) c += ' wrong';
+    }
+    return c;
+  };
+  const questionsHtml = qs.map((q, i) => `
+    <div class="listen-q${listen.checked ? (listen.answers[i] === q.answer ? ' ok' : ' bad') : ''}">
+      <div class="listen-q-text">${esc(q.de)}</div>
+      <div class="listen-q-btns">
+        <button class="${tfClass(i, q, true)}"  ${listen.checked ? 'disabled' : ''} onclick="listenPick(${i}, true)">${T('listen_true')}</button>
+        <button class="${tfClass(i, q, false)}" ${listen.checked ? 'disabled' : ''} onclick="listenPick(${i}, false)">${T('listen_false')}</button>
+      </div>
+    </div>`).join('');
+  const right = qs.reduce((n, q, i) => n + (listen.answers[i] === q.answer ? 1 : 0), 0);
+  let footer;
+  if (!qs.length) footer = `<div class="flow-actions"><button class="btn accent big" onclick="finishListen()">${T('today_continue')}</button></div>`;
+  else if (listen.checked) footer = `
+    <div class="listen-score">${T('listen_score', right, qs.length)}</div>
+    <div class="flow-actions"><button class="btn accent big" onclick="finishListen()">${T('today_continue')}</button></div>`;
+  else footer = `<div class="flow-actions"><button class="btn accent big" ${allAnswered ? '' : 'disabled'} onclick="listenCheck()">${T('listen_check')}</button></div>`;
+  document.getElementById('app').innerHTML = flowHeader() + `
+<main class="container flow-body"><div class="listen-wrap">
+  <div class="listen-head">
+    <div class="listen-kicker">${T('today_step_listen')}</div>
+    <h2 class="listen-title">${esc(title)}</h2>
+    <p class="listen-hint">${T('listen_hint')}</p>
+  </div>
+  <div class="listen-controls">
+    <button class="btn accent" id="listenPlay" onclick="playDialogue(false)">▶ ${T('listen_play')}</button>
+    <button class="btn" onclick="playDialogue(true)">🐢 ${T('listen_play_slow')}</button>
+  </div>
+  <details class="listen-transcript">
+    <summary>${T('listen_transcript')}</summary>
+    <div class="listen-lines">${transcript}</div>
+  </details>
+  ${qs.length ? `<div class="listen-questions">${questionsHtml}</div>` : ''}
+  ${footer}
+</div></main>`;
+}
+/* Play the day's dialogue lines in sequence (🐢 = slower). No re-render, so the play button keeps its
+   `speaking` state for the run. */
+function playDialogue(slow){
+  const dia = dialogueForDay(); if (!dia) return;
+  speakLines(dia.lines.map(l => l.de), { btnEl: document.getElementById('listenPlay'), rate: slow ? 0.62 : 0.92 });
+}
+function listenPick(i, val){
+  if (listen.checked || i < 0 || i >= listen.answers.length) return;
+  listen.answers[i] = val;
+  renderListen();
+}
+function listenCheck(){
+  if (listen.checked || !listen.answers.length || listen.answers.some(a => a === null)) return;
+  listen.checked = true;
+  renderListen();
+}
+/* Finish the listen block: file its result (worked to the end → counts complete) and advance. The
+   score is informational; completion gates the day like the other required blocks. */
+function finishListen(){
+  const dia = dialogueForDay();
+  const qs = (dia && Array.isArray(dia.questions)) ? dia.questions : [];
+  const right = qs.reduce((n, q, i) => n + (listen.answers[i] === q.answer ? 1 : 0), 0);
+  flow.results.listen = { completed: true, right, total: qs.length };
+  if (window.speechSynthesis) window.speechSynthesis.cancel();
+  nextStep();
 }
 
 /* ---- shared in-flow header (progress) ---- */
@@ -437,7 +563,7 @@ function recordDayStats(day){
   planner.dayStats[day] = {
     completedAt: new Date().toISOString(),
     blocks: flow.steps.filter(s => s.id !== 'done').map(s => ({ id: s.id, required: !!s.required, completed: !!s.isComplete() })),
-    counts: { vocab: score(flow.vocabResult), verbs: score(flow.verbResult) },
+    counts: { vocab: score(flow.vocabResult), verbs: score(flow.verbResult), listen: score(flow.results.listen) },
   };
 }
 
@@ -565,6 +691,7 @@ async function afterInit(){
 function resumeFlow(saved){
   ai = { messages: [], loading: false };
   grammarExplain = false;
+  listen = { checked: false, answers: [] };
   const steps = buildSteps(saved.day, onboardingProfile());
   flow = { running: true, step: Math.min(saved.step, steps.length - 1), day: saved.day, steps: steps, results: {}, vocabResult: null, verbResult: null };
   loadDayLesson(flow.day);   // its trailing render() paints the resumed step with the lesson loaded

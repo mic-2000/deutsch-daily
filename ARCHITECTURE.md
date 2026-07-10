@@ -128,9 +128,9 @@ deutsch-daily/
 │   │         markdown.js · course-consts.js · planner-data.js · vocab-trainer.js · verbs-trainer.js · grammar-drill.js   # AI md + course shape + day model + trainer engines
 │   ├── favicon.svg · icon.svg · icon-maskable.svg     # icon sources (PNGs rendered into icons/)
 │   └── icons/  icon-192.png · icon-512.png · maskable-512.png · apple-touch-icon.png
-├── data/   weeks.js (WEEKS) · vocab.js (VOCAB) · verbs.js (VERBS — master verb dictionary) · grammar-drills.js (GRAMMAR_DRILLS — keyed by slug, cut from v2)
+├── data/   weeks.js (WEEKS) · vocab.js (VOCAB) · verbs.js (VERBS — master verb dictionary) · grammar-drills.js (GRAMMAR_DRILLS — keyed by slug, cut from v2) · dialogues.js (DIALOGUES — keyed by slug, cut from v2)
 │   └── v2/   GENERATED Course-v2 data (weeks/vocab/grammar-drills/dialogues/manifest) — source of the live course; swapped into data/ by cutover-v2. §21
-├── locales/  ru.js · ua.js · en.js   (window.LOCALE_RU / _UA / _EN = { ui, vocab, verbs, weeks, drills })
+├── locales/  ru.js · ua.js · en.js   (window.LOCALE_RU / _UA / _EN = { ui, vocab, verbs, weeks, drills, dialogues })
 │   └── v2/   GENERATED Course-v2 locale overlays (en/ru/ua) — merged into locales/ by cutover-v2. §21
 ├── authoring/  Course-v2 single-source content (course.js · verb-bands.js · plurals.js · weeks/w01..w36.js) + README. §21
 ├── scripts/  gen-course.js (authoring → data/v2 + locales/v2) · cutover-v2.js (v2 → live data/ + locales/) · band-verbs.js (verb bands). §21
@@ -215,10 +215,10 @@ Supabase CDN
 Supabase CDN
 → i18n.js → theme.js → utils.js → pwa.js → leitner.js → speech.js → supabase.js → cloud-sync.js
 → ai-config.js → gemini.js → markdown.js → header.js
-→ data/weeks.js → data/vocab.js → data/verbs.js
+→ data/weeks.js → data/vocab.js → data/verbs.js → data/grammar-drills.js → data/dialogues.js
 → course-consts.js                 (COURSE_VERSION, BAND_WEEKS, WEEK_FOR_LEVEL, levelOfWeek)
 → planner-data.js                  (DAYS, TOTAL_DAYS, getLocalizedDay)
-→ vocab-trainer.js → verbs-trainer.js
+→ vocab-trainer.js → verbs-trainer.js → grammar-drill.js
 → inline page <script>             (flow controller; CLOUD_FIELD='planner_data'; initApp().then(afterInit))
 ```
 
@@ -410,6 +410,11 @@ Card shape: `{ box:0..5, due:ms, right:count, wrong:count, seen:count }`.
 - `pickVoice()` — run on page load and on `onvoiceschanged`.
 - `speak(text, btnEl?, rate?)` — speaks with `lang='de-DE'`, default `rate=0.9`; adds/removes
   `.speaking` class on `btnEl` while speaking.
+- `ttsAvailable()` — is the Web Speech API + its utterance ctor present? (`/today`'s listen block gates
+  on it, so missing TTS skips the block instead of deadlocking.)
+- `speakLines(lines, {btnEl?, rate?, onEnd?})` — speaks several German lines in sequence (one utterance
+  per line, a single `cancel()` up front so repeat presses don't pile up); `.speaking` on `btnEl` for
+  the whole run, `onEnd` after the last line. Used by the `/today` listen step to play a dialogue.
 
 ### `utils.js` — tiny shared helpers
 - `esc(s)` — HTML-escape `& < > " '`. **Every** dynamic value interpolated into `innerHTML` must
@@ -1390,8 +1395,11 @@ selection is **tariff-driven** (`tariff(onboarding)` → `5`/`10`/`15`/`'20+'`, 
 *light track* runs a short grammar step + exactly ONE trainer (vocab on even days, verbs on odd) and no
 AI; 10/15-min run grammar + both trainers (session length differs via `sessionCap`); 20+ adds the
 inline AI step. A **grammar-review** block slots in right after grammar on 10/15/20+ whenever a
-practised topic has come due (`hasDueGrammarReview()`). The descriptor shape is what lets later phases
-add listen/produce by extending `buildSteps()` alone. `nextStep`/`flowHeader`/the intro checklist all iterate `flow.steps` (the intro builds a preview
+practised topic has come due (`hasDueGrammarReview()`). A **listen** block (after the trainers) appears
+when TTS is usable *and* the current week has a dialogue *and* `shouldRunListening(day, onboarding)`
+allows it for the tariff (light track skips listening unless `hardest === 'listening'`; 10-min every
+other day; 15/20+ always). The descriptor shape is what lets later phases
+add produce by extending `buildSteps()` alone. `nextStep`/`flowHeader`/the intro checklist all iterate `flow.steps` (the intro builds a preview
 list for the current day). Completion model: **AI is `required:false`** (never blocks the day); a trainer
 session worked to its end screen (`onSessionEnd`'s `summary.completed`, set from `s.pos >= s.queue.length`
 in `closeSession`) — or auto-skipped on an empty queue — marks its block complete; **closing a trainer
@@ -1423,7 +1431,16 @@ early leaves its block incomplete**.
    the engine **band-gate new verbs**: only verbs whose `band` is at or below the current week's CEFR
    band (`levelOfWeek`) are introduced as new; already-seen due verbs stay reviewable regardless of
    band. The standalone `/verbs` page passes no `week`, so it stays unrestricted.
-5. **ai** — an in-flow chat (reuses `gemini.js` / `ai-config.js` / `markdown.js` / `chat.css`),
+5. **listen** — a short listening-comprehension block on the current **week's dialogue**
+   (`dialogueForDay()` → the keyed `DIALOGUES` entry whose `week` matches; `data/dialogues.js`, cut from
+   v2). Rendered **inline** by the page (not a shared engine — listening is `/today`-only): the localized
+   dialogue title (`dialogueLocale(slug).title`), a ▶/🐢-slow **Play** pair that reads the German lines
+   in sequence via `speakLines()` (§4 `speech.js`), a collapsible transcript, and the dialogue's German
+   **true/false** comprehension checks. `listenCheck` grades them (score + per-item marking), `finishListen`
+   files `flow.results.listen` and advances. Gated on `ttsAvailable()`: no TTS or no dialogue → the block
+   never appears (and `isComplete()` short-circuits) so it can't deadlock the day (Gate 5). Lines and
+   checks are German-only (understanding the German *is* the task); only the title is localized.
+6. **ai** — an in-flow chat (reuses `gemini.js` / `ai-config.js` / `markdown.js` / `chat.css`),
    **persisted** to the same `lessons` row the planner uses (one per user×day). On entry it
    **auto-generates a "day summary"** (`maybeSummarize` → `askSummary`): a short recap pinned on top —
    grammar takeaways + the word/verb session results (`flow.vocabResult` / `flow.verbResult`, captured
@@ -1431,9 +1448,9 @@ early leaves its block incomplete**.
    generated once and persisted, so revisiting the day (or no key) doesn't regenerate. Below the
    pinned blocks, the same `ai` thread (`renderAiPanel()`) lets the student ask follow-ups. If no key,
    it nudges to `/settings` and offers **Skip**.
-6. **done** — gated on `dayComplete()` (every enabled `required` descriptor `isComplete()`): when the day
+7. **done** — gated on `dayComplete()` (every enabled `required` descriptor `isComplete()`): when the day
    is complete it marks `planner_data.completed[day] = true`, records `dayStats[day]`
-   (`{ completedAt, blocks:[{id,required,completed}], counts:{vocab,verbs} }` — written once, on the
+   (`{ completedAt, blocks:[{id,required,completed}], counts:{vocab,verbs,listen} }` — written once, on the
    completing pass only), advances `currentDay` (when finishing the current day), persists via
    `saveToCloud`, and shows the completion screen ("You completed Day N") with the current week's
    read-only **can-do list** (`weekCanDo()` → the active locale's `weeks[week].canDo`, EN fallback) and a
@@ -1567,10 +1584,11 @@ the parallel arrays makes alignment structural instead of hand-tended.
 - **`scripts/cutover-v2.js`** (`npm run cutover:v2`) — the Course v2 **cutover** (idempotent): copies
   `data/v2/weeks.js` → `data/weeks.js`, `data/v2/vocab.js` → `data/vocab.js` (`VOCAB` + `PLURALS`
   verbatim), `data/v2/grammar-drills.js` → `data/grammar-drills.js` (`GRAMMAR_DRILLS`, keyed by slug —
-  consumed by the `/today` grammar step via the `GrammarDrill` engine, §19), and merges
-  `locales/v2/<l>.js`'s `vocab` + `weeks` + keyed `drills` into the live `locales/<l>.js` (keeping
-  `ui` + `verbs`; `ensureKey` appends an empty `drills` slot if the live file predates it).
-  `dialogues` are generated but not yet consumed by the app (Phase 6).
+  consumed by the `/today` grammar step via the `GrammarDrill` engine, §19), `data/v2/dialogues.js` →
+  `data/dialogues.js` (`DIALOGUES`, keyed by slug — consumed by the `/today` listen step, §19), and
+  merges `locales/v2/<l>.js`'s `vocab` + `weeks` + keyed `drills` + keyed `dialogues` into the live
+  `locales/<l>.js` (keeping `ui` + `verbs`; `ensureKey` appends an empty `drills`/`dialogues` slot if
+  the live file predates it).
 - **`scripts/band-verbs.js`** — writes the `band` field into every `data/verbs.js` entry (§7).
 - **`scripts/srs-budget.js`** (`node scripts/srs-budget.js`, `--json`) — dependency-free SRS
   due-pressure estimator: counts the four card families from the live data (words + verbs + plurals +

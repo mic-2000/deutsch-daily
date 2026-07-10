@@ -25,6 +25,8 @@ window.LOCALE_EN = {
     today_step_vocab_sub: 'Leitner flashcards — review exactly when due.',
     today_step_verbs: 'Articles & three forms',
     today_step_verbs_sub: 'der / die / das and Infinitiv · Präteritum · Partizip II.',
+    today_step_listen: 'Listen',
+    today_step_listen_sub: 'A short dialogue — then a quick comprehension check.',
     today_step_ai: 'Ask the AI',
     today_step_ai_sub: 'Let the tutor explain the hard parts.',
     today_step_done: 'See your progress',
@@ -49,6 +51,15 @@ window.LOCALE_EN = {
     drill_end_perfect: 'Perfect — every one right!',
     drill_end_good: 'Well done.',
     drill_end_inwork: 'Keep practising — this one needs a few more goes.',
+    // listen step (renderListen) — a short listening-comprehension block on the week's dialogue
+    listen_hint: 'Listen to the dialogue, then decide: true or false?',
+    listen_play: 'Play',
+    listen_play_slow: 'Slowly',
+    listen_transcript: 'Show transcript',
+    listen_true: 'True',
+    listen_false: 'False',
+    listen_check: 'Check answers',
+    listen_score: (r, n) => `${r} of ${n} correct`,
     today_ai_breakdown_req: 'Break this topic down point by point. For EACH grammar item above, give a short rule, 2–3 examples with translation, any conjugation tables, and exactly what to memorize. End with a short "what I must remember today" checklist.',
     today_ai_title: 'Ask the AI tutor',
     today_ai_lead: "Today's summary is pinned below — ask anything else you like.",
@@ -2603,6 +2614,101 @@ window.LOCALE_EN = {
     "briefformeln": {
       "concept": "Formal vs. informal letter formulas",
       "prompt": "Choose the fitting formula."
+    }
+  },
+  dialogues: {
+    "w01-vorstellung": {
+      "title": "Getting to know each other"
+    },
+    "w03-einkaufen": {
+      "title": "At the shop"
+    },
+    "w04-hobbys": {
+      "title": "What do you do in your free time?"
+    },
+    "w05-wohnung": {
+      "title": "Showing the flat"
+    },
+    "w06-termin": {
+      "title": "Making an appointment"
+    },
+    "w10-wegbeschreibung": {
+      "title": "Asking for the way"
+    },
+    "w11-beim-arzt": {
+      "title": "At the doctor"
+    },
+    "w12-wetter": {
+      "title": "What’s the weather like?"
+    },
+    "w13-geburtstag": {
+      "title": "The birthday party"
+    },
+    "w15-zwei-staedte": {
+      "title": "Two cities"
+    },
+    "w16-meinung": {
+      "title": "A little argument"
+    },
+    "w17-erinnerung": {
+      "title": "Childhood memories"
+    },
+    "w18-technik": {
+      "title": "A problem with the phone"
+    },
+    "w19-mein-morgen": {
+      "title": "My morning"
+    },
+    "w20-im-kleidungsgeschaeft": {
+      "title": "At the clothing shop"
+    },
+    "w21-plaene": {
+      "title": "Weekend plans"
+    },
+    "w22-beruf": {
+      "title": "What is your job?"
+    },
+    "w23-im-restaurant": {
+      "title": "At the restaurant"
+    },
+    "w24-pruefung-a2": {
+      "title": "Exam-format listening (A2)"
+    },
+    "w25-verwandtschaft": {
+      "title": "The whole family"
+    },
+    "w26-geschichte": {
+      "title": "A story from last summer"
+    },
+    "w27-beschreibung": {
+      "title": "The new restaurant"
+    },
+    "w28-herstellung": {
+      "title": "How chocolate is made"
+    },
+    "w29-beschwerde": {
+      "title": "A complaint at the hotel"
+    },
+    "w30-b1-mid": {
+      "title": "Talking about goals"
+    },
+    "w31-vorstellungsgespraech": {
+      "title": "The job interview"
+    },
+    "w32-diskussion": {
+      "title": "A disagreement at the office"
+    },
+    "w33-nachrichten": {
+      "title": "In the news"
+    },
+    "w34-schriftlich": {
+      "title": "Planning an essay"
+    },
+    "w35-hoeren-sim": {
+      "title": "Listening simulation"
+    },
+    "w36-sprechen-planen": {
+      "title": "Planning together (Sprechen Teil 1)"
     }
   },
 };

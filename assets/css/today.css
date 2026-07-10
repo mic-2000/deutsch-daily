@@ -30,6 +30,8 @@
 .step-row.c3 .step-badge { border-color: var(--green); color: var(--green); }
 .step-row.c4 .step-badge { border-color: var(--gold); color: var(--gold); }
 .step-row.c5 .step-badge { border-color: var(--accent); color: var(--accent); }
+.step-row.c6 .step-badge { border-color: var(--die); color: var(--die); }
+.step-row.c7 .step-badge { border-color: var(--green); color: var(--green); }
 .step-text h3 { margin: 2px 0 4px; font-size: 17px; font-weight: 600; }
 .step-text p { margin: 0; color: var(--ink-soft); font-size: 14px; line-height: 1.5; }
 
@@ -87,6 +89,36 @@
 .done-cando-list { list-style: none; margin: 0; padding: 0; }
 .done-cando-list li { position: relative; padding-left: 26px; font-size: 15px; line-height: 1.5; color: var(--ink); margin: 8px 0; }
 .done-cando-list li::before { content: '✓'; position: absolute; left: 0; top: 0; color: var(--green); font-weight: 700; }
+
+/* ---- listen step (renderListen; a short listening-comprehension block on the week's dialogue) ---- */
+.listen-wrap { max-width: 640px; margin: 0 auto; }
+.listen-head { text-align: center; }
+.listen-kicker { font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--accent); }
+.listen-title { font-family: var(--serif); font-weight: 300; font-size: clamp(26px, 4.5vw, 36px); line-height: 1.1; margin: 8px 0 6px; }
+.listen-hint { color: var(--ink-soft); font-size: 15px; margin: 0 0 20px; }
+.listen-controls { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-bottom: 18px; }
+.btn.speaking { border-color: var(--accent); color: var(--accent); }
+.listen-transcript { border: 1px solid var(--line); border-radius: 8px; background: var(--paper-3); padding: 0 16px; margin-bottom: 24px; }
+.listen-transcript > summary { cursor: pointer; padding: 12px 0; font-size: 13px; letter-spacing: .04em; color: var(--ink-soft); list-style: none; }
+.listen-transcript > summary::-webkit-details-marker { display: none; }
+.listen-transcript[open] > summary { border-bottom: 1px solid var(--line); }
+.listen-lines { padding: 12px 0 16px; }
+.listen-line { display: flex; gap: 12px; padding: 4px 0; font-size: 16px; line-height: 1.5; }
+.listen-speaker { flex: 0 0 auto; min-width: 68px; color: var(--ink-soft); font-weight: 600; }
+.listen-questions { display: flex; flex-direction: column; gap: 14px; }
+.listen-q { border: 1px solid var(--line); border-radius: 8px; background: var(--paper-3); padding: 16px 18px; transition: border-color .12s; }
+.listen-q.ok { border-color: var(--green); }
+.listen-q.bad { border-color: var(--der); }
+.listen-q-text { font-size: 17px; line-height: 1.5; margin-bottom: 12px; }
+.listen-q-btns { display: flex; gap: 10px; }
+.listen-tf { font: inherit; font-size: 15px; padding: 8px 20px; border: 1px solid var(--line); border-radius: 6px;
+  background: var(--paper); color: var(--ink); cursor: pointer; transition: border-color .12s, background .12s, color .12s; }
+.listen-tf:hover:not(:disabled) { border-color: var(--accent); }
+.listen-tf.picked { border-color: var(--accent); background: var(--paper-3); }
+.listen-tf.correct { border-color: var(--green); color: var(--green); }
+.listen-tf.wrong { border-color: var(--der); color: var(--der); }
+.listen-tf:disabled { cursor: default; }
+.listen-score { text-align: center; font-size: 16px; color: var(--ink-soft); margin: 22px 0 4px; }
 
 /* ---- grammar drill (grammar-drill.js; runs inside the grammar step, reuses vocab.css session chrome) ---- */
 .drill-sentence { font-size: 22px; line-height: 1.6; color: var(--ink); margin: 4px 0 20px; text-align: center; }

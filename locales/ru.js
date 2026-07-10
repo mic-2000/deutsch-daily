@@ -25,6 +25,8 @@ window.LOCALE_RU = {
     today_step_vocab_sub: 'Карточки Лейтнера — повтор ровно тогда, когда нужно.',
     today_step_verbs: 'Артикли и три формы',
     today_step_verbs_sub: 'der / die / das и Infinitiv · Präteritum · Partizip II.',
+    today_step_listen: 'Аудирование',
+    today_step_listen_sub: 'Короткий диалог — и быстрая проверка понимания.',
     today_step_ai: 'Спросить ИИ',
     today_step_ai_sub: 'Попросите ИИ объяснить сложное.',
     today_step_done: 'Виден прогресс',
@@ -49,6 +51,15 @@ window.LOCALE_RU = {
     drill_end_perfect: 'Отлично — всё верно!',
     drill_end_good: 'Хорошая работа.',
     drill_end_inwork: 'Ещё немного практики — стоит повторить.',
+    // listen step (renderListen) — короткое аудирование на диалоге недели
+    listen_hint: 'Прослушайте диалог и решите: правда или нет?',
+    listen_play: 'Слушать',
+    listen_play_slow: 'Медленно',
+    listen_transcript: 'Показать текст',
+    listen_true: 'Правда',
+    listen_false: 'Неправда',
+    listen_check: 'Проверить',
+    listen_score: (r, n) => `${r} из ${n} верно`,
     today_ai_breakdown_req: 'Разбери эту тему по пунктам. Для КАЖДОГО грамматического пункта выше дай краткое правило, 2–3 примера с переводом, таблицы спряжения (если есть) и что именно нужно выучить наизусть. В конце — короткий чек-лист «что я должен запомнить сегодня».',
     today_ai_title: 'Спросить ИИ-учителя',
     today_ai_lead: 'Итоги дня закреплены ниже — спросите что-нибудь ещё, если хотите.',
@@ -2599,6 +2610,101 @@ window.LOCALE_RU = {
     "briefformeln": {
       "concept": "Формулы формальных и неформальных писем",
       "prompt": "Выберите подходящую формулу."
+    }
+  },
+  dialogues: {
+    "w01-vorstellung": {
+      "title": "Знакомство"
+    },
+    "w03-einkaufen": {
+      "title": "В магазине"
+    },
+    "w04-hobbys": {
+      "title": "Чем ты занимаешься в свободное время?"
+    },
+    "w05-wohnung": {
+      "title": "Показываю квартиру"
+    },
+    "w06-termin": {
+      "title": "Договариваемся о встрече"
+    },
+    "w10-wegbeschreibung": {
+      "title": "Спросить дорогу"
+    },
+    "w11-beim-arzt": {
+      "title": "У врача"
+    },
+    "w12-wetter": {
+      "title": "Какая погода?"
+    },
+    "w13-geburtstag": {
+      "title": "День рождения"
+    },
+    "w15-zwei-staedte": {
+      "title": "Два города"
+    },
+    "w16-meinung": {
+      "title": "Небольшой спор"
+    },
+    "w17-erinnerung": {
+      "title": "Воспоминания детства"
+    },
+    "w18-technik": {
+      "title": "Проблема с телефоном"
+    },
+    "w19-mein-morgen": {
+      "title": "Моё утро"
+    },
+    "w20-im-kleidungsgeschaeft": {
+      "title": "В магазине одежды"
+    },
+    "w21-plaene": {
+      "title": "Планы на выходные"
+    },
+    "w22-beruf": {
+      "title": "Кто ты по профессии?"
+    },
+    "w23-im-restaurant": {
+      "title": "В ресторане"
+    },
+    "w24-pruefung-a2": {
+      "title": "Аудирование в формате экзамена (A2)"
+    },
+    "w25-verwandtschaft": {
+      "title": "Вся родня"
+    },
+    "w26-geschichte": {
+      "title": "История прошлого лета"
+    },
+    "w27-beschreibung": {
+      "title": "Новый ресторан"
+    },
+    "w28-herstellung": {
+      "title": "Как делают шоколад"
+    },
+    "w29-beschwerde": {
+      "title": "Жалоба в отеле"
+    },
+    "w30-b1-mid": {
+      "title": "Разговор о целях"
+    },
+    "w31-vorstellungsgespraech": {
+      "title": "Собеседование"
+    },
+    "w32-diskussion": {
+      "title": "Спор в офисе"
+    },
+    "w33-nachrichten": {
+      "title": "В новостях"
+    },
+    "w34-schriftlich": {
+      "title": "Планирование эссе"
+    },
+    "w35-hoeren-sim": {
+      "title": "Симуляция аудирования"
+    },
+    "w36-sprechen-planen": {
+      "title": "Совместное планирование (Sprechen Teil 1)"
     }
   },
 };

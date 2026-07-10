@@ -79,8 +79,10 @@ function finishSession(engine) {
 
 test('buildSteps returns descriptor objects; the default tariff has no AI step', () => {
   const t = fresh(['buildSteps']);
-  const steps = t.buildSteps(1, {});   // no minutes → default 15-min path: both trainers, no AI
-  assert.equal(steps.map((s) => s.id).join(','), 'grammar,vocab,verbs,done', 'default path blocks, in order');
+  // no minutes → default 15-min path: both trainers + the week's listen block (day 1 = week 1 has a
+  // dialogue and the harness provides speechSynthesis), no AI.
+  const steps = t.buildSteps(1, {});
+  assert.equal(steps.map((s) => s.id).join(','), 'grammar,vocab,verbs,listen,done', 'default path blocks, in order');
   for (const s of steps) {
     assert.equal(typeof s.run, 'function', `${s.id}.run is a function`);
     assert.equal(typeof s.isComplete, 'function', `${s.id}.isComplete is a function`);
@@ -93,7 +95,7 @@ test('buildSteps returns descriptor objects; the default tariff has no AI step',
 test('the 20+ tariff adds the inline AI step, and AI never blocks the day', () => {
   const t = fresh(['buildSteps']);
   const steps = t.buildSteps(1, { minutes: '20+' });
-  assert.equal(steps.map((s) => s.id).join(','), 'grammar,vocab,verbs,ai,done', 'full path includes AI');
+  assert.equal(steps.map((s) => s.id).join(','), 'grammar,vocab,verbs,listen,ai,done', 'full path includes listen + AI');
   assert.equal(steps.find((s) => s.id === 'ai').required, false, 'AI never blocks the day');
 });
 
@@ -107,13 +109,13 @@ test('the 5-min light track runs exactly one trainer, alternating by day parity,
 });
 
 test('finishing every required block completes the day and advances currentDay', () => {
-  const t = fresh(['startFlow', 'nextStep', 'VocabTrainer', 'VerbsTrainer', 'planner']);
+  const t = fresh(['startFlow', 'nextStep', 'VocabTrainer', 'VerbsTrainer', 'finishListen', 'planner']);
   t.startFlow();               // grammar (flow.day = currentDay, 1 by default)
   const before = t.planner.currentDay;
   t.nextStep();                // → vocab session
   finishSession(t.VocabTrainer); // → verb session (onSessionEnd advances)
-  finishSession(t.VerbsTrainer); // → done (default tariff has no AI step)
-  t.nextStep();                // clamp on the done step (renderDone)
+  finishSession(t.VerbsTrainer); // → listen block (day 1 has a dialogue + TTS)
+  t.finishListen();            // listen worked to the end → done step (renderDone)
   assert.equal(t.planner.completed[before], true, 'today marked complete');
   assert.equal(t.planner.currentDay, before + 1, 'currentDay advanced');
   assert.match(t.app.innerHTML, /flow-done/);
@@ -121,29 +123,29 @@ test('finishing every required block completes the day and advances currentDay',
 });
 
 test('completing the day records a dayStats entry (completedAt + blocks + counts)', () => {
-  const t = fresh(['startFlow', 'nextStep', 'VocabTrainer', 'VerbsTrainer', 'planner']);
+  const t = fresh(['startFlow', 'nextStep', 'VocabTrainer', 'VerbsTrainer', 'finishListen', 'planner']);
   t.startFlow();
   const day = t.planner.currentDay;
   t.nextStep();                    // → vocab session
   finishSession(t.VocabTrainer);   // → verb session
-  finishSession(t.VerbsTrainer);   // → done (default tariff has no AI step)
-  t.nextStep();                    // clamp on the done step (records stats)
+  finishSession(t.VerbsTrainer);   // → listen block
+  t.finishListen();                // → done step (records stats)
   const st = t.planner.dayStats[day];
   assert.ok(st, 'a dayStats entry was written for the finished day');
   assert.match(st.completedAt, /^\d{4}-\d{2}-\d{2}T/, 'completedAt is an ISO timestamp');
   const ids = st.blocks.map((b) => b.id).join(',');
-  assert.equal(ids, 'grammar,vocab,verbs', 'records the enabled non-done blocks in order');
+  assert.equal(ids, 'grammar,vocab,verbs,listen', 'records the enabled non-done blocks in order');
   assert.ok(st.blocks.every((b) => typeof b.completed === 'boolean' && typeof b.required === 'boolean'));
   assert.ok('vocab' in st.counts && 'verbs' in st.counts, 'trainer scores captured under counts');
 });
 
 test('the done screen renders the current week\'s can-do list (localized, read-only)', () => {
-  const t = fresh(['startFlow', 'nextStep', 'VocabTrainer', 'VerbsTrainer']);
+  const t = fresh(['startFlow', 'nextStep', 'VocabTrainer', 'VerbsTrainer', 'finishListen']);
   t.startFlow();               // day 1 → week 1
   t.nextStep();
   finishSession(t.VocabTrainer);
   finishSession(t.VerbsTrainer);
-  t.nextStep();                // → done
+  t.finishListen();            // → done
   const html = t.app.innerHTML;
   assert.match(html, /done-cando-list/, 'a can-do list is rendered on the done screen');
   assert.match(html, /This week you can/, 'the localized section title is shown');
@@ -152,19 +154,19 @@ test('the done screen renders the current week\'s can-do list (localized, read-o
 });
 
 test('dayStats is not overwritten when re-entering the done step of an already-complete day', () => {
-  const t = fresh(['startFlow', 'nextStep', 'VocabTrainer', 'VerbsTrainer', 'planner']);
+  const t = fresh(['startFlow', 'nextStep', 'VocabTrainer', 'VerbsTrainer', 'finishListen', 'planner']);
   t.startFlow();
   const day = t.planner.currentDay;
   t.nextStep();
   finishSession(t.VocabTrainer);
   finishSession(t.VerbsTrainer);
-  t.nextStep();                    // done → writes dayStats
+  t.finishListen();                // done → writes dayStats
   const first = t.planner.dayStats[day];
   t.startFlow();                   // restart the (now-complete) day
   t.nextStep();
   finishSession(t.VocabTrainer);
   finishSession(t.VerbsTrainer);
-  t.nextStep();                    // done again — completed[day] already true → no re-record
+  t.finishListen();                // done again — completed[day] already true → no re-record
   assert.strictEqual(t.planner.dayStats[day], first, 'the original dayStats entry is preserved');
 });
 
@@ -174,8 +176,8 @@ test('closing a required trainer early leaves the day incomplete (not checked of
   const before = t.planner.currentDay;
   t.nextStep();                  // → vocab session
   t.VocabTrainer.closeSession(); // closed early (pos 0 < queue length) → verb session
-  finishSession(t.VerbsTrainer); // verbs finished → AI step
-  t.nextStep();                  // AI → done
+  finishSession(t.VerbsTrainer); // verbs finished → listen block
+  t.nextStep();                  // listen (left unfinished) → done
   assert.equal(t.dayComplete(), false, 'a required block was closed early');
   assert.notEqual(t.planner.completed[before], true, 'day NOT marked complete');
   assert.equal(t.planner.currentDay, before, 'currentDay did not advance');
@@ -200,6 +202,75 @@ test('5-min light track: one trainer carries the day, with a light-pace note on 
   assert.match(html, /done-light/, 'a light-pace note is rendered');
   assert.match(html, /Light pace/, 'the localized light-pace copy is shown');
   assert.doesNotMatch(html, /today_light_pace/, 'no raw i18n key leaks');
+});
+
+/* ---- listen block (renderListen; Plan §3/§4, Gate 5) ---- */
+
+test('the listen block is required on a dialogue week when TTS is available', () => {
+  const t = fresh(['buildSteps', 'dialogueForDay']);
+  assert.ok(t.dialogueForDay(1), 'day 1 (week 1) has a dialogue');
+  const listen = t.buildSteps(1, {}).find((s) => s.id === 'listen');
+  assert.ok(listen, 'the listen block is enabled');
+  assert.equal(listen.required, true, 'an enabled listen block is required');
+});
+
+test('no listen block when TTS is unavailable (never deadlocks the day) — Gate 5', () => {
+  // With no utterance ctor, ttsAvailable() is false → the listen block is filtered out entirely.
+  const t = loadPage({
+    page: 'today.html', extraFiles: ['locales/en.js'],
+    exports: ['buildSteps', 'ttsAvailable', 'startFlow', 'nextStep', 'VocabTrainer', 'VerbsTrainer', 'planner'],
+    shims: { SpeechSynthesisUtterance: undefined },
+  });
+  assert.equal(t.ttsAvailable(), false, 'no TTS in this environment');
+  assert.equal(t.buildSteps(1, {}).map((s) => s.id).join(','), 'grammar,vocab,verbs,done', 'no listen block without TTS');
+  // and the day still completes end-to-end with the trainers alone
+  t.startFlow();
+  const day = t.planner.currentDay;
+  t.nextStep();
+  finishSession(t.VocabTrainer);
+  finishSession(t.VerbsTrainer);   // → done directly (no listen block)
+  t.nextStep();
+  assert.equal(t.planner.completed[day], true, 'the day completes without a listen block');
+});
+
+test('no listen block on a week that has no dialogue', () => {
+  const t = fresh(['buildSteps', 'dialogueForDay']);
+  assert.equal(t.dialogueForDay(6), null, 'week 2 (day 6) has no dialogue');
+  assert.ok(!t.buildSteps(6, {}).some((s) => s.id === 'listen'), 'no listen block for a dialogue-less week');
+});
+
+test('the listen step plays the dialogue, grades the true/false checks, and advances', () => {
+  const t = fresh(['startFlow', 'nextStep', 'VocabTrainer', 'VerbsTrainer',
+    'dialogueForDay', 'playDialogue', 'listenPick', 'listenCheck', 'finishListen']);
+  t.startFlow();                   // grammar
+  t.nextStep();                    // → vocab session
+  finishSession(t.VocabTrainer);   // → verb session
+  finishSession(t.VerbsTrainer);   // → listen block
+  assert.match(t.app.innerHTML, /listen-wrap/, 'the listen card is shown');
+  assert.match(t.app.innerHTML, /listen-title/, 'the localized dialogue title is shown');
+
+  const dia = t.dialogueForDay();
+  t.playDialogue(false);           // queue the German lines for TTS
+  assert.equal(t.speech.spoken.length, dia.lines.length, 'every dialogue line was queued for TTS');
+  assert.equal(t.speech.spoken[0].lang, 'de-DE', 'spoken in German');
+
+  dia.questions.forEach((q, i) => t.listenPick(i, q.answer));   // answer every check correctly
+  t.listenCheck();
+  const checked = t.app.innerHTML;
+  assert.match(checked, new RegExp(`${dia.questions.length} of ${dia.questions.length} correct`), 'the score reflects all-correct');
+  assert.match(checked, /listen-tf[^"]*correct/, 'the correct answers are marked');
+
+  t.finishListen();                // → done (default tariff)
+  assert.match(t.app.innerHTML, /flow-done/, 'finishing the listen block advances the flow to done');
+});
+
+test('the 5-min light track skips listening unless listening is the hardest part', () => {
+  const t = fresh(['buildSteps']);
+  // day 2 (even) on the light track runs vocab; listening is off by default…
+  assert.ok(!t.buildSteps(2, { minutes: '5' }).some((s) => s.id === 'listen'), 'no listen on the light track by default');
+  // …but turns on when the learner flagged listening as their weak spot.
+  assert.ok(t.buildSteps(2, { minutes: '5', hardest: 'listening' }).some((s) => s.id === 'listen'),
+    'listen runs on the light track when hardest === listening');
 });
 
 /* A localStorage that reports a saved Gemini key, so the AI panel renders (not the no-key nudge). */
@@ -238,7 +309,7 @@ test('the AI step shows the day summary pinned (own label) alongside the topic b
   ] }];
   const t = loadPage({
     page: 'today.html', extraFiles: ['locales/en.js'],
-    exports: ['startFlow', 'nextStep', 'VocabTrainer', 'VerbsTrainer'],
+    exports: ['startFlow', 'nextStep', 'VocabTrainer', 'VerbsTrainer', 'finishListen'],
     // the AI step only exists on the full (20+) tariff
     shims: { localStorage: keyStore(), userOnboarding: { minutes: '20+' }, loadLessonsFromCloud: async () => rows, saveLessonToCloud: async () => {} },
   });
@@ -246,7 +317,8 @@ test('the AI step shows the day summary pinned (own label) alongside the topic b
   await new Promise((r) => setImmediate(r));   // loadDayLesson settles
   t.nextStep();                                // grammar → vocab session
   t.VocabTrainer.closeSession();               // → verb session (onSessionEnd advances)
-  t.VerbsTrainer.closeSession();               // → AI step (renderAi + maybeSummarize)
+  t.VerbsTrainer.closeSession();               // → listen block
+  t.finishListen();                            // → AI step (renderAi + maybeSummarize)
   await new Promise((r) => setImmediate(r));
   const html = t.app.innerHTML;
   assert.match(html, /Day summary/, 'summary block uses its own label');
@@ -267,7 +339,8 @@ test('renderStep persists the position and resumeFlow restores it (refresh → s
   const t = loadPage({
     page: 'today.html', extraFiles: ['locales/en.js'],
     exports: ['startFlow', 'nextStep', 'resumeFlow'],
-    // resume lands on the AI step (step index 3), which only exists on the full (20+) tariff
+    // resume lands on the AI step (step index 4 now that listen sits before it), full (20+) tariff:
+    // grammar,vocab,verbs,listen,ai,done
     shims: { localStorage: keyStore(), userOnboarding: { minutes: '20+' }, loadLessonsFromCloud: async () => rows, saveLessonToCloud: async () => {}, saveToCloud: () => {} },
   });
   // Drive into the flow, then read what was persisted for a refresh.
@@ -278,11 +351,11 @@ test('renderStep persists the position and resumeFlow restores it (refresh → s
   assert.equal(saved.day, 1);
 
   // Simulate a fresh page that resumes from the saved position (AI step here).
-  t.resumeFlow({ step: 3, day: 1 });
+  t.resumeFlow({ step: 4, day: 1 });
   await new Promise((r) => setImmediate(r));
   const html = t.app.innerHTML;
   assert.match(html, /flow-top/, 'resumed into a flow step, not the intro');
-  assert.match(html, /Step 4 of 5/, 'resumed onto the AI step');
+  assert.match(html, /Step 5 of 6/, 'resumed onto the AI step');
   assert.match(html, /Day summary/, 'the saved summary is shown');
 });
 

@@ -107,6 +107,42 @@ test('the live locales carry the keyed drills block (concept + prompt) in all th
   }
 });
 
+test('live data/dialogues.js ships the generated DIALOGUES verbatim (cutover ran)', () => {
+  function evalDialogues(rel) {
+    const src = fs.readFileSync(path.join(ROOT, rel), 'utf8');
+    const sb = {};
+    vm.createContext(sb);
+    vm.runInContext(src + '\n;this.O = DIALOGUES;', sb);
+    return plain(sb.O);
+  }
+  const live = evalDialogues('data/dialogues.js');
+  const gen = evalDialogues('data/v2/dialogues.js');
+  assert.deepEqual(live, gen, 'live DIALOGUES != generated — re-run `npm run cutover:v2`');
+  assert.ok(Object.keys(live).length > 20, 'the course should ship many keyed dialogues');
+  // every dialogue is keyed by slug, tagged with a week, and carries German lines + comprehension checks
+  for (const slug of Object.keys(live)) {
+    const d = live[slug];
+    assert.equal(typeof d.week, 'number', `${slug}: has a week`);
+    assert.ok(Array.isArray(d.lines) && d.lines.length, `${slug}: has dialogue lines`);
+    assert.ok(Array.isArray(d.questions) && d.questions.length, `${slug}: has comprehension checks`);
+    assert.ok(d.questions.every((q) => typeof q.de === 'string' && typeof q.answer === 'boolean'), `${slug}: checks are German true/false`);
+  }
+});
+
+test('the live locales carry the keyed dialogues block (title) in all three languages', () => {
+  for (const lang of ['en', 'ru', 'ua']) {
+    const src = fs.readFileSync(path.join(ROOT, `locales/${lang}.js`), 'utf8');
+    const sb = { window: {} }; vm.createContext(sb); vm.runInContext(src, sb);
+    const loc = sb.window['LOCALE_' + lang.toUpperCase()];
+    assert.ok(loc.dialogues && Object.keys(loc.dialogues).length > 20, `${lang}: a populated dialogues block`);
+    const d = loc.dialogues['w01-vorstellung'];
+    assert.ok(d && d.title, `${lang}: a known dialogue has a localized title`);
+    // ui + verbs blocks must survive the splice (drills/dialogues are inserted alongside, not over them)
+    assert.ok(loc.ui && Object.keys(loc.ui).length > 100, `${lang}: ui block preserved`);
+    assert.ok(loc.verbs && Object.keys(loc.verbs).length > 100, `${lang}: verbs block preserved`);
+  }
+});
+
 /* ---- cloud-sync.js migration --------------------------------------------------------------- */
 function loadMigration() {
   const src = fs.readFileSync(path.join(ROOT, 'assets/js/cloud-sync.js'), 'utf8');

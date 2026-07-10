@@ -225,8 +225,8 @@ test('a due grammar-review card enables the review step (10/15/20+ only, not lig
   assert.equal(t.hasDueGrammarReview(), false, 'nothing due on a fresh planner');
   t.planner.grammarReview = { 'praesens-endungen': { box: 2, due: 0, right: 2, wrong: 0, seen: 2 } };
   assert.equal(t.hasDueGrammarReview(), true, 'a past-due card is due');
-  const std = t.buildSteps(1, {});                  // default 15-min path
-  assert.equal(std.map((s) => s.id).join(','), 'grammar,review,vocab,verbs,done', 'review sits right after grammar');
+  const std = t.buildSteps(1, {});                  // default 15-min path (day 1 also has a listen block)
+  assert.equal(std.map((s) => s.id).join(','), 'grammar,review,vocab,verbs,listen,done', 'review sits right after grammar');
   assert.equal(std.find((s) => s.id === 'review').required, true, 'a due review block is required');
   const light = t.buildSteps(1, { minutes: '5' });
   assert.ok(!light.some((s) => s.id === 'review'), 'no review on the 5-min light track');

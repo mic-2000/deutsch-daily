@@ -24,6 +24,8 @@ window.LOCALE_UA = {
     today_step_vocab_sub: 'Картки Лейтнера — повтор саме тоді, коли потрібно.',
     today_step_verbs: 'Артиклі й три форми',
     today_step_verbs_sub: 'der / die / das та Infinitiv · Präteritum · Partizip II.',
+    today_step_listen: 'Аудіювання',
+    today_step_listen_sub: 'Короткий діалог — і швидка перевірка розуміння.',
     today_step_ai: 'Запитати ШІ',
     today_step_ai_sub: 'Попросіть ШІ пояснити складне.',
     today_step_done: 'Видно прогрес',
@@ -48,6 +50,15 @@ window.LOCALE_UA = {
     drill_end_perfect: 'Чудово — усе правильно!',
     drill_end_good: 'Гарна робота.',
     drill_end_inwork: 'Ще трохи практики — варто повторити.',
+    // listen step (renderListen) — коротке аудіювання на діалозі тижня
+    listen_hint: 'Прослухайте діалог і вирішіть: правда чи ні?',
+    listen_play: 'Слухати',
+    listen_play_slow: 'Повільно',
+    listen_transcript: 'Показати текст',
+    listen_true: 'Правда',
+    listen_false: 'Неправда',
+    listen_check: 'Перевірити',
+    listen_score: (r, n) => `${r} з ${n} правильно`,
     today_ai_breakdown_req: 'Розбери цю тему по пунктах. Для КОЖНОГО граматичного пункту вище дай коротке правило, 2–3 приклади з перекладом, таблиці відмінювання (якщо є) і що саме треба вивчити напам’ять. У кінці — короткий чек-лист «що я маю запам’ятати сьогодні».',
     today_ai_title: 'Запитати ШІ-вчителя',
     today_ai_lead: 'Підсумки дня закріплені нижче — запитайте ще щось, якщо хочете.',
@@ -2598,6 +2609,101 @@ window.LOCALE_UA = {
     "briefformeln": {
       "concept": "Формули формальних і неформальних листів",
       "prompt": "Виберіть відповідну формулу."
+    }
+  },
+  dialogues: {
+    "w01-vorstellung": {
+      "title": "Знайомство"
+    },
+    "w03-einkaufen": {
+      "title": "У магазині"
+    },
+    "w04-hobbys": {
+      "title": "Чим ти займаєшся у вільний час?"
+    },
+    "w05-wohnung": {
+      "title": "Показую квартиру"
+    },
+    "w06-termin": {
+      "title": "Домовляємося про зустріч"
+    },
+    "w10-wegbeschreibung": {
+      "title": "Запитати дорогу"
+    },
+    "w11-beim-arzt": {
+      "title": "У лікаря"
+    },
+    "w12-wetter": {
+      "title": "Яка погода?"
+    },
+    "w13-geburtstag": {
+      "title": "День народження"
+    },
+    "w15-zwei-staedte": {
+      "title": "Два міста"
+    },
+    "w16-meinung": {
+      "title": "Невелика суперечка"
+    },
+    "w17-erinnerung": {
+      "title": "Спогади дитинства"
+    },
+    "w18-technik": {
+      "title": "Проблема з телефоном"
+    },
+    "w19-mein-morgen": {
+      "title": "Мій ранок"
+    },
+    "w20-im-kleidungsgeschaeft": {
+      "title": "У магазині одягу"
+    },
+    "w21-plaene": {
+      "title": "Плани на вихідні"
+    },
+    "w22-beruf": {
+      "title": "Хто ти за фахом?"
+    },
+    "w23-im-restaurant": {
+      "title": "У ресторані"
+    },
+    "w24-pruefung-a2": {
+      "title": "Аудіювання у форматі іспиту (A2)"
+    },
+    "w25-verwandtschaft": {
+      "title": "Уся рідня"
+    },
+    "w26-geschichte": {
+      "title": "Історія минулого літа"
+    },
+    "w27-beschreibung": {
+      "title": "Новий ресторан"
+    },
+    "w28-herstellung": {
+      "title": "Як роблять шоколад"
+    },
+    "w29-beschwerde": {
+      "title": "Скарга в готелі"
+    },
+    "w30-b1-mid": {
+      "title": "Розмова про цілі"
+    },
+    "w31-vorstellungsgespraech": {
+      "title": "Співбесіда"
+    },
+    "w32-diskussion": {
+      "title": "Суперечка в офісі"
+    },
+    "w33-nachrichten": {
+      "title": "У новинах"
+    },
+    "w34-schriftlich": {
+      "title": "Планування есе"
+    },
+    "w35-hoeren-sim": {
+      "title": "Симуляція аудіювання"
+    },
+    "w36-sprechen-planen": {
+      "title": "Спільне планування (Sprechen Teil 1)"
     }
   },
 };

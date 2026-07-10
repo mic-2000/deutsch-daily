@@ -31,3 +31,33 @@ function speak(text, btnEl, rate) {
   }
   window.speechSynthesis.speak(u);
 }
+
+/* Is browser text-to-speech usable at all? (The Web Speech API + its utterance ctor are present.)
+ * /today's listen block gates on this: no TTS → the block is skipped, never a deadlock. */
+function ttsAvailable() {
+  return typeof window !== 'undefined' && !!window.speechSynthesis && typeof SpeechSynthesisUtterance !== 'undefined';
+}
+
+/* Speak several German lines in sequence (a dialogue). Queues one utterance per line WITHOUT
+ * cancelling between them (a single cancel() up front clears any prior speech, so the lines don't
+ * pile up on repeat presses). `opts.btnEl` gets a `speaking` class for the whole run; `opts.rate`
+ * sets the pace (default 0.9); `opts.onEnd` fires after the last line. Returns false (and toasts)
+ * when speech is unavailable or there is nothing to say. */
+function speakLines(lines, opts) {
+  opts = opts || {};
+  if (!window.speechSynthesis) { showToast(T('toast_no_speech')); return false; }
+  const list = (lines || []).filter(t => t != null && String(t).trim() !== '');
+  if (!list.length) return false;
+  window.speechSynthesis.cancel();
+  const btn = opts.btnEl;
+  if (btn) btn.classList.add('speaking');
+  const done = () => { if (btn) btn.classList.remove('speaking'); if (typeof opts.onEnd === 'function') opts.onEnd(); };
+  list.forEach((text, i) => {
+    const u = new SpeechSynthesisUtterance(String(text));
+    u.lang = 'de-DE'; u.rate = opts.rate || 0.9; u.pitch = 1;
+    if (GERMAN_VOICE) u.voice = GERMAN_VOICE;
+    if (i === list.length - 1) { u.onend = done; u.onerror = done; }
+    window.speechSynthesis.speak(u);
+  });
+  return true;
+}
