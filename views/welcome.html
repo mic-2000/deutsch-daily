@@ -83,6 +83,7 @@ VerbsTrainer.init({ embedded: true, onSessionEnd: (r) => { lessonResult = r; fin
 let onb = { level: null, goal: null, minutes: null, hardest: null };
 let phase = 'questions';      // 'questions' | 'lesson' | 'done'
 let lessonResult = null;
+let onbStartTracked = false;  // fire onboarding_start exactly once
 const Q = {
   level:   ['A1', 'A2', 'B1'],
   goal:    ['exam', 'work', 'travel', 'conversation'],
@@ -143,6 +144,11 @@ function loadPanel(){
   return `<div class="onb-load"><div class="onb-load-h">${T('onb_load_title')}</div><p>${T(key)}</p></div>`;
 }
 function renderQuestions(){
+  if (!onbStartTracked) {
+    onbStartTracked = true;
+    const a = resolved();
+    track('onboarding_start', { level: a.level, minutes: a.minutes, hardest: a.hardest });
+  }
   const notice = isReturning()
     ? `<div class="onb-updated"><h2>${T('onb_updated_title')}</h2><p>${T('onb_updated_msg')}</p></div>`
     : '';
@@ -181,6 +187,8 @@ function applyLevel(){
 }
 function startLesson(){
   if (!allAnswered()) return;      // Start is disabled until every question is picked; guard anyway
+  const a = resolved();
+  track('onboarding_complete', { level: a.level, minutes: a.minutes, hardest: a.hardest });
   const week = applyLevel();
   phase = 'lesson';
   if (resolved().hardest === 'verbs') {

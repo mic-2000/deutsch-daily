@@ -556,6 +556,7 @@ window.VocabTrainer = (function () {
     // Hosts (e.g. /today) use it to decide whether a required block counts as finished.
     const summary = s ? { right: s.uniqueRight || 0, total: s.uniqueTotal || 0, completed: s.pos >= s.queue.length } : null;
     if (window.speechSynthesis) window.speechSynthesis.cancel();
+    if (summary) track('session_end', { kind: 'vocab', right: summary.right, total: summary.total });
     state.session = null;
     if (cfg.embedded && typeof cfg.onSessionEnd === 'function') cfg.onSessionEnd(summary);
     else render();

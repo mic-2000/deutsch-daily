@@ -272,12 +272,15 @@ function dayComplete(){ return flow.steps.filter(s => s.required).every(s => s.i
 
 function startFlow(){
   if (dayOf() > TOTAL_DAYS) return;
+  const onb = onboardingProfile();
+  const tariffVal = tariff(onb);
+  track('today_start', { day: dayOf(), tariff: String(tariffVal) });
   ai = { messages: [], loading: false };
   grammarExplain = false;
   listen = { checked: false, answers: [] };
   produce = { text: '', checks: {}, feedback: '', loading: false };
   weak = { active: false, seq: [], stage: 0, results: {} };
-  flow = { running: true, step: 0, day: dayOf(), steps: buildSteps(dayOf(), onboardingProfile()), results: {}, backlog: {}, vocabResult: null, verbResult: null };
+  flow = { running: true, step: 0, day: dayOf(), steps: buildSteps(dayOf(), onb), results: {}, backlog: {}, vocabResult: null, verbResult: null };
   renderStep();
   loadDayLesson(flow.day);   // pull any saved explanation/chat for this day (shared with the planner)
 }
@@ -752,6 +755,9 @@ function recordDayStats(day){
     blocks: flow.steps.filter(s => s.id !== 'done').map(s => ({ id: s.id, required: !!s.required, completed: !!s.isComplete() })),
     counts: { vocab: score(flow.vocabResult), verbs: score(flow.verbResult), listen: score(flow.results.listen) },
   };
+  const week = Math.ceil(day / 5);
+  const tariffVal = tariff();
+  track('day_complete', { day: day, week: week, tariff: String(tariffVal) });
 }
 
 /* Course-readiness for the flow's current day, measured from the LIVE steps (same block shape

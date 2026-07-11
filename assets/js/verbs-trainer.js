@@ -263,6 +263,7 @@ window.VerbsTrainer = (function () {
   function answer(correct) {
     const s = state.session; if (!s) return;
     const card = s.queue[s.pos];
+    track('verb_review', { mode: card.mode, correct });
     if (card.firstTry === null) { card.firstTry = correct; if (correct) s.uniqueRight++; }
     /* Grade only on the card's first appearance — a re-queued card must not grade twice. */
     if (!card.requeued) {
@@ -286,6 +287,7 @@ window.VerbsTrainer = (function () {
     // Hosts (e.g. /today) use it to decide whether a required block counts as finished.
     const summary = s ? { right: s.uniqueRight || 0, total: s.uniqueTotal || 0, completed: s.pos >= s.queue.length } : null;
     if (window.speechSynthesis) window.speechSynthesis.cancel();
+    if (summary) track('session_end', { kind: 'verbs', right: summary.right, total: summary.total });
     state.session = null;
     if (cfg.embedded && typeof cfg.onSessionEnd === 'function') cfg.onSessionEnd(summary);
     else render();

@@ -11,5 +11,8 @@
       "Bash(rtk git status *)",
       "Bash(rtk git show *)"
     ]
+  },
+  "enabledPlugins": {
+    "umami-mcp@climactic": true
   }
 }
