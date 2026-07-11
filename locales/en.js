@@ -127,6 +127,16 @@ window.LOCALE_EN = {
     onb_kicker: 'GETTING STARTED',
     onb_title: "Let's set you up in a minute",
     onb_lead: 'Five quick questions, then your first mini-lesson right away.',
+    // re-onboarding notice (shown to returning users after the course update)
+    onb_updated_title: 'The course has been updated',
+    onb_updated_msg: 'Deutsch Daily now follows a new 180-day plan to level B1. Your account and trainer progress were kept where possible — please choose your settings again so we can tune the new plan to you.',
+    // daily-load explainer under the minutes question
+    onb_load_title: 'Your daily load',
+    onb_load_hint: 'Choose your minutes a day to see what a day will look like.',
+    onb_load_5: 'Light pace: a short grammar warm-up plus one trainer a day — vocabulary and verbs on alternating days (about 6 cards). Great for keeping a streak, but not enough to reach B1 in 180 days.',
+    onb_load_10: 'Steady pace: grammar, a quick review, and both vocabulary and verbs every day (about 12 cards). If reviews pile up, we show how many cards are still waiting.',
+    onb_load_15: 'Recommended pace: grammar, review, vocabulary, verbs and listening every day (about 18 cards). Tuned to reach B1 in 180 days.',
+    onb_load_20: 'Full pace: everything in the 15-minute plan plus a writing/speaking task and your AI tutor with feedback (about 25 cards). The fastest way through the course.',
     onb_q_level: 'Your level',
     onb_q_goal: 'Your goal',
     onb_q_minutes: 'Minutes a day',

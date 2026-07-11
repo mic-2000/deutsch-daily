@@ -465,10 +465,13 @@ collection upserts **merge per id** so a create + later mastery update collapse 
   `localStorage['auth_redirect']` and redirect to `/login`. **Session →** set `currentUser`,
   `SELECT <CLOUD_FIELD>, lang, onboarding` from `progress` (via **`.maybeSingle()`** so a missing row
   is `data:null` rather than a throw), apply the payload (only when non-empty — the `{}` column
-  default is skipped). **First-run gate:** if there is **no progress row** (brand-new account) and the
-  page isn't `/welcome`/`/login`, redirect to `/welcome` and return (§20). Keying off row *absence*
-  grandfathers every existing user and never traps an offline read (which lands in the `catch`, where
-  the gate flag stays false). Otherwise it resolves the language **before** the first render, then
+  default is skipped). **Onboarding gate:** redirect to `/welcome` (unless already on `/welcome`/`/login`)
+  when either (a) there is **no progress row** (brand-new account, `isNewUser`), or (b) the row's
+  `onboarding.onbVersion` predates the current `ONBOARDING_VERSION` (`needsReonboarding`) — the v2
+  rebuild re-onboards every existing user **once** so they re-pick their preferences for the new
+  180-day plan; completing/skipping stamps a fresh `onbVersion`, so the gate never fires again (§20).
+  Both signals are set **only on a successful read**, so an offline read (which lands in the `catch`,
+  where both stay false) never traps anyone. Otherwise it resolves the language **before** the first render, then
   `await setLang(lang, true)` loads that one locale and renders **once** — no language flash.
 - **Course v2 migration.** `initApp` fetches `planner_data` on **every** field page (added to the
   select when it isn't the page's own column) and runs `_migratePlannerV2` on it, so the reset fires
@@ -564,7 +567,7 @@ single table, `public.progress`, one row per user (confirmed schema):
 | `lang` | `text` | yes | `'en'::text` | `saveLangToCloud` | `'ru' \| 'ua' \| 'en'` |
 | `theme` | `text` | yes | — | `saveThemeToCloud` | `'light' \| 'dark'` |
 | `gemini_key` | `text` | yes | — | `saveGeminiKeyToCloud` (planner, opt-in) | the user's Gemini API key, or `null`. Written only when the user ticks "remember on my account"; cleared (→ `null`) when they untick or remove the key. See §8. |
-| `onboarding` | `jsonb` | yes | `'{}'::jsonb` | `saveOnboardingToCloud` (the `/welcome` wizard) | `{ done, skipped?, level, goal, minutes, hardest, at }`. Set once on first run; read into the `userOnboarding` global. See §20. |
+| `onboarding` | `jsonb` | yes | `'{}'::jsonb` | `saveOnboardingToCloud` (the `/welcome` wizard) | `{ done, skipped?, level, goal, minutes, hardest, at, onbVersion }`. Set on first run and re-written on each re-onboarding; `onbVersion` (stamped by `saveOnboardingToCloud`) drives the once-per-bump re-onboarding gate. Read into the `userOnboarding` global. See §20. |
 | `updated_at` | `timestamptz` | yes | `now()` | every upsert | ISO string |
 
 > `verbs_data` was added with `alter table public.progress add column if not exists verbs_data jsonb default '{}'::jsonb;`. RLS is row-level (per `user_id`), so it covers new columns automatically. **Cross-cutting progress is live:** verb `mastery` is keyed by the verb key (e.g. `gehen`), so a verb counts the same wherever it appears. `verbs.html` owns the column via its `CLOUD_FIELD`. `vocab.html` ALSO reads/writes it: `cloud-sync` loads it into a `verbStore` via the page's `applyVerbProgress(d)` hook, and any vocabulary word that resolves to a master-verb key (`verbKeyForWord` strips the `—` form and looks it up in `VERBS`, ~69 of the vocab entries) routes its mastery to `verbStore` and persists via `saveVerbsToCloud`. `sel` (the verb-trainer's saved training selection) round-trips through the same column.
@@ -1268,8 +1271,9 @@ runs `node --test tests/`; `npm run test:regression` runs the curated subset.
   present as namespaces, intro/grammar render, flow advance grammar→vocab→verbs, the shared
   `verbs_data` mastery map is one object across both engines, and the done step closes the day +
   advances `currentDay`; see §19), and `onboarding.test.js` (the `/welcome` wizard render-smoke + the
-  first-run gate: a missing progress row → redirect to `/welcome`; an existing row → no redirect;
-  `/welcome` never loops; `userOnboarding` is loaded — see §20). `ui-refactor.test.js` guards the move to `views/` +
+  onboarding gate: a missing row **or** a stale `onbVersion` → redirect to `/welcome`; an up-to-date
+  stamp → no redirect; `/welcome` never loops; an offline read never gates; `userOnboarding` is
+  loaded — see §20). `ui-refactor.test.js` guards the move to `views/` +
   unified chrome: app pages live in `views/` with `index.html` alone at root, pages use
   root-absolute `/assets`/`/data`/`/locales` paths and load `header.js`, the inline theme snippet
   runs before the Supabase CDN (FOUC guard), no `*.html` inter-page links remain, `appHeader()`
@@ -1597,16 +1601,22 @@ card, AI wrapper, done screen); the in-flow sessions reuse `vocab.css` / `verbs.
 
 ## 20. `welcome.html` — first-run onboarding (`/welcome`)
 
-A 3-minute onboarding that gives a brand-new user a personalized start and an instant first win.
-Five tap-only chip questions (sensible defaults pre-selected, so "Start" works with zero taps) → a
-~5-card **mini-lesson** (embedded trainer, **no AI key / network** — Leitner + Web Speech only) →
-a success screen → `/today`.
+A 3-minute onboarding that gives a user a personalized start and an instant first win. Five tap-only
+chip questions (**nothing pre-selected** — the learner picks each; "Start" stays disabled until all
+four are answered, "Skip" falls back to their previous answers or A1 defaults) → a ~5-card
+**mini-lesson** (embedded trainer, **no AI key / network** — Leitner + Web Speech only) → a success
+screen → `/today`. Under the **minutes** question a live `.onb-load` panel explains how the daily
+workload changes with the picked tariff (`onb_load_5/10/15/20`, mirroring `/today`'s `tariff()`).
 
-**Gating.** New accounts have **no `progress` row**; `cloud-sync.initApp` detects that (via
-`.maybeSingle()`) and redirects to `/welcome` (every app page passes through `initApp`, so the funnel
-is caught everywhere). `/welcome` and `/login` are excluded → no loop. Keying off row *absence*
-grandfathers all existing users and never traps an offline read. Completing (or skipping) onboarding
-writes the row (`saveOnboardingToCloud`), so the gate never fires again. (See §4 / §5.)
+**Gating.** `cloud-sync.initApp` redirects to `/welcome` (every app page passes through `initApp`,
+so the funnel is caught everywhere; `/welcome` and `/login` are excluded → no loop) when either:
+(a) the account has **no `progress` row** (brand-new, detected via `.maybeSingle()` → `data:null`), or
+(b) the row's `onboarding.onbVersion` is **below `ONBOARDING_VERSION`** — the v2 course rebuild
+re-onboards every existing user **once** so they re-pick preferences for the new 180-day plan.
+Completing (or skipping) writes the row **and stamps the current `onbVersion`** (`saveOnboardingToCloud`),
+so the gate never fires again until the next bump. Both signals are computed only on a successful read,
+so an offline read never traps anyone. Returning (re-onboarding) users also see an `.onb-updated`
+notice explaining the course was rebuilt. (See §4 / §5.)
 
 **The five questions → real effects:**
 - **Level** (A1/A2/B1) → `VocabTrainer.state.levels` + `planner_data.currentDay` set to the first day
@@ -1619,7 +1629,7 @@ writes the row (`saveOnboardingToCloud`), so the gate never fires again. (See §
 - **Hardest** also seeds default vocab `modes` and picks the mini-lesson's exercise: `verbs` →
   `VerbsTrainer` triad; `articles` → article mode; otherwise flashcards. Queue sliced to ~5.
 
-**Persistence on finish/skip:** `saveOnboardingToCloud({done, level, goal, minutes, hardest, at})`,
+**Persistence on finish/skip:** `saveOnboardingToCloud({done, level, goal, minutes, hardest, at})` (which adds `onbVersion`),
 `saveToCloud()` (planner_data start day), `saveVocabToCloud(...)` (mini-lesson mastery is real
 practice), and `saveVerbsToCloud(...)` when a verb mini-lesson ran. The page is a thin host like
 `/today` (`CLOUD_FIELD='planner_data'`, shared `verbStore` wiring, embedded trainers); chrome in

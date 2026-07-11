@@ -36,6 +36,14 @@ let userOnboarding = {};
 const COURSE_V2 = 2;
 const V2_START_DAY = { A1: 1, A2: 61, B1: 121 }; // first day of each band ((week-1)*5+1, WEEK_FOR_LEVEL {A1:1,A2:13,B1:25})
 
+// Onboarding version. Bumped when the course changes enough that every EXISTING user should re-pick
+// their preferences (level/goal/minutes/hardest) — the answers now feed the new 180-day v2 plan.
+// saveOnboardingToCloud stamps the current version; initApp re-gates any row whose stamp is below it
+// exactly once (after they re-onboard, the fresh stamp lifts the gate). Old rows have no stamp (→ 0),
+// so v2 re-onboards everyone once; brand-new accounts are still gated by row absence. (redesign §2.)
+const ONBOARDING_VERSION = 2;
+function _onboardingOutdated(o) { return (+(o && o.onbVersion) || 0) < ONBOARDING_VERSION; }
+
 // ISO timestamp of this account's v1→v2 reset (planner_data.migratedFrom.at), or null when the
 // account was never migrated (native v2 / brand new). Captured from the loaded planner_data on
 // initApp — see _noteMigratedAt — and consumed by (a) loadLessonsFromCloud, to hide legacy
@@ -233,6 +241,7 @@ async function initApp() {
   // in the correct language (no flash) and only that one locale is fetched.
   let lang = getLang();
   let isNewUser = false; // confirmed NO progress row (set only on a successful read — never on a network error)
+  let needsReonboarding = false; // existing row whose onboarding stamp predates ONBOARDING_VERSION (success-read only)
   const hasField = (typeof CLOUD_FIELD !== 'undefined' && CLOUD_FIELD); // a table-only page (collections) has none
   try {
     // maybeSingle() returns { data: null, error: null } when the row doesn't exist (no throw), which
@@ -247,6 +256,9 @@ async function initApp() {
     if (error) throw error;
     isNewUser = !data;
     userOnboarding = (data && data.onboarding) || {};
+    // A returning user whose onboarding predates the current version re-onboards once (see above).
+    // Computed only on a successful read, so an offline read (→ catch) can never trap anyone.
+    needsReonboarding = !isNewUser && _onboardingOutdated(userOnboarding);
     // Course v2 cutover: reset a pre-v2 planner_data to a clean v2 state and lock it in — on
     // whichever field page the account loads first. An empty ({}::jsonb) row stays untouched:
     // that's a v2-native account, not a migration candidate.
@@ -270,10 +282,12 @@ async function initApp() {
     }
   }
 
-  // First-run gate: a brand-new account (no progress row yet) is sent to the onboarding wizard.
-  // Keyed off row ABSENCE so existing users (who all have a row) are never gated, and an offline
-  // read (caught above, isNewUser stays false) never traps anyone. /welcome and /login are excluded.
-  if (isNewUser && !/welcome|login/.test(location.pathname)) {
+  // Onboarding gate → /welcome. Fires for a brand-new account (no progress row yet) AND, once, for an
+  // existing account whose onboarding stamp predates ONBOARDING_VERSION (the v2 course rebuild wants
+  // every existing user to re-pick their preferences). Both signals are set only on a successful read,
+  // so an offline read (caught above, both flags stay false) never traps anyone. /welcome and /login
+  // are excluded → no loop; re-onboarding writes a fresh stamp, so the gate never fires again. (§20.)
+  if ((isNewUser || needsReonboarding) && !/welcome|login/.test(location.pathname)) {
     location.href = '/welcome';
     return;
   }
@@ -333,9 +347,10 @@ async function saveVerbsToCloud(payload) { return _pushProgress({ verbs_data: pa
 // the vocab engine without owning vocab_data as its CLOUD_FIELD (it owns planner_data); the /vocab
 // page keeps writing vocab_data via saveToCloud + its CLOUD_FIELD.
 async function saveVocabToCloud(payload) { return _pushProgress({ vocab_data: payload }); }
-// Persist the onboarding answers + completion flag (written by the /welcome wizard). Writing the
-// row is also what lifts the first-run gate above (the row then exists on the next initApp).
-async function saveOnboardingToCloud(payload) { userOnboarding = payload || {}; return _pushProgress({ onboarding: payload }); }
+// Persist the onboarding answers + completion flag (written by the /welcome wizard). Writing the row
+// is what lifts the first-run gate above (the row then exists on the next initApp); stamping the
+// current ONBOARDING_VERSION is what lifts the re-onboarding gate (so it fires at most once per bump).
+async function saveOnboardingToCloud(payload) { const stamped = Object.assign({}, payload || {}, { onbVersion: ONBOARDING_VERSION }); userOnboarding = stamped; return _pushProgress({ onboarding: stamped }); }
 // Persist the user's Gemini key on their account (opt-in, planner only). Pass '' to clear it.
 async function saveGeminiKeyToCloud(key) { return _pushProgress({ gemini_key: key || null }); }
 // Stamp (ISO string) or clear (null) the account-deletion request. Server-side purge runs 30 days later.

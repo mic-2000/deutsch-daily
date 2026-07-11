@@ -14,12 +14,15 @@ have their own chrome). In-page asset/data/locale paths are root-absolute (`/ass
 `/locales`). (Details: ARCHITECTURE.md §1–§3, landing = §18, collections = §16, today = §19,
 onboarding = §20.)
 
-**First-run onboarding:** brand-new accounts (no `progress` row) are gated by `cloud-sync.initApp`
-to `views/welcome.html` (`/welcome`) — 5 tap questions → a no-key mini-lesson → `/today`. The answers
-have real effects (level → start day + vocab levels; language → `setLang`; minutes → `/today` session
-size; goal/hardest → AI prompt via the `userOnboarding` global; hardest → default modes). Stored in
-the `progress.onboarding` jsonb column. Don't gate on anything but row *absence* (grandfathers
-existing users). (§20.)
+**Onboarding:** `cloud-sync.initApp` gates users to `views/welcome.html` (`/welcome`) — 5 tap
+questions (nothing pre-selected; Start disabled until all answered) → a no-key mini-lesson → `/today`.
+The answers have real effects (level → start day + vocab levels; language → `setLang`; minutes →
+`/today` session size + a live daily-load explainer; goal/hardest → AI prompt via the `userOnboarding`
+global; hardest → default modes). Stored in the `progress.onboarding` jsonb column. The gate fires for
+(a) row *absence* (brand-new account) OR (b) a stale `onboarding.onbVersion` (below `ONBOARDING_VERSION`)
+— the latter re-onboards every existing user **once** after a course rebuild; `saveOnboardingToCloud`
+stamps the current version, so it fires at most once per bump. Never gate on an offline/errored read.
+Bump `ONBOARDING_VERSION` only when a course change should force everyone to re-pick preferences. (§20.)
 
 The vocab + verb **trainer engines are shared modules** (`assets/js/vocab-trainer.js` =
 `window.VocabTrainer`, `verbs-trainer.js` = `window.VerbsTrainer`). `/vocab` and `/verbs` are thin

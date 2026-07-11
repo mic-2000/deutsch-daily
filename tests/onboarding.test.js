@@ -2,8 +2,10 @@
  *
  * Part A (page harness): /welcome renders the questions screen with the chip groups and no raw keys.
  * Part B (cloud-sync eval, like outbox.test.js): initApp() gates a BRAND-NEW account (no progress
- *   row) to /welcome, leaves existing users alone, never loops on /welcome, and never gates on an
- *   offline read; it also loads the `onboarding` column into the `userOnboarding` global.
+ *   row) to /welcome, RE-onboards an existing account whose onboarding stamp predates the current
+ *   ONBOARDING_VERSION (once — a fresh stamp lifts the gate), leaves an up-to-date account alone,
+ *   never loops on /welcome, and never gates on an offline read; it also loads the `onboarding`
+ *   column into the `userOnboarding` global.
  */
 const test = require('node:test');
 const assert = require('node:assert/strict');
@@ -29,12 +31,12 @@ const SRC = fs.readFileSync(path.join(__dirname, '..', 'assets/js/cloud-sync.js'
 
 // Run initApp() with a mock Supabase whose main read (maybeSingle) returns `mainData`, on a page at
 // `pathname`. Returns the captured redirect target (location.href) and the userOnboarding global.
-async function runInit({ mainData, pathname }) {
+async function runInit({ mainData, pathname, readError = null }) {
   const store = new Map();
   const session = { user: { id: 'user-1' } };
   const proto = {
     select() { return this; }, eq() { return this; },
-    maybeSingle() { return Promise.resolve({ data: mainData, error: null }); },
+    maybeSingle() { return Promise.resolve(readError ? { data: null, error: readError } : { data: mainData, error: null }); },
     single() { return Promise.resolve({ data: null, error: null }); },
     upsert() { return Promise.resolve({ error: null }); },
   };
@@ -52,10 +54,10 @@ async function runInit({ mainData, pathname }) {
   };
   sandbox.globalThis = sandbox;
   vm.createContext(sandbox);
-  const epilogue = '\n;globalThis.__initApp = initApp; globalThis.__getOnb = () => userOnboarding;';
+  const epilogue = '\n;globalThis.__initApp = initApp; globalThis.__getOnb = () => userOnboarding; globalThis.__onbVer = ONBOARDING_VERSION;';
   vm.runInContext(SRC + epilogue, sandbox, { filename: 'cloud-sync.js' });
   await sandbox.__initApp();
-  return { redirect: location._href, onboarding: sandbox.__getOnb() };
+  return { redirect: location._href, onboarding: sandbox.__getOnb(), onbVersion: sandbox.__onbVer };
 }
 
 test('a brand-new account (no progress row) is gated to /welcome', async () => {
@@ -63,21 +65,37 @@ test('a brand-new account (no progress row) is gated to /welcome', async () => {
   assert.equal(r.redirect, '/welcome');
 });
 
-test('an existing user (row present) is NOT gated, and userOnboarding is loaded', async () => {
-  const r = await runInit({ mainData: { planner_data: { currentDay: 3 }, lang: 'en', onboarding: { done: true, goal: 'work' } }, pathname: '/planner' });
-  assert.equal(r.redirect, '', 'no redirect for an existing user');
+test('an existing user with an up-to-date onboarding stamp is NOT gated, and userOnboarding is loaded', async () => {
+  const { onbVersion } = await runInit({ mainData: null, pathname: '/planner' });
+  const r = await runInit({ mainData: { planner_data: { courseVersion: 2, currentDay: 3 }, lang: 'en', onboarding: { done: true, goal: 'work', onbVersion } }, pathname: '/planner' });
+  assert.equal(r.redirect, '', 'no redirect for a re-onboarded user');
   assert.equal(r.onboarding.done, true, 'onboarding column loaded into the global');
   assert.equal(r.onboarding.goal, 'work');
+});
+
+test('an existing user whose onboarding predates the current version is re-onboarded once (→ /welcome)', async () => {
+  // Old rows carry no onbVersion (or a lower one) → gated exactly once so they re-pick v2 preferences.
+  const r = await runInit({ mainData: { planner_data: { currentDay: 3 }, lang: 'en', onboarding: { done: true, goal: 'work' } }, pathname: '/planner' });
+  assert.equal(r.redirect, '/welcome', 'a stale onboarding stamp re-gates the user');
+  assert.equal(r.onboarding.done, true, 'onboarding is still loaded before the redirect');
+});
+
+test('an existing user with an empty onboarding column is re-onboarded (→ /welcome)', async () => {
+  const r = await runInit({ mainData: { planner_data: {}, lang: 'en', onboarding: {} }, pathname: '/vocab' });
+  assert.equal(r.redirect, '/welcome', 'no onboarding stamp → treated as outdated → gated once');
 });
 
 test('/welcome itself is never gated (no redirect loop)', async () => {
   const r = await runInit({ mainData: null, pathname: '/welcome' });
   assert.equal(r.redirect, '', 'the wizard page is excluded from the gate');
+  const r2 = await runInit({ mainData: { planner_data: {}, lang: 'en', onboarding: {} }, pathname: '/welcome' });
+  assert.equal(r2.redirect, '', 're-onboarding users on /welcome are not redirected either');
 });
 
-test('an existing user with an empty onboarding column is not gated (grandfathered)', async () => {
-  const r = await runInit({ mainData: { planner_data: {}, lang: 'en', onboarding: {} }, pathname: '/vocab' });
-  assert.equal(r.redirect, '', 'a row exists → never gated, regardless of onboarding flag');
+test('an offline read never gates a returning user (even with a stale onboarding stamp)', async () => {
+  // maybeSingle errors → the catch path leaves both gate flags false, so no one is trapped offline.
+  const r = await runInit({ readError: { message: 'offline' }, pathname: '/planner' });
+  assert.equal(r.redirect, '', 'a read error never triggers the onboarding gate');
 });
 
 /* ---------------- Part C: applyLevel() derives the default vocab modes (§16 item 2, plan §4) ----------------

@@ -76,8 +76,11 @@ function saveVerbsNow(){ if (typeof saveVerbsToCloud === 'function') saveVerbsTo
 VocabTrainer.init({ embedded: true, onSessionEnd: (r) => { lessonResult = r; finishLesson(); }, onSaveVocab: saveVocabNow, onSaveVerbs: saveVerbsNow });
 VerbsTrainer.init({ embedded: true, onSessionEnd: (r) => { lessonResult = r; finishLesson(); }, onSave: saveVerbsNow });
 
-/* ---- state (sensible defaults so "Start" works with zero taps) ---- */
-let onb = { level: 'A1', goal: 'exam', minutes: '15', hardest: 'articles' };
+/* ---- state — NOTHING is pre-selected; the learner picks every answer (redesign re-onboarding: the
+   v2 course wants a deliberate choice). Start stays disabled until all four are picked; "Skip" falls
+   back to the previous onboarding (returning users) or A1 defaults. Language is the one exception —
+   it always reflects the live getLang(). ---- */
+let onb = { level: null, goal: null, minutes: null, hardest: null };
 let phase = 'questions';      // 'questions' | 'lesson' | 'done'
 let lessonResult = null;
 const Q = {
@@ -89,6 +92,23 @@ const Q = {
 };
 const LANG_LABELS = { en: 'English', ua: 'Українська', ru: 'Русский' };
 // WEEK_FOR_LEVEL lives in course-consts.js (single source of truth for course shape).
+
+/* Resolve un-picked answers from the previous onboarding (returning users) or a sensible default.
+   Start is gated on allAnswered(), so this only differs from `onb` when the user taps Skip. */
+function prevOnb(){ return (typeof userOnboarding !== 'undefined' && userOnboarding) || {}; }
+function resolved(){
+  const p = prevOnb();
+  return {
+    level:   onb.level   || p.level   || 'A1',
+    goal:    onb.goal    || p.goal    || 'exam',
+    minutes: onb.minutes || p.minutes || '15',
+    hardest: onb.hardest || p.hardest || 'articles',
+  };
+}
+function allAnswered(){ return !!(onb.level && onb.goal && onb.minutes && onb.hardest); }
+/* A returning learner — already onboarded once before this version bump — is re-onboarding after the
+   course update; show them the "course updated" notice (a brand-new account has an empty onboarding). */
+function isReturning(){ const p = prevOnb(); return !!(p.done || p.level || p.minutes); }
 
 function render(){
   if (phase === 'lesson') return;     // the engine paints the session into #app
@@ -114,19 +134,32 @@ function pick(group, v){
 function qGroup(titleKey, group){
   return `<div class="onb-group"><div class="onb-q">${T(titleKey)}</div><div class="onb-chips">${Q[group].map(v => chip(group, v)).join('')}</div></div>`;
 }
+/* The daily-load explainer under the minutes question — updates live with the picked tariff so the
+   learner can see how the workload changes before committing. Mirrors /today's tariff() blocks. */
+function loadPanel(){
+  const m = onb.minutes;
+  if (!m) return `<div class="onb-load onb-load--empty">${T('onb_load_hint')}</div>`;
+  const key = 'onb_load_' + (m === '20+' ? '20' : m);   // onb_load_5 / _10 / _15 / _20
+  return `<div class="onb-load"><div class="onb-load-h">${T('onb_load_title')}</div><p>${T(key)}</p></div>`;
+}
 function renderQuestions(){
+  const notice = isReturning()
+    ? `<div class="onb-updated"><h2>${T('onb_updated_title')}</h2><p>${T('onb_updated_msg')}</p></div>`
+    : '';
   document.getElementById('app').innerHTML = `
 <main class="container welcome-wrap">
+  ${notice}
   <div class="welcome-kicker">${T('onb_kicker')}</div>
   <h1 class="welcome-title">${T('onb_title')}</h1>
   <p class="welcome-lead">${T('onb_lead')}</p>
   ${qGroup('onb_q_level', 'level')}
   ${qGroup('onb_q_goal', 'goal')}
   ${qGroup('onb_q_minutes', 'minutes')}
+  ${loadPanel()}
   ${qGroup('onb_q_lang', 'lang')}
   ${qGroup('onb_q_hardest', 'hardest')}
   <div class="welcome-actions">
-    <button class="btn accent huge" onclick="startLesson()">${T('onb_start')}</button>
+    <button class="btn accent huge" onclick="startLesson()"${allAnswered() ? '' : ' disabled'}>${T('onb_start')}</button>
     <button class="onb-skip" onclick="skipOnboarding()">${T('onb_skip')}</button>
   </div>
 </main>`;
@@ -134,21 +167,23 @@ function renderQuestions(){
 
 /* ---- apply answers + run the first mini-lesson ---- */
 function applyLevel(){
-  const week = WEEK_FOR_LEVEL[onb.level] || 1;
+  const a = resolved();
+  const week = WEEK_FOR_LEVEL[a.level] || 1;
   const firstDay = (DAYS.find(d => d.week === week) || DAYS[0]).day;
   planner.currentDay = firstDay; planner.viewingDay = firstDay;
-  VocabTrainer.state.levels = { A1: onb.level === 'A1', A2: onb.level === 'A2', B1: onb.level === 'B1' };
+  VocabTrainer.state.levels = { A1: a.level === 'A1', A2: a.level === 'A2', B1: a.level === 'B1' };
   // "hardest" seeds the default exercise modes (kept after onboarding). Plural is on by default for
   // A2/B1 learners and for anyone who flagged articles as hardest (course-redesign §4).
-  const plural = onb.level === 'A2' || onb.level === 'B1' || onb.hardest === 'articles';
-  const modes = { flashcard: true, article: onb.hardest === 'articles', spelling: onb.hardest === 'spelling', plural };
+  const plural = a.level === 'A2' || a.level === 'B1' || a.hardest === 'articles';
+  const modes = { flashcard: true, article: a.hardest === 'articles', spelling: a.hardest === 'spelling', plural };
   VocabTrainer.state.modes = modes;
   return week;
 }
 function startLesson(){
+  if (!allAnswered()) return;      // Start is disabled until every question is picked; guard anyway
   const week = applyLevel();
   phase = 'lesson';
-  if (onb.hardest === 'verbs') {
+  if (resolved().hardest === 'verbs') {
     VerbsTrainer.startSession({ type: 'filter', filter: 'all' });
     if (!VerbsTrainer.state.session) { finishLesson(); return; }
     trim(VerbsTrainer, 5); VerbsTrainer.render();
@@ -161,11 +196,12 @@ function startLesson(){
 function trim(engine, n){ const s = engine.state.session; if (s && s.queue) { s.queue = s.queue.slice(0, n); s.uniqueTotal = s.queue.length; } }
 
 function persistAll(extra){
-  const payload = Object.assign({ done: true, level: onb.level, goal: onb.goal, minutes: onb.minutes, hardest: onb.hardest, at: new Date().toISOString() }, extra || {});
-  if (typeof saveOnboardingToCloud === 'function') saveOnboardingToCloud(payload);
+  const a = resolved();
+  const payload = Object.assign({ done: true, level: a.level, goal: a.goal, minutes: a.minutes, hardest: a.hardest, at: new Date().toISOString() }, extra || {});
+  if (typeof saveOnboardingToCloud === 'function') saveOnboardingToCloud(payload);   // stamps onbVersion → lifts the re-onboarding gate
   if (typeof saveToCloud === 'function') saveToCloud();        // planner_data (starting currentDay)
   saveVocabNow();
-  if (onb.hardest === 'verbs') saveVerbsNow();
+  if (a.hardest === 'verbs') saveVerbsNow();
 }
 function finishLesson(){ phase = 'done'; persistAll(); render(); }
 function skipOnboarding(){ applyLevel(); phase = 'done'; lessonResult = null; persistAll({ skipped: true }); render(); }

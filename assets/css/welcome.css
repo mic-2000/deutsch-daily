@@ -6,10 +6,21 @@
 .welcome-title { font-family: var(--serif); font-weight: 300; font-size: clamp(30px, 6vw, 46px); line-height: 1.05; margin: 8px 0 0; letter-spacing: -.01em; }
 .welcome-lead { color: var(--ink-soft); font-size: 16px; line-height: 1.6; margin: 14px 0 28px; max-width: 52ch; }
 
+/* "Course has been updated" notice shown to returning users who are re-onboarding after the v2 rebuild. */
+.onb-updated { border: 1px solid var(--line); border-left: 3px solid var(--accent); background: var(--paper-3); border-radius: 4px; padding: 16px 18px; margin: 0 0 26px; }
+.onb-updated h2 { font-family: var(--serif); font-weight: 400; font-size: 20px; margin: 0 0 6px; }
+.onb-updated p { color: var(--ink-soft); font-size: 14px; line-height: 1.6; margin: 0; }
+
 .onb-group { margin-bottom: 22px; }
 .onb-q { font-size: 13px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-soft); margin-bottom: 10px; }
 .onb-chips { display: flex; flex-wrap: wrap; gap: 10px; }
 .onb-chips .chip { font-size: 14px; padding: 9px 16px; cursor: pointer; }
+
+/* Daily-load explainer under the minutes question — reflects the picked tariff (or prompts a pick). */
+.onb-load { margin: -8px 0 22px; padding: 13px 16px; border: 1px solid var(--line); border-radius: 4px; background: var(--paper-3); }
+.onb-load-h { font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: var(--accent); margin-bottom: 5px; }
+.onb-load p { margin: 0; color: var(--ink-soft); font-size: 14px; line-height: 1.6; }
+.onb-load--empty { color: var(--ink-soft); font-size: 13px; line-height: 1.55; font-style: italic; }
 
 .welcome-actions { margin-top: 30px; display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
 .onb-skip { background: none; border: none; cursor: pointer; color: var(--ink-soft); font-size: 13px; text-decoration: underline; text-underline-offset: 3px; }
