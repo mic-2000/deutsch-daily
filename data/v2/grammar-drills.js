@@ -73,7 +73,7 @@ const GRAMMAR_DRILLS = {
       },
       {
         "type": "cloze",
-        "de": "Das ist ___ Frau.",
+        "de": "Das ist ___ Frau. (ein)",
         "answer": "eine"
       },
       {
@@ -205,7 +205,7 @@ const GRAMMAR_DRILLS = {
     "items": [
       {
         "type": "cloze",
-        "de": "Ich trinke ___ Bier.",
+        "de": "Ich trinke ___ Wasser.",
         "answer": "kein"
       },
       {
@@ -431,12 +431,12 @@ const GRAMMAR_DRILLS = {
     "items": [
       {
         "type": "cloze",
-        "de": "___ Montag arbeite ich. (on the day)",
+        "de": "___ Montag arbeite ich. (Tag)",
         "answer": "Am"
       },
       {
         "type": "choice",
-        "de": "Ich habe ___ Juli Urlaub. (in the month)",
+        "de": "Ich habe ___ Juli Urlaub. (Monat)",
         "answer": "im",
         "options": [
           "am",
@@ -446,7 +446,7 @@ const GRAMMAR_DRILLS = {
       },
       {
         "type": "cloze",
-        "de": "Der Kurs beginnt ___ neun Uhr. (at the time)",
+        "de": "Der Kurs beginnt ___ neun Uhr. (Uhrzeit)",
         "answer": "um"
       }
     ]
@@ -517,7 +517,7 @@ const GRAMMAR_DRILLS = {
         "options": [
           "Bringst",
           "Mitbringst",
-          "Bringmitst"
+          "Bringt"
         ]
       },
       {
@@ -591,7 +591,7 @@ const GRAMMAR_DRILLS = {
         "options": [
           "gestudiert",
           "studiert",
-          "studeirt"
+          "studieren"
         ]
       }
     ]
@@ -752,9 +752,14 @@ const GRAMMAR_DRILLS = {
     "concept": "Imperativ for du and ihr",
     "items": [
       {
-        "type": "cloze",
+        "type": "choice",
         "de": "___ langsam! (du, fahren)",
-        "answer": "Fahr"
+        "answer": "Fahr",
+        "options": [
+          "Fahr",
+          "Fährst",
+          "Fahrt"
+        ]
       },
       {
         "type": "cloze",
@@ -1004,7 +1009,7 @@ const GRAMMAR_DRILLS = {
       },
       {
         "type": "cloze",
-        "de": "Sie ___ jeden Tag um sechs aufstehen. (müssen)",
+        "de": "Meine Schwester ___ jeden Tag um sechs aufstehen. (müssen)",
         "answer": "musste"
       },
       {
@@ -1013,8 +1018,8 @@ const GRAMMAR_DRILLS = {
         "answer": "durfte",
         "options": [
           "durfte",
-          "durfen",
-          "darfte"
+          "darf",
+          "durftest"
         ]
       }
     ]
@@ -1058,7 +1063,7 @@ const GRAMMAR_DRILLS = {
     "items": [
       {
         "type": "cloze",
-        "de": "Er ist nicht da. Er ___ wohl im Amt sein. (werden)",
+        "de": "Er ist nicht da. Er ___ wohl auf dem Amt sein. (werden)",
         "answer": "wird"
       },
       {
@@ -1284,24 +1289,14 @@ const GRAMMAR_DRILLS = {
     "concept": "während / bevor / sobald",
     "items": [
       {
-        "type": "choice",
-        "de": "___ ich koche, höre ich Musik.",
-        "answer": "Während",
-        "options": [
-          "Während",
-          "Bevor",
-          "Sobald"
-        ]
+        "type": "cloze",
+        "de": "___ ich koche, höre ich Musik. (while)",
+        "answer": "Während"
       },
       {
-        "type": "choice",
-        "de": "Ruf mich an, ___ du ankommst.",
-        "answer": "sobald",
-        "options": [
-          "während",
-          "bevor",
-          "sobald"
-        ]
+        "type": "cloze",
+        "de": "Ruf mich an, ___ du ankommst. (as soon as)",
+        "answer": "sobald"
       },
       {
         "type": "cloze",
@@ -1333,7 +1328,9 @@ const GRAMMAR_DRILLS = {
           "gegessen",
           "hatten,",
           "gingen",
-          "wir"
+          "wir",
+          "nach",
+          "Hause"
         ]
       }
     ]
@@ -1355,7 +1352,7 @@ const GRAMMAR_DRILLS = {
       },
       {
         "type": "cloze",
-        "de": "Nachdem er gegessen ___, ging er. (Plusquamperfekt, haben)",
+        "de": "Nachdem er gegessen ___, ging er zur Arbeit. (Plusquamperfekt, haben)",
         "answer": "hatte"
       },
       {
@@ -1575,7 +1572,7 @@ const GRAMMAR_DRILLS = {
       },
       {
         "type": "choice",
-        "de": "Wir freuen uns ___ das Wochenende.",
+        "de": "Wir freuen uns schon ___ das Wochenende.",
         "answer": "auf",
         "options": [
           "auf",
@@ -1664,7 +1661,7 @@ const GRAMMAR_DRILLS = {
     "items": [
       {
         "type": "choice",
-        "de": "___ Sie mir bitte helfen?",
+        "de": "___ Sie mir bitte helfen? (Konjunktiv II)",
         "answer": "Könnten",
         "options": [
           "Können",
@@ -1674,7 +1671,7 @@ const GRAMMAR_DRILLS = {
       },
       {
         "type": "cloze",
-        "de": "Ich ___ gern einen Kaffee. (hätte)",
+        "de": "Ich ___ gern einen Kaffee. (haben, höflich)",
         "answer": "hätte"
       },
       {
@@ -1711,7 +1708,7 @@ const GRAMMAR_DRILLS = {
       },
       {
         "type": "cloze",
-        "de": "Man ___ höflich sein. (sollte)",
+        "de": "Man ___ höflich sein. (sollen, Rat)",
         "answer": "sollte"
       }
     ]
@@ -2036,7 +2033,7 @@ const GRAMMAR_DRILLS = {
       },
       {
         "type": "cloze",
-        "de": "Es ___ schön, wenn du kommst. (sein → KII)",
+        "de": "Es ___ schön, wenn du kommen würdest. (sein → KII)",
         "answer": "wäre"
       },
       {

@@ -49,9 +49,9 @@ module.exports = {
     { type: 'write',
       text: { en: 'Write 6–8 definitions of professions using relative clauses (Ein Arzt ist eine Person, die kranke Menschen behandelt).',
               ru: 'Напишите 6–8 определений профессий с относительными придаточными (Ein Arzt ist eine Person, die kranke Menschen behandelt).',
-              ua: 'Напишіть 6–8 означень професій із підрядними означальними (Ein Arzt ist eine Person, die kranke Menschen behandelt).' },
+              ua: 'Напишіть 6–8 визначень професій із підрядними означальними (Ein Arzt ist eine Person, die kranke Menschen behandelt).' },
       checklist: [
-        { en: 'Write at least six definitions.', ru: 'Напишите минимум шесть определений.', ua: 'Напишіть щонайменше шість означень.' },
+        { en: 'Write at least six definitions.', ru: 'Напишите минимум шесть определений.', ua: 'Напишіть щонайменше шість визначень.' },
         { en: 'Use a nominative relative pronoun (der/die/das/die).', ru: 'Используйте относительное местоимение в Nominativ (der/die/das/die).', ua: 'Використайте відносний займенник у Nominativ (der/die/das/die).' },
         { en: 'Use at least one accusative relative pronoun (den).', ru: 'Используйте минимум одно относительное местоимение в Akkusativ (den).', ua: 'Використайте щонайменше один відносний займенник в Akkusativ (den).' },
       ] },
@@ -65,7 +65,7 @@ module.exports = {
     { en: 'I can describe people with nominative relative clauses (der Mann, der hier arbeitet).', ru: 'Я могу описывать людей относительными придаточными в Nominativ (der Mann, der hier arbeitet).', ua: 'Я можу описувати людей підрядними означальними в Nominativ (der Mann, der hier arbeitet).' },
     { en: 'I can use accusative relative clauses (die Frau, die ich kenne).', ru: 'Я могу использовать относительные придаточные в Akkusativ (die Frau, die ich kenne).', ua: 'Я можу використовувати підрядні означальні в Akkusativ (die Frau, die ich kenne).' },
     { en: 'I can follow a dialogue about professions and answer questions about it.', ru: 'Я могу понять диалог о профессиях и ответить на вопросы по нему.', ua: 'Я можу зрозуміти діалог про професії й відповісти на питання за ним.' },
-    { en: 'I can write definitions of professions using relative clauses.', ru: 'Я могу написать определения профессий с относительными придаточными.', ua: 'Я можу написати означення професій із підрядними означальними.' },
+    { en: 'I can write definitions of professions using relative clauses.', ru: 'Я могу написать определения профессий с относительными придаточными.', ua: 'Я можу написати визначення професій із підрядними означальними.' },
     { en: 'I can pick the right relative pronoun der/die/das/den by gender and case.', ru: 'Я могу выбрать правильное относительное местоимение der/die/das/den по роду и падежу.', ua: 'Я можу вибрати правильний відносний займенник der/die/das/den за родом і відмінком.' },
   ],
 

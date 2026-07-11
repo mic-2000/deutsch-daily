@@ -13,7 +13,7 @@ module.exports = {
 
   vocab: [
     { de: 'beeindruckend', en: 'impressive',   ru: 'впечатляющий',    ua: 'вражаючий' },
-    { de: 'enttäuschend',  en: 'disappointing', ru: 'разочаровывающий', ua: 'розчаровуючий' },
+    { de: 'enttäuschend',  en: 'disappointing', ru: 'разочаровывающий', ua: 'невтішний' },
     { de: 'seltsam',       en: 'strange',       ru: 'странный',        ua: 'дивний' },
     { de: 'typisch',       en: 'typical',       ru: 'типичный',        ua: 'типовий' },
     { de: 'üblich',        en: 'usual',         ru: 'обычный',         ua: 'звичайний' },

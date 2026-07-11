@@ -12,11 +12,11 @@ module.exports = {
 
   vocab: [
     { de: 'eines Tages',       en: 'one day (in a story)', ru: 'однажды',                 ua: 'одного дня' },
-    { de: 'am Anfang',         en: 'at first',             ru: 'вначале',                 ua: 'спочатку' },
+    { de: 'am Anfang',         en: 'at the beginning',     ru: 'вначале',                 ua: 'спочатку' },
     { de: 'auf einmal',        en: 'all of a sudden',      ru: 'вдруг',                   ua: 'раптом' },
     { de: 'nach einer Weile',  en: 'after a while',        ru: 'спустя некоторое время',  ua: 'через деякий час' },
     { de: 'schließlich',       en: 'finally',              ru: 'наконец',                 ua: 'нарешті' },
-    { de: 'zum Schluss',       en: 'to conclude',          ru: 'напоследок',              ua: 'на завершення' },
+    { de: 'zum Schluss',       en: 'in conclusion',        ru: 'в заключение',            ua: 'на завершення' },
     { de: 'am Ende',           en: 'in the end',           ru: 'в конце',                 ua: 'у кінці' },
     { de: 'seitdem',           en: 'since then',           ru: 'с тех пор',               ua: 'відтоді' },
   ],

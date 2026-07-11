@@ -1,11 +1,11 @@
-/* Week 24 — Goethe A2 exam week (A2, phase A2.2). Days 116–120. Day 120 = milestone debrief.
-   Original, exam-format-aligned tasks (no copied Goethe material). */
+/* Week 24 — A2 exam week (A2, phase A2.2). Days 116–120. Day 120 = milestone debrief.
+   Original, exam-format-aligned tasks (no copied Goethe/telc material, no official simulation). */
 module.exports = {
   n: 24,
   phase: 'A2.2',
   level: 'A2',
-  theme:      { en: 'Goethe A2 exam week', ru: 'Экзаменационная неделя A2', ua: 'Екзаменаційний тиждень A2' },
-  grammar:    { en: 'No new grammar — exam-format modules (Lesen/Hören/Schreiben/Sprechen)', ru: '0 нового — экзаменационные модули (Lesen/Hören/Schreiben/Sprechen)', ua: '0 нового — екзаменаційні модулі (Lesen/Hören/Schreiben/Sprechen)' },
+  theme:      { en: 'A2 exam week', ru: 'Экзаменационная неделя A2', ua: 'Екзаменаційний тиждень A2' },
+  grammar:    { en: 'No new grammar — exam-format modules (Lesen/Hören/Schreiben/Sprechen)', ru: 'Без новой грамматики — экзаменационные модули (Lesen/Hören/Schreiben/Sprechen)', ua: 'Без нової граматики — екзаменаційні модулі (Lesen/Hören/Schreiben/Sprechen)' },
   vocabTheme: { en: 'useful exam words', ru: 'полезные слова для экзамена', ua: 'корисні слова для іспиту' },
 
   vocab: [
@@ -17,7 +17,7 @@ module.exports = {
     { de: 'plötzlich',      en: 'suddenly',     ru: 'внезапно',      ua: 'раптово' },
     { de: 'wahrscheinlich', en: 'probably',     ru: 'вероятно',      ua: 'ймовірно' },
     { de: 'meistens',       en: 'mostly',       ru: 'чаще всего',    ua: 'здебільшого' },
-    { de: 'trotzdem',       en: 'nevertheless', ru: 'тем не менее',  ua: 'проте' },
+    { de: 'trotzdem',       en: 'nevertheless', ru: 'тем не менее',  ua: 'попри це' },
     { de: 'inzwischen',     en: 'meanwhile',    ru: 'тем временем',  ua: 'тим часом' },
   ],
 
@@ -58,7 +58,7 @@ module.exports = {
     lines: [
       { speaker: 'Ansage', de: 'Der Zug nach München fährt heute nicht um 9 Uhr, sondern um 10 Uhr.' },
       { speaker: 'Ansage', de: 'Der Grund ist ein technisches Problem.' },
-      { speaker: 'Ansage', de: 'Bitte warten Sie am Gleis drei.' },
+      { speaker: 'Ansage', de: 'Bitte warten Sie an Gleis drei.' },
     ],
     questions: [
       { de: 'Der Zug fährt normalerweise um 9 Uhr.', answer: true, text: { en: 'The train normally leaves at 9.', ru: 'Обычно поезд отправляется в 9.', ua: 'Зазвичай потяг вирушає о 9.' } },

@@ -85,7 +85,7 @@ module.exports = {
       items: [
         { type: 'cloze',  de: 'Ich habe Fußball ___. (spielen)', answer: 'gespielt' },
         { type: 'cloze',  de: 'Wir haben einen Film ___. (sehen)', answer: 'gesehen' },
-        { type: 'choice', de: 'Er hat an der Uni ___. (studieren)', answer: 'studiert', options: ['gestudiert', 'studiert', 'studeirt'] },
+        { type: 'choice', de: 'Er hat an der Uni ___. (studieren)', answer: 'studiert', options: ['gestudiert', 'studiert', 'studieren'] },
       ],
     },
     'partizip-praefixe': {

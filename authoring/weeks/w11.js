@@ -37,7 +37,7 @@ module.exports = {
     { type: 'grammar', grammarFocus: 'und/aber/oder', drill: 'aduso-position-0',
       text: { en: 'Coordinating conjunctions und/aber/oder in position 0 (no verb shift).', ru: 'Сочинительные союзы und/aber/oder в позиции 0 (без сдвига глагола).', ua: 'Сурядні сполучники und/aber/oder у позиції 0 (без зсуву дієслова).' } },
     { type: 'grammar', grammarFocus: 'denn / sondern', drill: 'denn-sondern',
-      text: { en: 'denn (because) and sondern (but rather): position 0 vs. verb-second contrast.', ru: 'denn (потому что) и sondern (а/но): позиция 0 vs. V2.', ua: 'denn (тому що) і sondern (а/але): позиція 0 vs. V2.' } },
+      text: { en: 'denn (because) and sondern (but rather, after a negation) — both stay in position 0 like und/aber/oder.', ru: 'denn (потому что) и sondern (а, после отрицания) — оба стоят в позиции 0, как und/aber/oder.', ua: 'denn (тому що) і sondern (а, після заперечення) — обидва стоять у позиції 0, як und/aber/oder.' } },
     { type: 'grammar', grammarFocus: 'Time before place', drill: 'zeit-vor-ort',
       text: { en: 'Word order: time before place (Ich gehe heute zum Arzt).', ru: 'Порядок слов: время перед местом (Ich gehe heute zum Arzt).', ua: 'Порядок слів: час перед місцем (Ich gehe heute zum Arzt).' } },
     { type: 'write',
@@ -47,7 +47,7 @@ module.exports = {
         { en: 'Use denn to give a reason.', ru: 'Используйте denn для причины.', ua: 'Використайте denn для причини.' },
       ] },
     { type: 'review',
-      text: { en: 'Review day: add plural forms (Nasen, Haare, Bäuche); dictation.', ru: 'День повторения: добор форм мн.ч. (Nasen, Haare, Bäuche); диктант.', ua: 'День повторення: форми множини (Nasen, Haare, Bäuche); диктант.' } },
+      text: { en: 'Review day: add plural forms (Nasen, Augen, Bäuche); dictation.', ru: 'День повторения: формы мн. ч. (Nasen, Augen, Bäuche); диктант.', ua: 'День повторення: форми множини (Nasen, Augen, Bäuche); диктант.' } },
   ],
 
   canDo: [
@@ -55,7 +55,7 @@ module.exports = {
     { en: 'I can give a reason with denn.', ru: 'Я могу назвать причину с denn.', ua: 'Я можу назвати причину з denn.' },
     { en: 'I can put time before place in a sentence.', ru: 'Я могу ставить время перед местом в предложении.', ua: 'Я можу ставити час перед місцем у реченні.' },
     { en: 'I can describe symptoms at the doctor.', ru: 'Я могу описать симптомы у врача.', ua: 'Я можу описати симптоми у лікаря.' },
-    { en: 'I can name body parts and their plural forms.', ru: 'Я могу назвать части тела и их формы мн.ч.', ua: 'Я можу назвати частини тіла та їх форми множини.' },
+    { en: 'I can name body parts and their plural forms.', ru: 'Я могу назвать части тела и их формы мн.ч.', ua: 'Я можу назвати частини тіла та їхні форми множини.' },
   ],
 
   drills: {

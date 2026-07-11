@@ -3,8 +3,8 @@ module.exports = {
   n: 12,
   phase: 'A1.2',
   level: 'A1',
-  theme:      { en: 'A1 consolidation + weather', ru: 'Консолидация A1 + погода', ua: 'Консолідація A1 + погода' },
-  grammar:    { en: 'Review of cases, tenses and the sentence bracket; Goethe A1 self-check', ru: 'Повторение падежей, времён и рамки; самопроверка Goethe A1', ua: 'Повторення відмінків, часів і рамки; самоперевірка Goethe A1' },
+  theme:      { en: 'A1 consolidation + weather', ru: 'Закрепление A1 + погода', ua: 'Закріплення A1 + погода' },
+  grammar:    { en: 'Review of cases, tenses and the sentence bracket; Goethe A1 self-check', ru: 'Повторение падежей, времён и глагольной рамки; самопроверка Goethe A1', ua: 'Повторення відмінків, часів і дієслівної рамки; самоперевірка Goethe A1' },
   vocabTheme: { en: 'weather, adverbs', ru: 'погода, наречия', ua: 'погода, прислівники' },
 
   vocab: [
@@ -16,7 +16,7 @@ module.exports = {
     { de: 'die Wolke',    en: 'cloud',         ru: 'облако',        ua: 'хмара' },
     { de: 'warm',         en: 'warm',          ru: 'тёплый',        ua: 'теплий' },
     { de: 'kalt',         en: 'cold',          ru: 'холодный',      ua: 'холодний' },
-    { de: 'sonnig',       en: 'sunny',         ru: 'солнечно',      ua: 'сонячно' },
+    { de: 'sonnig',       en: 'sunny',         ru: 'солнечный',     ua: 'сонячний' },
     { de: 'vielleicht',   en: 'maybe',         ru: 'возможно',      ua: 'можливо' },
     { de: 'leider',       en: 'unfortunately', ru: 'к сожалению',   ua: 'на жаль' },
     { de: 'genau',        en: 'exactly',       ru: 'точно',         ua: 'точно' },
@@ -30,11 +30,11 @@ module.exports = {
 
   tasks: [
     { type: 'review', drill: 'kasus-wdh-a1',
-      text: { en: 'Consolidation: cases der→den→dem across Nominativ/Akkusativ/Dativ; new weather words.', ru: 'Консолидация: падежи der→den→dem по Nominativ/Akkusativ/Dativ; новые слова о погоде.', ua: 'Консолідація: відмінки der→den→dem за Nominativ/Akkusativ/Dativ; нові слова про погоду.' } },
+      text: { en: 'Consolidation: cases der→den→dem across Nominativ/Akkusativ/Dativ; new weather words.', ru: 'Закрепление: падежи der→den→dem по Nominativ/Akkusativ/Dativ; новые слова о погоде.', ua: 'Закріплення: відмінки der→den→dem за Nominativ/Akkusativ/Dativ; нові слова про погоду.' } },
     { type: 'review',
-      text: { en: 'Consolidation: Perfekt, the sentence bracket and separable verbs; weather adverbs.', ru: 'Консолидация: Perfekt, рамка и отделяемые глаголы; наречия для погоды.', ua: 'Консолідація: Perfekt, рамка та відокремлювані дієслова; прислівники для погоди.' } },
+      text: { en: 'Consolidation: Perfekt, the sentence bracket and separable verbs; weather adverbs.', ru: 'Закрепление: Perfekt, глагольная рамка и отделяемые глаголы; наречия для погоды.', ua: 'Закріплення: Perfekt, дієслівна рамка та відокремлювані дієслова; прислівники для погоди.' } },
     { type: 'listen',
-      text: { en: 'Mini Hören/Lesen: a short weather forecast and dialogue with comprehension checks.', ru: 'Мини Hören/Lesen: короткий прогноз погоды и диалог с проверками.', ua: 'Міні Hören/Lesen: короткий прогноз погоди й діалог з перевірками.' } },
+      text: { en: 'Mini Hören/Lesen: a short weather forecast and dialogue with comprehension checks.', ru: 'Мини Hören/Lesen: короткий прогноз погоды и диалог с заданиями на понимание.', ua: 'Міні Hören/Lesen: короткий прогноз погоди й діалог із завданнями на розуміння.' } },
     { type: 'write',
       text: { en: 'Write a letter to a friend — 40–60 words: the weather and what you did yesterday (Perfekt).', ru: 'Напишите письмо другу — 40–60 слов: погода и что вы делали вчера (Perfekt).', ua: 'Напишіть лист другу — 40–60 слів: погода і що ви робили вчора (Perfekt).' },
       checklist: [

@@ -17,7 +17,7 @@ module.exports = {
     { de: 'das Beispiel',        en: 'example',         ru: 'пример',           ua: 'приклад' },
     { de: 'zum Beispiel',        en: 'for example',     ru: 'например',         ua: 'наприклад' },
     { de: 'außerdem',            en: 'moreover',        ru: 'кроме того',       ua: 'крім того' },
-    { de: 'trotzdem',            en: 'nevertheless',    ru: 'тем не менее',     ua: 'проте' },
+    { de: 'trotzdem',            en: 'nevertheless',    ru: 'тем не менее',     ua: 'попри це, все ж' },
     { de: 'deshalb',             en: 'therefore',       ru: 'поэтому',          ua: 'тому' },
     { de: 'obwohl',              en: 'although',        ru: 'хотя',             ua: 'хоча' },
     { de: 'weil',                en: 'because',         ru: 'потому что',       ua: 'тому що' },
@@ -92,7 +92,7 @@ module.exports = {
     vocabularyMaxWeek: 16,
     title: { en: 'A little argument', ru: 'Небольшой спор', ua: 'Невелика суперечка' },
     lines: [
-      { speaker: 'A', de: 'Ich denke, dass Autos in der Stadt verboten sein sollten.' },
+      { speaker: 'A', de: 'Ich denke, dass es in der Stadt zu viele Autos gibt.' },
       { speaker: 'B', de: 'Wirklich? Warum?' },
       { speaker: 'A', de: 'Weil sie die Luft schmutzig machen.' },
       { speaker: 'B', de: 'Das stimmt, aber viele Leute brauchen ihr Auto für die Arbeit.' },

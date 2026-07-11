@@ -48,7 +48,7 @@ module.exports = {
         { en: 'Include links/rechts abbiegen and geradeaus.', ru: 'Включите links/rechts abbiegen и geradeaus.', ua: 'Включіть links/rechts abbiegen і geradeaus.' },
       ] },
     { type: 'review',
-      text: { en: 'Review day: dictation of numbers and times; revisit the weakest cards.', ru: 'День повторения: диктант чисел и времени; повторите слабейшие карточки.', ua: 'День повторення: диктант чисел і часу; повторіть найслабші картки.' } },
+      text: { en: 'Review day: dictation of numbers and times; revisit the weakest cards.', ru: 'День повторения: диктант чисел и времени; повторите самые слабые карточки.', ua: 'День повторення: диктант чисел і часу; повторіть найслабші картки.' } },
   ],
 
   canDo: [
@@ -65,7 +65,7 @@ module.exports = {
       concept: { en: 'Imperativ for du and ihr', ru: 'Imperativ для du и ihr', ua: 'Imperativ для du та ihr' },
       prompt:  { en: 'Form the imperative.', ru: 'Образуйте повелительное наклонение.', ua: 'Утворіть наказовий спосіб.' },
       items: [
-        { type: 'cloze',  de: '___ langsam! (du, fahren)', answer: 'Fahr' },
+        { type: 'choice', de: '___ langsam! (du, fahren)', answer: 'Fahr', options: ['Fahr', 'Fährst', 'Fahrt'] },
         { type: 'cloze',  de: '___ nach links! (ihr, gehen)', answer: 'Geht' },
         { type: 'choice', de: '___ das Fenster auf! (du, aufmachen)', answer: 'Mach', options: ['Mach', 'Machst', 'Macht'] },
       ],

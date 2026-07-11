@@ -25,7 +25,7 @@ module.exports = {
     { de: 'reisen',       en: 'to travel',    ru: 'путешествовать',  ua: 'подорожувати' },
     { de: 'schwimmen',    en: 'to swim',      ru: 'плавать',         ua: 'плавати' },
     { de: 'laufen',       en: 'to run',       ru: 'бегать',          ua: 'бігати' },
-    { de: 'wandern',      en: 'to hike',      ru: 'ходить в поход',  ua: 'ходити в похід' },
+    { de: 'wandern',      en: 'to hike',      ru: 'ходить в походы', ua: 'ходити в походи' },
     { de: 'Fußball',      en: 'football',     ru: 'футбол',          ua: 'футбол' },
     { de: 'Tennis',       en: 'tennis',       ru: 'теннис',          ua: 'теніс' },
     { de: 'das Buch',     en: 'book',         ru: 'книга',           ua: 'книга' },

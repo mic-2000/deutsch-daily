@@ -101,7 +101,7 @@ module.exports = {
       concept: { en: 'Negation: kein with nouns, nicht otherwise', ru: 'Отрицание: kein с существительными, иначе nicht', ua: 'Заперечення: kein з іменниками, інакше nicht' },
       prompt:  { en: 'Fill in kein-/keinen or nicht.', ru: 'Вставьте kein-/keinen или nicht.', ua: 'Вставте kein-/keinen або nicht.' },
       items: [
-        { type: 'cloze',  de: 'Ich trinke ___ Bier.', answer: 'kein' },
+        { type: 'cloze',  de: 'Ich trinke ___ Wasser.', answer: 'kein' },
         { type: 'choice', de: 'Ich esse ___ Fisch.', answer: 'keinen', options: ['kein', 'keinen', 'nicht'] },
         { type: 'cloze',  de: 'Ich mag den Käse ___.', answer: 'nicht' },
       ],

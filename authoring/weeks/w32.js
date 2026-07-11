@@ -33,9 +33,9 @@ module.exports = {
 
   tasks: [
     { type: 'grammar', grammarFocus: 'Verb-preposition rections II', drill: 'verben-praeposition-2',
-      text: { en: 'Ten more verb-preposition pairs: sich beschweren über, hoffen auf, leiden unter, abhängen von.',
-              ru: 'Ещё десять глагольно-предложных пар: sich beschweren über, hoffen auf, leiden unter, abhängen von.',
-              ua: 'Ще десять дієслівно-прийменникових пар: sich beschweren über, hoffen auf, leiden unter, abhängen von.' } },
+      text: { en: 'More verb-preposition pairs: sich beschweren über, hoffen auf, leiden unter, abhängen von.',
+              ru: 'Новые глагольно-предложные пары: sich beschweren über, hoffen auf, leiden unter, abhängen von.',
+              ua: 'Нові дієслівно-прийменникові пари: sich beschweren über, hoffen auf, leiden unter, abhängen von.' } },
     { type: 'grammar', grammarFocus: 'da(r)- / wo(r)- forms', drill: 'da-wo-komposita',
       text: { en: 'Replace a thing with da(r)- (darauf, davon) and ask about it with wo(r)- (worauf, wovon).',
               ru: 'Заменяйте предмет формой da(r)- (darauf, davon) и спрашивайте о нём через wo(r)- (worauf, wovon).',

@@ -5,7 +5,7 @@ module.exports = {
   phase: 'A1.1',
   level: 'A1',
   theme:      { en: 'Introductions, countries, languages', ru: 'Знакомство, страны, языки', ua: 'Знайомство, країни, мови' },
-  grammar:    { en: 'Präsens, sein/haben, Nominativ, W-/yes-no questions, verb in position 2', ru: 'Präsens, sein/haben, Nominativ, W-/да-нет вопросы, глагол на 2-м месте', ua: 'Präsens, sein/haben, Nominativ, W-/так-ні питання, дієслово на 2-му місці' },
+  grammar:    { en: 'Präsens, sein/haben, Nominativ, W-/yes-no questions, verb in position 2', ru: 'Präsens, sein/haben, Nominativ, W-вопросы и да/нет-вопросы, глагол на 2-м месте', ua: 'Präsens, sein/haben, Nominativ, W-питання і так/ні-питання, дієслово на 2-му місці' },
   vocabTheme: { en: 'greetings, countries, languages', ru: 'приветствия, страны, языки', ua: 'привітання, країни, мови' },
 
   vocab: [
@@ -40,8 +40,8 @@ module.exports = {
               ua: 'Провідміняйте sein і haben у теперішньому часі напам’ять.' } },
     { type: 'grammar', grammarFocus: 'Nominativ articles + questions', drill: 'nominativ-artikel',
       text: { en: 'Nominative articles der/die/das and ein/eine; verb in position 2, W- and yes/no questions.',
-              ru: 'Артикли Nominativ der/die/das и ein/eine; глагол на 2-м месте, W- и да-нет вопросы.',
-              ua: 'Артиклі Nominativ der/die/das та ein/eine; дієслово на 2-му місці, W- і так-ні питання.' } },
+              ru: 'Артикли Nominativ der/die/das и ein/eine; глагол на 2-м месте, W-вопросы и да/нет-вопросы.',
+              ua: 'Артиклі Nominativ der/die/das та ein/eine; дієслово на 2-му місці, W-питання і так/ні-питання.' } },
     { type: 'write',
       text: { en: 'Write a Steckbrief about yourself — 30–40 words (name, country, language).',
               ru: 'Напишите Steckbrief о себе — 30–40 слов (имя, страна, язык).',
@@ -92,7 +92,7 @@ module.exports = {
       prompt:  { en: 'Choose the right article or build the question.', ru: 'Выберите артикль или соберите вопрос.', ua: 'Виберіть артикль або складіть питання.' },
       items: [
         { type: 'choice', de: '___ Mann ist nett.', answer: 'Der', options: ['Der', 'Die', 'Das'] },
-        { type: 'cloze',  de: 'Das ist ___ Frau.', answer: 'eine' },
+        { type: 'cloze',  de: 'Das ist ___ Frau. (ein)', answer: 'eine' },
         { type: 'order',  answer: ['Wie', 'heißt', 'du'] },
       ],
     },

@@ -15,7 +15,7 @@ module.exports = {
   vocab: [
     { de: 'das Auto',         en: 'car',            ru: 'машина',      ua: 'машина' },
     { de: 'der Bus',          en: 'bus',            ru: 'автобус',     ua: 'автобус' },
-    { de: 'die U-Bahn',       en: 'underground',    ru: 'метро',       ua: 'метро' },
+    { de: 'die U-Bahn',       en: 'underground / subway', ru: 'метро', ua: 'метро' },
     { de: 'die S-Bahn',       en: 'suburban train', ru: 'электричка',  ua: 'приміська електричка' },
     { de: 'die Straßenbahn',  en: 'tram',           ru: 'трамвай',     ua: 'трамвай' },
     { de: 'das Fahrrad',      en: 'bicycle',        ru: 'велосипед',   ua: 'велосипед' },
@@ -59,8 +59,8 @@ module.exports = {
               ua: 'Вивчіть решту шість: hinter/neben/über/unter/vor/zwischen та злиття im/am/ins.' } },
     { type: 'write', grammarFocus: 'stellen/legen vs. stehen/liegen',
       text: { en: 'Warm up stellen/legen (Wohin?+Akk) vs. stehen/liegen (Wo?+Dativ), then write 8 sentences about your way to work, including "ich bin … gefahren".',
-              ru: 'Разомнитесь на stellen/legen (Wohin?+Akk) vs. stehen/liegen (Wo?+Dativ), затем напишите 8 предложений о дороге на работу, включая «ich bin … gefahren».',
-              ua: 'Розімніться на stellen/legen (Wohin?+Akk) vs. stehen/liegen (Wo?+Dativ), потім напишіть 8 речень про дорогу на роботу, включно з «ich bin … gefahren».' },
+              ru: 'Сначала потренируйте stellen/legen (Wohin?+Akk) vs. stehen/liegen (Wo?+Dativ), затем напишите 8 предложений о дороге на работу, включая «ich bin … gefahren».',
+              ua: 'Спочатку потренуйте stellen/legen (Wohin?+Akk) vs. stehen/liegen (Wo?+Dativ), потім напишіть 8 речень про дорогу на роботу, включно з «ich bin … gefahren».' },
       checklist: [
         { en: 'Use both a Wo?-sentence and a Wohin?-sentence.', ru: 'Используйте предложение с Wo? и предложение с Wohin?.', ua: 'Використайте речення з Wo? і речення з Wohin?.' },
         { en: 'Include at least three means of transport.', ru: 'Включите минимум три вида транспорта.', ua: 'Включіть щонайменше три види транспорту.' },

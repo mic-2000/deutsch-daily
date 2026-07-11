@@ -4,7 +4,7 @@ module.exports = {
   phase: 'B1.1',
   level: 'B1',
   theme:      { en: 'Wishes; Konjunktiv II', ru: 'Желания; Konjunktiv II', ua: 'Бажання; Konjunktiv II' },
-  grammar:    { en: 'KII forms hätte/wäre/würde; Irrealis + advice; KII of the past', ru: 'Формы KII hätte/wäre/würde; Irrealis + советы; KII прошедшего', ua: 'Форми KII hätte/wäre/würde; Irrealis + поради; KII минулого' },
+  grammar:    { en: 'KII forms hätte/wäre/würde; Irrealis + advice; KII of the past (recognition)', ru: 'Формы KII hätte/wäre/würde; Irrealis + советы; KII прошедшего (рецептивно)', ua: 'Форми KII hätte/wäre/würde; Irrealis + поради; KII минулого (рецептивно)' },
   vocabTheme: { en: 'wishes, advice', ru: 'желания, советы', ua: 'бажання, поради' },
 
   vocab: [
@@ -31,10 +31,10 @@ module.exports = {
       text: { en: 'Konjunktiv II forms: hätte, wäre, würde + Infinitiv.', ru: 'Формы Konjunktiv II: hätte, wäre, würde + Infinitiv.', ua: 'Форми Konjunktiv II: hätte, wäre, würde + Infinitiv.' } },
     { type: 'grammar', grammarFocus: 'KII usage', drill: 'kii-gebrauch',
       text: { en: 'Using KII: unreal conditions (Irrealis) and advice (An deiner Stelle würde ich …).', ru: 'Употребление KII: нереальные условия (Irrealis) и советы (An deiner Stelle würde ich …).', ua: 'Вживання KII: нереальні умови (Irrealis) і поради (An deiner Stelle würde ich …).' } },
-    { type: 'grammar', grammarFocus: 'KII of the past', drill: 'kii-vergangenheit',
-      text: { en: 'KII of the past: hätte gemacht / wäre gefahren.', ru: 'KII прошедшего: hätte gemacht / wäre gefahren.', ua: 'KII минулого: hätte gemacht / wäre gefahren.' } },
+    { type: 'grammar', grammarFocus: 'KII of the past (recognition)', drill: 'kii-vergangenheit',
+      text: { en: 'KII of the past: learn to recognize hätte gemacht / wäre gefahren; produce them only in guided exercises.', ru: 'KII прошедшего: научитесь узнавать hätte gemacht / wäre gefahren; образуйте их только по образцу.', ua: 'KII минулого: навчіться впізнавати hätte gemacht / wäre gefahren; утворюйте їх лише за зразком.' } },
     { type: 'write',
-      text: { en: 'Write a complaint letter to a hotel — 80 words, Goethe Teil-1 format.', ru: 'Напишите письмо-жалобу в отель — 80 слов, формат Goethe Teil 1.', ua: 'Напишіть лист-скаргу в готель — 80 слів, формат Goethe Teil 1.' },
+      text: { en: 'Write a complaint letter to a hotel — about 80 words, in the style of the Goethe B1 writing tasks.', ru: 'Напишите письмо-жалобу в отель — около 80 слов, в стиле письменных заданий Goethe B1.', ua: 'Напишіть лист-скаргу в готель — близько 80 слів, у стилі письмових завдань Goethe B1.' },
       checklist: [
         { en: 'Use at least 2 KII forms.', ru: 'Используйте хотя бы 2 формы KII.', ua: 'Використайте щонайменше 2 форми KII.' },
         { en: 'State the problem and a request.', ru: 'Опишите проблему и просьбу.', ua: 'Опишіть проблему і прохання.' },
@@ -46,7 +46,7 @@ module.exports = {
   canDo: [
     { en: 'I can form the Konjunktiv II with hätte/wäre/würde.', ru: 'Я могу образовать Konjunktiv II с hätte/wäre/würde.', ua: 'Я можу утворити Konjunktiv II з hätte/wäre/würde.' },
     { en: 'I can talk about unreal situations and give advice.', ru: 'Я могу говорить о нереальных ситуациях и давать советы.', ua: 'Я можу говорити про нереальні ситуації та давати поради.' },
-    { en: 'I can say what would have happened in the past.', ru: 'Я могу сказать, что произошло бы в прошлом.', ua: 'Я можу сказати, що сталося б у минулому.' },
+    { en: 'I can understand sentences about what would have happened in the past (hätte gemacht / wäre gefahren).', ru: 'Я понимаю предложения о том, что произошло бы в прошлом (hätte gemacht / wäre gefahren).', ua: 'Я розумію речення про те, що сталося б у минулому (hätte gemacht / wäre gefahren).' },
     { en: 'I can write a formal complaint letter.', ru: 'Я могу написать официальную жалобу.', ua: 'Я можу написати офіційну скаргу.' },
     { en: 'I can express wishes and hypothetical plans.', ru: 'Я могу выражать желания и гипотетические планы.', ua: 'Я можу висловлювати бажання й гіпотетичні плани.' },
   ],
@@ -58,7 +58,7 @@ module.exports = {
       prompt:  { en: 'Fill in the Konjunktiv II form.', ru: 'Вставьте форму Konjunktiv II.', ua: 'Вставте форму Konjunktiv II.' },
       items: [
         { type: 'cloze',  de: 'Ich ___ gern mehr Zeit. (haben → KII)', answer: 'hätte' },
-        { type: 'cloze',  de: 'Es ___ schön, wenn du kommst. (sein → KII)', answer: 'wäre' },
+        { type: 'cloze',  de: 'Es ___ schön, wenn du kommen würdest. (sein → KII)', answer: 'wäre' },
         { type: 'choice', de: 'Ich ___ dir helfen. (werden → KII)', answer: 'würde', options: ['werde', 'würde', 'wurde'] },
       ],
     },
@@ -92,7 +92,7 @@ module.exports = {
     lines: [
       { speaker: 'Gast', de: 'Guten Tag. Ich hätte gern ein ruhigeres Zimmer.' },
       { speaker: 'Rezeption', de: 'Was ist das Problem?' },
-      { speaker: 'Gast', de: 'Das Zimmer ist zu laut. An Ihrer Stelle würde ich es auch ändern.' },
+      { speaker: 'Gast', de: 'Das Zimmer ist zu laut. Ich würde gern in ein anderes Zimmer wechseln.' },
       { speaker: 'Rezeption', de: 'Kein Problem, wir hätten noch ein Zimmer im vierten Stock.' },
     ],
     questions: [

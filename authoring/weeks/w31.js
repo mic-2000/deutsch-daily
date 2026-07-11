@@ -11,7 +11,7 @@ module.exports = {
   vocabTheme: { en: 'job application', ru: 'заявка на работу', ua: 'заявка на роботу' },
 
   vocab: [
-    { de: 'die Bewerbung',            en: 'job application',        ru: 'заявка на приём на работу',        ua: 'заявка на роботу' },
+    { de: 'die Bewerbung',            en: 'job application',        ru: 'заявление о приёме на работу',     ua: 'заявка на роботу' },
     { de: 'das Anschreiben',          en: 'cover letter',           ru: 'сопроводительное письмо',          ua: 'супровідний лист' },
     { de: 'der Lebenslauf',           en: 'CV / résumé',            ru: 'резюме / автобиография',           ua: 'резюме / автобіографія' },
     { de: 'das Vorstellungsgespräch', en: 'job interview',          ru: 'собеседование',                    ua: 'співбесіда' },
@@ -108,7 +108,7 @@ module.exports = {
       { speaker: 'B', de: 'Ja, genau. Ich habe meine Bewerbung letzte Woche geschickt.' },
       { speaker: 'A', de: 'Ihr Lebenslauf ist interessant. Welche Berufserfahrung haben Sie?' },
       { speaker: 'B', de: 'Ich habe fünf Jahre in einer Firma gearbeitet, die Maschinen herstellt.' },
-      { speaker: 'A', de: 'Und warum möchten Sie Ihre alte Stelle kündigen?' },
+      { speaker: 'A', de: 'Und warum möchten Sie Ihre jetzige Stelle kündigen?' },
       { speaker: 'B', de: 'Ich suche eine Aufgabe, bei der ich mehr Verantwortung habe.' },
     ],
     questions: [

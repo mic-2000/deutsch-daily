@@ -156,8 +156,15 @@ const VOCAB = {
     ]
   },
   "6": {
-    "theme": "months, clock, calendar",
+    "theme": "days of the week, months, clock",
     "words": [
+      "der Montag",
+      "der Dienstag",
+      "der Mittwoch",
+      "der Donnerstag",
+      "der Freitag",
+      "der Samstag",
+      "der Sonntag",
       "der Januar",
       "der Februar",
       "der März",

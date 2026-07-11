@@ -91,7 +91,7 @@ module.exports = {
       concept: { en: 'Separable vs. inseparable prefixes', ru: 'Отделяемые vs. неотделяемые приставки', ua: 'Відокремлювані vs. невідокремлювані префікси' },
       prompt:  { en: 'Decide whether the prefix separates.', ru: 'Определите, отделяется ли приставка.', ua: 'Визначте, чи відокремлюється префікс.' },
       items: [
-        { type: 'choice', de: '___ du deine Freunde mit? (mitbringen)', answer: 'Bringst', options: ['Bringst', 'Mitbringst', 'Bringmitst'] },
+        { type: 'choice', de: '___ du deine Freunde mit? (mitbringen)', answer: 'Bringst', options: ['Bringst', 'Mitbringst', 'Bringt'] },
         { type: 'cloze',  de: 'Ich fange die Arbeit um neun ___. (anfangen)', answer: 'an' },
         { type: 'choice', de: 'Er ___ das Buch. (verstehen — untrennbar)', answer: 'versteht', options: ['steht ver', 'versteht', 'ver steht'] },
       ],

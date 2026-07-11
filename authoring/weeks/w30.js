@@ -4,7 +4,7 @@ module.exports = {
   phase: 'B1.1',
   level: 'B1',
   theme:      { en: 'B1.1 consolidation', ru: 'Консолидация B1.1', ua: 'Консолідація B1.1' },
-  grammar:    { en: 'Review Genitiv + Adjektivdeklination; Aktiv→Passiv, direct→KII, Mittelfeld', ru: 'Повторение Genitiv + Adjektivdeklination; Aktiv→Passiv, прямая→KII, Mittelfeld', ua: 'Повторення Genitiv + Adjektivdeklination; Aktiv→Passiv, пряма→KII, Mittelfeld' },
+  grammar:    { en: 'Review Genitiv + Adjektivdeklination; Aktiv→Passiv, Indikativ→KII, Mittelfeld', ru: 'Повторение Genitiv + Adjektivdeklination; Aktiv→Passiv, Indikativ→KII, Mittelfeld', ua: 'Повторення Genitiv + Adjektivdeklination; Aktiv→Passiv, Indikativ→KII, Mittelfeld' },
   vocabTheme: { en: 'abstract vocabulary', ru: 'абстрактная лексика', ua: 'абстрактна лексика' },
 
   vocab: [
@@ -16,7 +16,7 @@ module.exports = {
     { de: 'der Eindruck',     en: 'impression',         ru: 'впечатление',    ua: 'враження' },
     { de: 'die Notwendigkeit', en: 'necessity',         ru: 'необходимость',  ua: 'необхідність' },
     { de: 'die Entwicklung',  en: 'development',        ru: 'развитие',       ua: 'розвиток' },
-    { de: 'die Lösung',       en: 'solution',           ru: 'решение',        ua: 'рішення' },
+    { de: 'die Lösung',       en: 'solution',           ru: 'решение',        ua: 'розв’язання' },
     { de: 'das Ziel',         en: 'goal',               ru: 'цель',           ua: 'мета' },
     { de: 'die Erfahrung',    en: 'experience',         ru: 'опыт',           ua: 'досвід' },
     { de: 'der Zweifel',      en: 'doubt',              ru: 'сомнение',       ua: 'сумнів' },
@@ -29,7 +29,7 @@ module.exports = {
     { type: 'review', drill: 'kasus-wdh-b1',
       text: { en: 'Consolidation: Genitiv and Adjektivdeklination across all three declension types.', ru: 'Консолидация: Genitiv и Adjektivdeklination во всех трёх типах.', ua: 'Консолідація: Genitiv і Adjektivdeklination в усіх трьох типах.' } },
     { type: 'review',
-      text: { en: 'Consolidation drills: Aktiv→Passiv, direct→KII, and Mittelfeld order (Ich gebe es ihm).', ru: 'Дриллы: Aktiv→Passiv, прямая→KII и порядок Mittelfeld (Ich gebe es ihm).', ua: 'Дрили: Aktiv→Passiv, пряма→KII і порядок Mittelfeld (Ich gebe es ihm).' } },
+      text: { en: 'Consolidation drills: Aktiv→Passiv, Indikativ→KII, and Mittelfeld order (Ich gebe es ihm).', ru: 'Дриллы: Aktiv→Passiv, Indikativ→KII и порядок Mittelfeld (Ich gebe es ihm).', ua: 'Дрили: Aktiv→Passiv, Indikativ→KII і порядок Mittelfeld (Ich gebe es ihm).' } },
     { type: 'read',
       text: { en: 'Reading day: an original B1 reading text; the rest of the abstract set is receptive.', ru: 'День чтения: оригинальный текст уровня B1; остаток абстрактного набора — рецептивно.', ua: 'День читання: оригінальний текст рівня B1; решта абстрактного набору — рецептивно.' } },
     { type: 'write',

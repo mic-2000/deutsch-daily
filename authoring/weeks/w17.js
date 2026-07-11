@@ -57,7 +57,7 @@ module.exports = {
   drills: {
     'wenn-als': {
       level: 'A2',
-      concept: { en: 'wenn vs. als', ru: 'wenn против als', ua: 'wenn проти als' },
+      concept: { en: 'wenn vs. als', ru: 'wenn vs. als', ua: 'wenn vs. als' },
       prompt:  { en: 'Choose wenn or als.', ru: 'Выберите wenn или als.', ua: 'Виберіть wenn або als.' },
       items: [
         { type: 'choice', de: '___ ich klein war, wohnte ich in Kyjiw.', answer: 'Als', options: ['Als', 'Wenn', 'Wann'] },
@@ -70,8 +70,8 @@ module.exports = {
       concept: { en: 'während / bevor / sobald', ru: 'während / bevor / sobald', ua: 'während / bevor / sobald' },
       prompt:  { en: 'Choose the temporal conjunction.', ru: 'Выберите временной союз.', ua: 'Виберіть часовий сполучник.' },
       items: [
-        { type: 'choice', de: '___ ich koche, höre ich Musik.', answer: 'Während', options: ['Während', 'Bevor', 'Sobald'] },
-        { type: 'choice', de: 'Ruf mich an, ___ du ankommst.', answer: 'sobald', options: ['während', 'bevor', 'sobald'] },
+        { type: 'cloze',  de: '___ ich koche, höre ich Musik. (while)', answer: 'Während' },
+        { type: 'cloze',  de: 'Ruf mich an, ___ du ankommst. (as soon as)', answer: 'sobald' },
         { type: 'cloze',  de: '___ ich schlafen gehe, lese ich ein Buch. (before)', answer: 'Bevor' },
       ],
     },
@@ -82,7 +82,7 @@ module.exports = {
       items: [
         { type: 'cloze',  de: 'Nachdem ich gegessen ___, ging ich spazieren. (haben)', answer: 'hatte' },
         { type: 'cloze',  de: 'Nachdem er angekommen ___, rief er an. (sein)', answer: 'war' },
-        { type: 'order',  answer: ['Nachdem', 'wir', 'gegessen', 'hatten,', 'gingen', 'wir'] },
+        { type: 'order',  answer: ['Nachdem', 'wir', 'gegessen', 'hatten,', 'gingen', 'wir', 'nach', 'Hause'] },
       ],
     },
   },

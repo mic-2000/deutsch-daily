@@ -43,8 +43,8 @@ module.exports = {
               ua: "Використовуйте зворотні займенники в Dativ (mir/dir/sich), коли є прямий додаток: sich die Haare waschen, sich etwas merken." } },
     { type: "listen",
       text: { en: "Listen to the dialogue 'Mein Morgen' and answer the true/false questions. Notice accusative vs dative reflexives.",
-              ru: "Прослушайте диалог «Mein Morgen» и ответьте на вопросы верно/неверно. Обратите внимание на Akkusativ и Dativ возвратных глаголов.",
-              ua: "Прослухайте діалог «Mein Morgen» і дайте відповіді правда/неправда. Зверніть увагу на Akkusativ і Dativ зворотних дієслів." } },
+              ru: "Прослушайте диалог «Mein Morgen» и ответьте на вопросы верно/неверно. Обратите внимание на возвратные местоимения в Akkusativ и Dativ.",
+              ua: "Прослухайте діалог «Mein Morgen» і дайте відповіді правда/неправда. Зверніть увагу на зворотні займенники в Akkusativ і Dativ." } },
     { type: "write",
       text: { en: "Write about your morning ritual — 8–10 sentences using at least 5 reflexive verbs.",
               ru: "Опишите свой утренний ритуал — 8–10 предложений, используя не менее 5 возвратных глаголов.",
@@ -56,8 +56,8 @@ module.exports = {
       ] },
     { type: "review", drill: "reflexiv-akkusativ",
       text: { en: "Review week 19: fill in reflexive verbs and recap the accusative vs dative pronouns out loud.",
-              ru: "Повторение недели 19: заполните пропуски с возвратными глаголами и повторите вслух Akkusativ vs Dativ местоимения.",
-              ua: "Повторення тижня 19: заповніть пропуски зі зворотними дієсловами й повторіть уголос Akkusativ vs Dativ займенники." } },
+              ru: "Повторение недели 19: заполните пропуски с возвратными глаголами и повторите вслух местоимения в Akkusativ и Dativ.",
+              ua: "Повторення тижня 19: заповніть пропуски зі зворотними дієсловами й повторіть уголос займенники в Akkusativ і Dativ." } },
   ],
 
   canDo: [

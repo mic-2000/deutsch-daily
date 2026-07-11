@@ -18,7 +18,7 @@ module.exports = {
     { de: 'vergessen zu',         en: 'to forget to',         ru: 'забывать (что-то сделать)', ua: 'забувати (щось зробити)' },
     { de: 'anfangen zu',          en: 'to start to',          ru: 'начинать (что-то делать)', ua: 'починати (щось робити)' },
     { de: 'um … zu',              en: 'in order to',          ru: 'чтобы (с целью)',         ua: 'щоб (з метою)' },
-    { de: 'damit',                en: 'so that',              ru: 'чтобы (для другого лица)', ua: 'щоб (для іншої особи)' },
+    { de: 'damit',                en: 'so that',              ru: 'чтобы (другой субъект)',  ua: 'щоб (інший суб’єкт)' },
     { de: 'das Ziel',             en: 'goal',                 ru: 'цель',                    ua: 'мета' },
     { de: 'der Plan',             en: 'plan',                 ru: 'план',                    ua: 'план' },
     { de: 'sich freuen auf',      en: 'to look forward to',   ru: 'радоваться (предстоящему)', ua: 'радіти (майбутньому)' },
@@ -94,7 +94,7 @@ module.exports = {
       prompt:  { en: 'Fill in the correct preposition.', ru: 'Вставьте правильный предлог.', ua: 'Вставте правильний прийменник.' },
       items: [
         { type: 'cloze',  de: 'Ich warte ___ den Bus.', answer: 'auf' },
-        { type: 'choice', de: 'Wir freuen uns ___ das Wochenende.', answer: 'auf', options: ['auf', 'über', 'für'] },
+        { type: 'choice', de: 'Wir freuen uns schon ___ das Wochenende.', answer: 'auf', options: ['auf', 'über', 'für'] },
         { type: 'cloze',  de: 'Denkst du oft ___ deine Familie?', answer: 'an' },
       ],
     },

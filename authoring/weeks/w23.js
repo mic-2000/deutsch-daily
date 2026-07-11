@@ -9,8 +9,8 @@ module.exports = {
 
   vocab: [
     { de: 'Könnten Sie …?',   en: 'Could you …?',        ru: 'Не могли бы вы …?',   ua: 'Чи не могли б ви …?' },
-    { de: 'Würden Sie …?',    en: 'Would you …?',        ru: 'Вы бы …?',            ua: 'Ви б …?' },
-    { de: 'Ich hätte gern …', en: "I'd like …",          ru: 'Я хотел бы …',        ua: 'Я хотів би …' },
+    { de: 'Würden Sie …?',    en: 'Would you …?',        ru: 'Вы бы …? (вежливая просьба)', ua: 'Ви б …? (ввічливе прохання)' },
+    { de: 'Ich hätte gern …', en: "I'd like … (ordering)", ru: 'Я хотел бы … (заказ)', ua: 'Я хотів би … (замовлення)' },
     { de: 'Ich möchte …',     en: 'I would like …',      ru: 'Я хотел бы …',        ua: 'Я хотів би …' },
     { de: 'die Speisekarte',  en: 'menu',                ru: 'меню',                ua: 'меню' },
     { de: 'die Bestellung',   en: 'order',               ru: 'заказ',               ua: 'замовлення' },
@@ -33,7 +33,7 @@ module.exports = {
     { type: 'grammar', grammarFocus: 'Polite requests (KII)', drill: 'kii-hoeflich',
       text: { en: 'Polite requests: könnte, würde gern, hätte gern.', ru: 'Вежливые просьбы: könnte, würde gern, hätte gern.', ua: 'Ввічливі прохання: könnte, würde gern, hätte gern.' } },
     { type: 'grammar', grammarFocus: 'Advice with sollte', drill: 'sollte-rat',
-      text: { en: 'Giving advice with sollte (+ dürfte/müsste).', ru: 'Советы с sollte (+ dürfte/müsste).', ua: 'Поради з sollte (+ dürfte/müsste).' } },
+      text: { en: 'Giving advice with sollte.', ru: 'Советы с sollte.', ua: 'Поради з sollte.' } },
     { type: 'listen',
       text: { en: 'Integration: a restaurant dialogue "Im Restaurant" with comprehension checks.', ru: 'Интеграция: диалог в ресторане «Im Restaurant» с проверками.', ua: 'Інтеграція: діалог у ресторані «Im Restaurant» з перевірками.' } },
     { type: 'write',
@@ -60,8 +60,8 @@ module.exports = {
       concept: { en: 'Polite Konjunktiv II requests', ru: 'Вежливые просьбы в Konjunktiv II', ua: 'Ввічливі прохання в Konjunktiv II' },
       prompt:  { en: 'Choose the polite form.', ru: 'Выберите вежливую форму.', ua: 'Виберіть ввічливу форму.' },
       items: [
-        { type: 'choice', de: '___ Sie mir bitte helfen?', answer: 'Könnten', options: ['Können', 'Könnten', 'Konnten'] },
-        { type: 'cloze',  de: 'Ich ___ gern einen Kaffee. (hätte)', answer: 'hätte' },
+        { type: 'choice', de: '___ Sie mir bitte helfen? (Konjunktiv II)', answer: 'Könnten', options: ['Können', 'Könnten', 'Konnten'] },
+        { type: 'cloze',  de: 'Ich ___ gern einen Kaffee. (haben, höflich)', answer: 'hätte' },
         { type: 'order',  answer: ['Würden', 'Sie', 'die', 'Rechnung', 'bringen?'] },
       ],
     },
@@ -72,7 +72,7 @@ module.exports = {
       items: [
         { type: 'cloze',  de: 'Du ___ mehr schlafen. (sollte, du-form)', answer: 'solltest' },
         { type: 'choice', de: 'Ihr ___ einen Arzt fragen.', answer: 'solltet', options: ['sollt', 'solltet', 'sollten'] },
-        { type: 'cloze',  de: 'Man ___ höflich sein. (sollte)', answer: 'sollte' },
+        { type: 'cloze',  de: 'Man ___ höflich sein. (sollen, Rat)', answer: 'sollte' },
       ],
     },
   },

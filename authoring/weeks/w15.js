@@ -13,7 +13,7 @@ module.exports = {
     // --- reused from v1 week 11 (index-matched glosses) ---
     { de: "der Charakter", en: "character",   ru: "характер",     ua: "характер" },
     { de: "nett",          en: "nice",        ru: "милый",        ua: "милий" },
-    { de: "freundlich",    en: "friendly",    ru: "дружелюбный",  ua: "дружній" },
+    { de: "freundlich",    en: "friendly",    ru: "дружелюбный",  ua: "привітний, доброзичливий" },
     { de: "höflich",       en: "polite",      ru: "вежливый",     ua: "ввічливий" },
     { de: "lustig",        en: "funny",       ru: "весёлый",      ua: "веселий" },
     { de: "ernst",         en: "serious",     ru: "серьёзный",    ua: "серйозний" },
@@ -108,7 +108,7 @@ module.exports = {
     vocabularyMaxWeek: 15,
     title: { en: "Two cities", ru: "Два города", ua: "Два міста" },
     lines: [
-      { speaker: "A", de: "Wo wohnst du lieber, in Hamburg oder in München?" },
+      { speaker: "A", de: "Wo möchtest du lieber wohnen, in Hamburg oder in München?" },
       { speaker: "B", de: "München ist schöner, aber Hamburg ist größer als München." },
       { speaker: "A", de: "Ist das Leben in München teurer?" },
       { speaker: "B", de: "Ja, München ist am teuersten. Hamburg ist nicht so teuer wie München." },

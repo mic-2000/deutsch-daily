@@ -21,7 +21,7 @@ module.exports = {
     { de: 'Mit freundlichen Grüßen',          en: 'Kind regards',                     ru: 'С уважением',                   ua: 'З повагою' },
     { de: 'Ich schreibe Ihnen, weil …',       en: 'I am writing to you because …',    ru: 'Я пишу вам, потому что …',      ua: 'Я пишу вам, тому що …' },
     { de: 'Ich freue mich auf Ihre Antwort',  en: 'I look forward to your reply',     ru: 'Жду вашего ответа',             ua: 'Чекаю на вашу відповідь' },
-    { de: 'Liebe Grüße',                      en: 'Best wishes (informal)',           ru: 'С наилучшими пожеланиями',      ua: 'З найкращими побажаннями' },
+    { de: 'Liebe Grüße',                      en: 'Best wishes (informal)',           ru: 'С наилучшими пожеланиями (неформально)', ua: 'З найкращими побажаннями (неформально)' },
     { de: 'die Stellungnahme',                en: 'statement / opinion piece',        ru: 'заявление / мнение',            ua: 'заява / думка' },
   ],
 
@@ -55,8 +55,8 @@ module.exports = {
   drills: {
     'pro-contra': {
       level: 'B1',
-      concept: { en: 'Pro/contra discourse markers', ru: 'Связки Pro/Contra', ua: 'Зв’язки Pro/Contra' },
-      prompt:  { en: 'Choose the right discourse marker.', ru: 'Выберите правильную связку.', ua: 'Виберіть правильний зв’язок.' },
+      concept: { en: 'Pro/contra discourse markers', ru: 'Связки Pro/Contra', ua: 'Слова-зв’язки Pro/Contra' },
+      prompt:  { en: 'Choose the right discourse marker.', ru: 'Выберите правильную связку.', ua: 'Виберіть правильне слово-зв’язку.' },
       items: [
         { type: 'choice', de: '___ ist das Auto praktisch, andererseits teuer.', answer: 'Einerseits', options: ['Einerseits', 'Andererseits', 'Trotzdem'] },
         { type: 'cloze',  de: '___ kann man sagen, dass beide Seiten Recht haben. (in conclusion)', answer: 'Zusammenfassend' },

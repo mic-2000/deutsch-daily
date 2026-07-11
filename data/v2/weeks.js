@@ -274,7 +274,7 @@ const WEEKS = [
       },
       {
         "type": "review",
-        "text": "Review week 5, then give a spoken audio tour of your flat using 3 bullet points.",
+        "text": "Review week 5, then give a spoken tour of your flat using 3 bullet points.",
         "drill": "dativ-artikel"
       }
     ]
@@ -285,7 +285,7 @@ const WEEKS = [
     "level": "A1",
     "theme": "Time and calendar (A1.1 consolidation)",
     "grammar": "Time prepositions am/im/um/von…bis, clock times, ordinal numbers and dates, review of the cases",
-    "vocab": "months, clock, calendar",
+    "vocab": "days of the week, months, clock",
     "verbFocus": [],
     "tasks": [
       {
@@ -309,7 +309,7 @@ const WEEKS = [
         "type": "write",
         "text": "Skills check: write “My day by the clock” in 6–8 sentences, then do a time dictation.",
         "checklist": [
-          "Give at least four times of day with um … Uhr.",
+          "Give at least four clock times with um … Uhr.",
           "Use am with a day of the week at least once.",
           "Write down every time you hear in the dictation."
         ]
@@ -570,7 +570,7 @@ const WEEKS = [
       },
       {
         "type": "grammar",
-        "text": "denn (because) and sondern (but rather): position 0 vs. verb-second contrast.",
+        "text": "denn (because) and sondern (but rather, after a negation) — both stay in position 0 like und/aber/oder.",
         "grammarFocus": "denn / sondern",
         "drill": "denn-sondern"
       },
@@ -590,7 +590,7 @@ const WEEKS = [
       },
       {
         "type": "review",
-        "text": "Review day: add plural forms (Nasen, Haare, Bäuche); dictation."
+        "text": "Review day: add plural forms (Nasen, Augen, Bäuche); dictation."
       }
     ]
   },
@@ -669,7 +669,7 @@ const WEEKS = [
       },
       {
         "type": "listen",
-        "text": "Listen to a birthday dialogue. Learn the rule: Perfekt is common in speech, Präteritum in written narrative — and sein, haben and modal verbs are usually used in Präteritum in everyday speech.",
+        "text": "Listen to a birthday dialogue. Learn the rule: Perfekt is common in speech, Präteritum in written narrative — and sein, haben and modal verbs are usually used in the Präteritum even in everyday speech.",
         "grammarFocus": "tense rule: Perfekt vs Präteritum"
       },
       {
@@ -999,7 +999,7 @@ const WEEKS = [
       },
       {
         "type": "listen",
-        "text": "Listen to the dialogue \"Im Kleidungsgeschäft\" and answer the true/false questions. Note how anziehen/ausziehen (put on / take off clothes) differs from the reflexive sich anziehen (get dressed)."
+        "text": "Listen to the dialogue \"Im Kleidungsgeschäft\" and answer the true/false questions. Note the verb anprobieren (to try on); remember that anziehen/ausziehen (put on / take off clothes) differs from the reflexive sich anziehen (get dressed)."
       },
       {
         "type": "write",
@@ -1139,7 +1139,7 @@ const WEEKS = [
       },
       {
         "type": "grammar",
-        "text": "Giving advice with sollte (+ dürfte/müsste).",
+        "text": "Giving advice with sollte.",
         "grammarFocus": "Advice with sollte",
         "drill": "sollte-rat"
       },
@@ -1165,7 +1165,7 @@ const WEEKS = [
     "n": 24,
     "phase": "A2.2",
     "level": "A2",
-    "theme": "Goethe A2 exam week",
+    "theme": "A2 exam week",
     "grammar": "No new grammar — exam-format modules (Lesen/Hören/Schreiben/Sprechen)",
     "vocab": "useful exam words",
     "verbFocus": [],
@@ -1350,7 +1350,7 @@ const WEEKS = [
     "phase": "B1.1",
     "level": "B1",
     "theme": "Processes; the passive",
-    "grammar": "Passive present/past + man-sentences; modal passive; lassen + infinitive; von/durch",
+    "grammar": "Passive present/past + man-sentences; modal passive; von/durch; lassen + infinitive (recognition)",
     "vocab": "processes and instructions",
     "verbFocus": [
       "herstellen",
@@ -1381,8 +1381,8 @@ const WEEKS = [
       },
       {
         "type": "grammar",
-        "text": "Use lassen + infinitive (etwas reparieren lassen) and name the agent with von (person) or durch (means).",
-        "grammarFocus": "lassen + infinitive; agent with von/durch",
+        "text": "Name the agent with von (person) or durch (means); learn to understand lassen + infinitive (etwas reparieren lassen).",
+        "grammarFocus": "agent with von/durch; lassen + infinitive (receptive)",
         "drill": "passiv-agens"
       },
       {
@@ -1406,7 +1406,7 @@ const WEEKS = [
     "phase": "B1.1",
     "level": "B1",
     "theme": "Wishes; Konjunktiv II",
-    "grammar": "KII forms hätte/wäre/würde; Irrealis + advice; KII of the past",
+    "grammar": "KII forms hätte/wäre/würde; Irrealis + advice; KII of the past (recognition)",
     "vocab": "wishes, advice",
     "verbFocus": [
       "raten",
@@ -1428,13 +1428,13 @@ const WEEKS = [
       },
       {
         "type": "grammar",
-        "text": "KII of the past: hätte gemacht / wäre gefahren.",
-        "grammarFocus": "KII of the past",
+        "text": "KII of the past: learn to recognize hätte gemacht / wäre gefahren; produce them only in guided exercises.",
+        "grammarFocus": "KII of the past (recognition)",
         "drill": "kii-vergangenheit"
       },
       {
         "type": "write",
-        "text": "Write a complaint letter to a hotel — 80 words, Goethe Teil-1 format.",
+        "text": "Write a complaint letter to a hotel — about 80 words, in the style of the Goethe B1 writing tasks.",
         "checklist": [
           "Use at least 2 KII forms.",
           "State the problem and a request."
@@ -1451,7 +1451,7 @@ const WEEKS = [
     "phase": "B1.1",
     "level": "B1",
     "theme": "B1.1 consolidation",
-    "grammar": "Review Genitiv + Adjektivdeklination; Aktiv→Passiv, direct→KII, Mittelfeld",
+    "grammar": "Review Genitiv + Adjektivdeklination; Aktiv→Passiv, Indikativ→KII, Mittelfeld",
     "vocab": "abstract vocabulary",
     "verbFocus": [],
     "tasks": [
@@ -1462,7 +1462,7 @@ const WEEKS = [
       },
       {
         "type": "review",
-        "text": "Consolidation drills: Aktiv→Passiv, direct→KII, and Mittelfeld order (Ich gebe es ihm)."
+        "text": "Consolidation drills: Aktiv→Passiv, Indikativ→KII, and Mittelfeld order (Ich gebe es ihm)."
       },
       {
         "type": "read",
@@ -1546,7 +1546,7 @@ const WEEKS = [
     "tasks": [
       {
         "type": "grammar",
-        "text": "Ten more verb-preposition pairs: sich beschweren über, hoffen auf, leiden unter, abhängen von.",
+        "text": "More verb-preposition pairs: sich beschweren über, hoffen auf, leiden unter, abhängen von.",
         "grammarFocus": "Verb-preposition rections II",
         "drill": "verben-praeposition-2"
       },

@@ -44,7 +44,7 @@ module.exports = {
     { de: 'hell',            en: 'bright',      ru: 'светлый',    ua: 'світлий' },
     { de: 'modern',          en: 'modern',      ru: 'современный', ua: 'сучасний' },
     { de: 'wohnen',          en: 'to live',     ru: 'жить',       ua: 'жити' },
-    { de: 'mieten',          en: 'to rent',     ru: 'снимать',    ua: 'орендувати' },
+    { de: 'mieten',          en: 'to rent',     ru: 'снимать (жильё)', ua: 'орендувати' },
   ],
 
   verbFocus: ['helfen', 'gefallen', 'gehören', 'danken', 'folgen', 'gratulieren', 'passen', 'fehlen', 'schmecken'],
@@ -73,9 +73,9 @@ module.exports = {
         { en: 'Use one dative verb, e.g. Das Zimmer gefällt mir.', ru: 'Используйте один глагол с Dativ, напр. Das Zimmer gefällt mir.', ua: 'Використайте одне дієслово з Dativ, напр. Das Zimmer gefällt mir.' },
       ] },
     { type: 'review', drill: 'dativ-artikel',
-      text: { en: 'Review week 5, then give a spoken audio tour of your flat using 3 bullet points.',
-              ru: 'Повторите неделю 5, затем проведите устную аудио-экскурсию по своей квартире по 3 пунктам.',
-              ua: 'Повторіть тиждень 5, потім проведіть усну аудіо-екскурсію своєю квартирою за 3 пунктами.' } },
+      text: { en: 'Review week 5, then give a spoken tour of your flat using 3 bullet points.',
+              ru: 'Повторите неделю 5, затем проведите устную экскурсию по своей квартире по 3 пунктам.',
+              ua: 'Повторіть тиждень 5, потім проведіть усну екскурсію своєю квартирою за 3 пунктами.' } },
   ],
 
   canDo: [

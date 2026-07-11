@@ -362,7 +362,7 @@ const DIALOGUES = {
       },
       {
         "speaker": "B",
-        "de": "Hallo Max! Sie war wunderbar. Viele Freunde kamen und wir feierten lange."
+        "de": "Hallo Max! Sie war wunderbar. Viele Freunde sind gekommen und wir haben lange gefeiert."
       },
       {
         "speaker": "A",
@@ -370,7 +370,7 @@ const DIALOGUES = {
       },
       {
         "speaker": "B",
-        "de": "Ja, meine Eltern schenkten mir ein Buch. Das war das beste Geschenk."
+        "de": "Ja, meine Eltern haben mir ein Buch geschenkt. Das war das beste Geschenk."
       },
       {
         "speaker": "A",
@@ -387,7 +387,7 @@ const DIALOGUES = {
         "answer": false
       },
       {
-        "de": "Lenas Eltern schenkten ihr ein Buch.",
+        "de": "Lenas Eltern haben ihr ein Buch geschenkt.",
         "answer": true
       },
       {
@@ -404,7 +404,7 @@ const DIALOGUES = {
     "lines": [
       {
         "speaker": "A",
-        "de": "Wo wohnst du lieber, in Hamburg oder in München?"
+        "de": "Wo möchtest du lieber wohnen, in Hamburg oder in München?"
       },
       {
         "speaker": "B",
@@ -450,7 +450,7 @@ const DIALOGUES = {
     "lines": [
       {
         "speaker": "A",
-        "de": "Ich denke, dass Autos in der Stadt verboten sein sollten."
+        "de": "Ich denke, dass es in der Stadt zu viele Autos gibt."
       },
       {
         "speaker": "B",
@@ -526,7 +526,7 @@ const DIALOGUES = {
     "lines": [
       {
         "speaker": "A",
-        "de": "Mein Handy funktioniert nicht mehr."
+        "de": "Die App auf meinem Handy funktioniert nicht mehr."
       },
       {
         "speaker": "B",
@@ -538,12 +538,12 @@ const DIALOGUES = {
       },
       {
         "speaker": "B",
-        "de": "Kein Problem, ich schicke dir eine neue Nachricht."
+        "de": "Kein Problem, ich schicke dir eine E-Mail mit einem neuen Passwort."
       }
     ],
     "questions": [
       {
-        "de": "Das Handy funktioniert nicht.",
+        "de": "Die App funktioniert nicht.",
         "answer": true
       },
       {
@@ -798,7 +798,7 @@ const DIALOGUES = {
       },
       {
         "speaker": "Ansage",
-        "de": "Bitte warten Sie am Gleis drei."
+        "de": "Bitte warten Sie an Gleis drei."
       }
     ],
     "questions": [
@@ -1016,7 +1016,7 @@ const DIALOGUES = {
       },
       {
         "speaker": "Gast",
-        "de": "Das Zimmer ist zu laut. An Ihrer Stelle würde ich es auch ändern."
+        "de": "Das Zimmer ist zu laut. Ich würde gern in ein anderes Zimmer wechseln."
       },
       {
         "speaker": "Rezeption",
@@ -1100,7 +1100,7 @@ const DIALOGUES = {
       },
       {
         "speaker": "A",
-        "de": "Und warum möchten Sie Ihre alte Stelle kündigen?"
+        "de": "Und warum möchten Sie Ihre jetzige Stelle kündigen?"
       },
       {
         "speaker": "B",

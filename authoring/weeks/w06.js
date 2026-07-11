@@ -1,7 +1,7 @@
 /* Week 6 — Time and calendar; A1.1 consolidation (A1, phase A1.1).
    Curriculum source: private/curriculum-redesign-2026-07.md §6 days 26–30.
    Consolidation week: 0 new verbs; day 30 is the A1.1 MILESTONE self-test. Vocab is NEW calendar
-   lexis (months, clock, calendar); days of the week are reviewed from W1. */
+   lexis (weekdays, months, clock, calendar). */
 module.exports = {
   n: 6,
   phase: 'A1.1',
@@ -10,9 +10,17 @@ module.exports = {
   grammar:    { en: 'Time prepositions am/im/um/von…bis, clock times, ordinal numbers and dates, review of the cases',
                 ru: 'Предлоги времени am/im/um/von…bis, время на часах, порядковые числа и даты, повторение падежей',
                 ua: 'Прийменники часу am/im/um/von…bis, час на годиннику, порядкові числа й дати, повторення відмінків' },
-  vocabTheme: { en: 'months, clock, calendar', ru: 'месяцы, часы, календарь', ua: 'місяці, годинник, календар' },
+  vocabTheme: { en: 'days of the week, months, clock', ru: 'дни недели, месяцы, часы', ua: 'дні тижня, місяці, годинник' },
 
   vocab: [
+    // days of the week (NEW)
+    { de: 'der Montag',     en: 'Monday',    ru: 'понедельник', ua: 'понеділок' },
+    { de: 'der Dienstag',   en: 'Tuesday',   ru: 'вторник',     ua: 'вівторок' },
+    { de: 'der Mittwoch',   en: 'Wednesday', ru: 'среда',       ua: 'середа' },
+    { de: 'der Donnerstag', en: 'Thursday',  ru: 'четверг',     ua: 'четвер' },
+    { de: 'der Freitag',    en: 'Friday',    ru: 'пятница',     ua: 'п’ятниця' },
+    { de: 'der Samstag',    en: 'Saturday',  ru: 'суббота',     ua: 'субота' },
+    { de: 'der Sonntag',    en: 'Sunday',    ru: 'воскресенье', ua: 'неділя' },
     // months (NEW)
     { de: 'der Januar',   en: 'January',   ru: 'январь',   ua: 'січень' },
     { de: 'der Februar',  en: 'February',  ru: 'февраль',  ua: 'лютий' },
@@ -55,7 +63,7 @@ module.exports = {
               ru: 'Проверка навыков: напишите «Мой день по часам» в 6–8 предложениях, затем сделайте диктант времени.',
               ua: 'Перевірка навичок: напишіть «Мій день за годинником» у 6–8 реченнях, потім зробіть диктант часу.' },
       checklist: [
-        { en: 'Give at least four times of day with um … Uhr.', ru: 'Укажите минимум четыре времени дня с um … Uhr.', ua: 'Вкажіть щонайменше чотири моменти дня з um … Uhr.' },
+        { en: 'Give at least four clock times with um … Uhr.', ru: 'Укажите время минимум четыре раза с um … Uhr.', ua: 'Вкажіть час щонайменше чотири рази з um … Uhr.' },
         { en: 'Use am with a day of the week at least once.', ru: 'Используйте am с днём недели хотя бы раз.', ua: 'Використайте am з днем тижня хоча б раз.' },
         { en: 'Write down every time you hear in the dictation.', ru: 'Запишите каждое время, которое слышите в диктанте.', ua: 'Запишіть кожен час, який чуєте в диктанті.' },
       ] },
@@ -79,9 +87,9 @@ module.exports = {
       concept: { en: 'Time prepositions am/im/um/von…bis', ru: 'Предлоги времени am/im/um/von…bis', ua: 'Прийменники часу am/im/um/von…bis' },
       prompt:  { en: 'Fill in the right time preposition.', ru: 'Вставьте правильный предлог времени.', ua: 'Вставте правильний прийменник часу.' },
       items: [
-        { type: 'cloze',  de: '___ Montag arbeite ich. (on the day)', answer: 'Am' },
-        { type: 'choice', de: 'Ich habe ___ Juli Urlaub. (in the month)', answer: 'im', options: ['am', 'im', 'um'] },
-        { type: 'cloze',  de: 'Der Kurs beginnt ___ neun Uhr. (at the time)', answer: 'um' },
+        { type: 'cloze',  de: '___ Montag arbeite ich. (Tag)', answer: 'Am' },
+        { type: 'choice', de: 'Ich habe ___ Juli Urlaub. (Monat)', answer: 'im', options: ['am', 'im', 'um'] },
+        { type: 'cloze',  de: 'Der Kurs beginnt ___ neun Uhr. (Uhrzeit)', answer: 'um' },
       ],
     },
     'uhrzeit-datum': {

@@ -16,7 +16,7 @@ module.exports = {
     { de: "der Lehrer",      en: "teacher",             ru: "учитель",                  ua: "вчитель" },
     { de: "die Universität", en: "university",          ru: "университет",              ua: "університет" },
     { de: "der Student",     en: "student (university)", ru: "студент",                 ua: "студент" },
-    { de: "das Studium",     en: "studies",             ru: "учёба (в вузе)",           ua: "навчання (у вузі)" },
+    { de: "das Studium",     en: "studies",             ru: "учёба (в вузе)",           ua: "навчання (в університеті)" },
     { de: "das Fach",        en: "subject",             ru: "предмет",                  ua: "предмет" },
     { de: "die Note",        en: "grade / mark",        ru: "оценка",                   ua: "оцінка" },
     { de: "die Prüfung",     en: "exam",                ru: "экзамен",                  ua: "іспит" },
@@ -31,7 +31,7 @@ module.exports = {
     { de: "der Lebenslauf",  en: "CV / résumé",         ru: "резюме",                   ua: "резюме" },
     { de: "das Praktikum",   en: "internship",          ru: "стажировка",               ua: "стажування" },
     // --- NEW: bureaucracy ---
-    { de: "der Termin",      en: "appointment",         ru: "приём, встреча",           ua: "прийом, зустріч" },
+    { de: "der Termin",      en: "appointment",         ru: "запись на приём, встреча", ua: "запис на прийом, зустріч" },
     { de: "das Formular",    en: "form",                ru: "бланк, анкета",            ua: "бланк, анкета" },
     { de: "der Ausweis",     en: "ID card",             ru: "удостоверение личности",   ua: "посвідчення особи" },
     { de: "der Vertrag",     en: "contract",            ru: "договор",                  ua: "договір" },
@@ -97,7 +97,7 @@ module.exports = {
       concept: { en: "Futur I for assumptions", ru: "Futur I для предположений", ua: "Futur I для припущень" },
       prompt:  { en: "Complete the assumption with werden and wohl.", ru: "Дополните предположение с werden и wohl.", ua: "Доповніть припущення з werden і wohl." },
       items: [
-        { type: "cloze",  de: "Er ist nicht da. Er ___ wohl im Amt sein. (werden)", answer: "wird" },
+        { type: "cloze",  de: "Er ist nicht da. Er ___ wohl auf dem Amt sein. (werden)", answer: "wird" },
         { type: "choice", de: "Maria ___ wahrscheinlich noch arbeiten.", answer: "wird", options: ["wird", "werden", "werdet"] },
         { type: "order",  answer: ["Das", "Formular", "wird", "wohl", "schwer", "sein"] },
       ],

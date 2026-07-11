@@ -142,6 +142,13 @@ window.LOCALE_EN_V2 = {
       "to rent"
     ],
     "6": [
+      "Monday",
+      "Tuesday",
+      "Wednesday",
+      "Thursday",
+      "Friday",
+      "Saturday",
+      "Sunday",
       "January",
       "February",
       "March",
@@ -213,7 +220,7 @@ window.LOCALE_EN_V2 = {
     "9": [
       "car",
       "bus",
-      "underground",
+      "underground / subway",
       "suburban train",
       "tram",
       "bicycle",
@@ -528,7 +535,7 @@ window.LOCALE_EN_V2 = {
     "23": [
       "Could you …?",
       "Would you …?",
-      "I'd like …",
+      "I'd like … (ordering)",
       "I would like …",
       "menu",
       "order",
@@ -573,11 +580,11 @@ window.LOCALE_EN_V2 = {
     ],
     "26": [
       "one day (in a story)",
-      "at first",
+      "at the beginning",
       "all of a sudden",
       "after a while",
       "finally",
-      "to conclude",
+      "in conclusion",
       "in the end",
       "since then"
     ],
@@ -825,7 +832,7 @@ window.LOCALE_EN_V2 = {
         "Learn the dative prepositions aus/bei/mit/nach/seit/von/zu — always followed by the dative.",
         "Learn the personal pronouns in the accusative and dative: mich/mir, dich/dir, ihm/ihr.",
         "Write a description of your room in 8–10 sentences using the dative.",
-        "Review week 5, then give a spoken audio tour of your flat using 3 bullet points."
+        "Review week 5, then give a spoken tour of your flat using 3 bullet points."
       ],
       "canDo": [
         "I can use dative articles and dative verbs (helfen, gefallen, gehören).",
@@ -838,7 +845,7 @@ window.LOCALE_EN_V2 = {
     "6": {
       "theme": "Time and calendar (A1.1 consolidation)",
       "grammar": "Time prepositions am/im/um/von…bis, clock times, ordinal numbers and dates, review of the cases",
-      "vocab": "months, clock, calendar",
+      "vocab": "days of the week, months, clock",
       "tasks": [
         "Learn the time prepositions: am (days), im (months), um (clock time) and von … bis.",
         "Tell the time with halb and Viertel, and say dates with ordinal numbers (am 3. Mai).",
@@ -936,10 +943,10 @@ window.LOCALE_EN_V2 = {
       "vocab": "body, health",
       "tasks": [
         "Coordinating conjunctions und/aber/oder in position 0 (no verb shift).",
-        "denn (because) and sondern (but rather): position 0 vs. verb-second contrast.",
+        "denn (because) and sondern (but rather, after a negation) — both stay in position 0 like und/aber/oder.",
         "Word order: time before place (Ich gehe heute zum Arzt).",
         "Write a short dialogue at the doctor — 8–10 lines with aber/denn.",
-        "Review day: add plural forms (Nasen, Haare, Bäuche); dictation."
+        "Review day: add plural forms (Nasen, Augen, Bäuche); dictation."
       ],
       "canDo": [
         "I can link ideas with und, aber and oder.",
@@ -975,7 +982,7 @@ window.LOCALE_EN_V2 = {
       "tasks": [
         "Learn the Präteritum of sein and haben (war, hatte) and use them to talk about the past.",
         "Learn the Präteritum of the modal verbs: konnte, musste, wollte, durfte, sollte, mochte.",
-        "Listen to a birthday dialogue. Learn the rule: Perfekt is common in speech, Präteritum in written narrative — and sein, haben and modal verbs are usually used in Präteritum in everyday speech.",
+        "Listen to a birthday dialogue. Learn the rule: Perfekt is common in speech, Präteritum in written narrative — and sein, haben and modal verbs are usually used in the Präteritum even in everyday speech.",
         "Write a short biography (60–80 words) in the Präteritum: childhood, studies, profession.",
         "Review week 13: dictate the forms war/hatte and tell about your childhood out loud for a minute."
       ],
@@ -1079,7 +1086,7 @@ window.LOCALE_EN_V2 = {
         "I can build correct subordinate clauses.",
         "I can follow a short technology dialogue.",
         "I can write a clear email to a friend.",
-        "I can assess my A2 mid-level."
+        "I can assess my progress at the A2 midpoint."
       ]
     },
     "19": {
@@ -1108,7 +1115,7 @@ window.LOCALE_EN_V2 = {
       "tasks": [
         "Learn the weak adjective endings after the definite article and dieser/jeder/welcher: der rote Rock, die blaue Jacke, das weiße Hemd.",
         "Use mixed endings after ein/kein/mein: if the article has no ending, the adjective shows gender/case (ein roter Rock, ein weißes Hemd, eine rote Bluse).",
-        "Listen to the dialogue \"Im Kleidungsgeschäft\" and answer the true/false questions. Note how anziehen/ausziehen (put on / take off clothes) differs from the reflexive sich anziehen (get dressed).",
+        "Listen to the dialogue \"Im Kleidungsgeschäft\" and answer the true/false questions. Note the verb anprobieren (to try on); remember that anziehen/ausziehen (put on / take off clothes) differs from the reflexive sich anziehen (get dressed).",
         "Describe three outfits in 60–80 words: what you wear on a workday, at the weekend and to a party.",
         "Review week 20: an adjective-ending cloze, then a spoken TTS dictation of clothing and color words."
       ],
@@ -1164,7 +1171,7 @@ window.LOCALE_EN_V2 = {
       "vocab": "politeness, restaurant",
       "tasks": [
         "Polite requests: könnte, würde gern, hätte gern.",
-        "Giving advice with sollte (+ dürfte/müsste).",
+        "Giving advice with sollte.",
         "Integration: a restaurant dialogue \"Im Restaurant\" with comprehension checks.",
         "Write a polite email or role-play making a reservation — 60–80 words.",
         "Review day: polite formulas dictation; revisit Relativsätze I (W22)."
@@ -1178,7 +1185,7 @@ window.LOCALE_EN_V2 = {
       ]
     },
     "24": {
-      "theme": "Goethe A2 exam week",
+      "theme": "A2 exam week",
       "grammar": "No new grammar — exam-format modules (Lesen/Hören/Schreiben/Sprechen)",
       "vocab": "useful exam words",
       "tasks": [
@@ -1255,49 +1262,49 @@ window.LOCALE_EN_V2 = {
     },
     "28": {
       "theme": "Processes; the passive",
-      "grammar": "Passive present/past + man-sentences; modal passive; lassen + infinitive; von/durch",
+      "grammar": "Passive present/past + man-sentences; modal passive; von/durch; lassen + infinitive (recognition)",
       "vocab": "processes and instructions",
       "tasks": [
         "Form the passive: wird/wurde gebaut, and contrast it with the man-sentence (man baut).",
         "Use the passive with modal verbs: muss repariert werden, kann verstanden werden.",
-        "Use lassen + infinitive (etwas reparieren lassen) and name the agent with von (person) or durch (means).",
+        "Name the agent with von (person) or durch (means); learn to understand lassen + infinitive (etwas reparieren lassen).",
         "Write a recipe or an instruction of about 80 words using the passive and man.",
         "Review week 28: an Aktiv→Passiv cloze, then explain out loud how something works or is made."
       ],
       "canDo": [
         "I can form the passive in the present and past (wird/wurde gebaut) and contrast it with man.",
         "I can use the passive with modal verbs (muss repariert werden).",
-        "I can name the agent with von or durch and use lassen + infinitive.",
+        "I can name the agent with von or durch and understand lassen + infinitive.",
         "I can write a short instruction or recipe using the passive.",
         "I can explain out loud how something works or is made."
       ]
     },
     "29": {
       "theme": "Wishes; Konjunktiv II",
-      "grammar": "KII forms hätte/wäre/würde; Irrealis + advice; KII of the past",
+      "grammar": "KII forms hätte/wäre/würde; Irrealis + advice; KII of the past (recognition)",
       "vocab": "wishes, advice",
       "tasks": [
         "Konjunktiv II forms: hätte, wäre, würde + Infinitiv.",
         "Using KII: unreal conditions (Irrealis) and advice (An deiner Stelle würde ich …).",
-        "KII of the past: hätte gemacht / wäre gefahren.",
-        "Write a complaint letter to a hotel — 80 words, Goethe Teil-1 format.",
+        "KII of the past: learn to recognize hätte gemacht / wäre gefahren; produce them only in guided exercises.",
+        "Write a complaint letter to a hotel — about 80 words, in the style of the Goethe B1 writing tasks.",
         "Review day: spoken monologue \"what would you do with a million\"; revisit Passiv (W28)."
       ],
       "canDo": [
         "I can form the Konjunktiv II with hätte/wäre/würde.",
         "I can talk about unreal situations and give advice.",
-        "I can say what would have happened in the past.",
+        "I can understand sentences about what would have happened in the past (hätte gemacht / wäre gefahren).",
         "I can write a formal complaint letter.",
         "I can express wishes and hypothetical plans."
       ]
     },
     "30": {
       "theme": "B1.1 consolidation",
-      "grammar": "Review Genitiv + Adjektivdeklination; Aktiv→Passiv, direct→KII, Mittelfeld",
+      "grammar": "Review Genitiv + Adjektivdeklination; Aktiv→Passiv, Indikativ→KII, Mittelfeld",
       "vocab": "abstract vocabulary",
       "tasks": [
         "Consolidation: Genitiv and Adjektivdeklination across all three declension types.",
-        "Consolidation drills: Aktiv→Passiv, direct→KII, and Mittelfeld order (Ich gebe es ihm).",
+        "Consolidation drills: Aktiv→Passiv, Indikativ→KII, and Mittelfeld order (Ich gebe es ihm).",
         "Reading day: an original B1 reading text; the rest of the abstract set is receptive.",
         "Grammar check + an 80-word text with at least one Genitiv and one Relativsatz.",
         "MILESTONE: B1-mid self-test across weeks 25–29; mistakes go to the trainer."
@@ -1334,7 +1341,7 @@ window.LOCALE_EN_V2 = {
       "grammar": "More verb-preposition pairs, da(r)-/wo(r)- forms, correlative conjunctions",
       "vocab": "verb-preposition pairs, discussion",
       "tasks": [
-        "Ten more verb-preposition pairs: sich beschweren über, hoffen auf, leiden unter, abhängen von.",
+        "More verb-preposition pairs: sich beschweren über, hoffen auf, leiden unter, abhängen von.",
         "Replace a thing with da(r)- (darauf, davon) and ask about it with wo(r)- (worauf, wovon).",
         "Link ideas with entweder … oder, sowohl … als auch, nicht nur … sondern auch.",
         "Take part in a short discussion: state an opinion and react using worauf/darauf. With a key, roleplay it with the AI; otherwise write the replies.",

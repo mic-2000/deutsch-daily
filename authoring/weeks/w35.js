@@ -4,7 +4,7 @@ module.exports = {
   phase: 'Pruefung',
   level: 'B1',
   theme:      { en: 'Exam: Lesen + Hören', ru: 'Экзамен: Lesen + Hören', ua: 'Іспит: Lesen + Hören' },
-  grammar:    { en: 'No new grammar — reading and listening exam strategies + original simulations', ru: '0 нового — стратегии Lesen/Hören + оригинальные симуляции', ua: '0 нового — стратегії Lesen/Hören + оригінальні симуляції' },
+  grammar:    { en: 'No new grammar — reading and listening exam strategies + original simulations', ru: 'Без новой грамматики — стратегии Lesen/Hören + оригинальные симуляции', ua: 'Без нової граматики — стратегії Lesen/Hören + оригінальні симуляції' },
   vocabTheme: { en: 'exam instruction words', ru: 'инструкционные слова', ua: 'інструкційні слова' },
 
   vocab: [
@@ -16,7 +16,7 @@ module.exports = {
     { de: 'ankreuzen',      en: 'to tick / mark',         ru: 'отметить',     ua: 'позначити' },
     { de: 'richtig',        en: 'correct',                ru: 'правильно',    ua: 'правильно' },
     { de: 'falsch',         en: 'wrong',                  ru: 'неправильно',  ua: 'неправильно' },
-    { de: 'die Zusammenfassung', en: 'summary',           ru: 'резюме',       ua: 'резюме' },
+    { de: 'die Zusammenfassung', en: 'summary',           ru: 'краткое изложение', ua: 'стислий виклад' },
     { de: 'der Hinweis',    en: 'hint / clue',            ru: 'подсказка',    ua: 'підказка' },
   ],
 

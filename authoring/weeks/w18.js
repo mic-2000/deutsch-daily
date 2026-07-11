@@ -46,7 +46,7 @@ module.exports = {
     { en: 'I can build correct subordinate clauses.', ru: 'Я могу строить правильные придаточные.', ua: 'Я можу будувати правильні підрядні.' },
     { en: 'I can follow a short technology dialogue.', ru: 'Я могу понять короткий диалог о технике.', ua: 'Я можу зрозуміти короткий діалог про техніку.' },
     { en: 'I can write a clear email to a friend.', ru: 'Я могу написать понятный e-mail другу.', ua: 'Я можу написати зрозумілий e-mail другу.' },
-    { en: 'I can assess my A2 mid-level.', ru: 'Я могу оценить свой уровень середины A2.', ua: 'Я можу оцінити свій рівень середини A2.' },
+    { en: 'I can assess my progress at the A2 midpoint.', ru: 'Я могу оценить свой прогресс в середине уровня A2.', ua: 'Я можу оцінити свій прогрес у середині рівня A2.' },
   ],
 
   drills: {
@@ -56,7 +56,7 @@ module.exports = {
       prompt:  { en: 'Choose the right past-tense form.', ru: 'Выберите правильную форму прошедшего.', ua: 'Виберіть правильну форму минулого.' },
       items: [
         { type: 'choice', de: 'Gestern ___ ich einen Film gesehen.', answer: 'habe', options: ['habe', 'bin', 'hatte'] },
-        { type: 'cloze',  de: 'Nachdem er gegessen ___, ging er. (Plusquamperfekt, haben)', answer: 'hatte' },
+        { type: 'cloze',  de: 'Nachdem er gegessen ___, ging er zur Arbeit. (Plusquamperfekt, haben)', answer: 'hatte' },
         { type: 'choice', de: 'Als Kind ___ ich viel Sport.', answer: 'machte', options: ['machte', 'gemacht', 'mache'] },
       ],
     },
@@ -68,13 +68,13 @@ module.exports = {
     vocabularyMaxWeek: 18,
     title: { en: 'A problem with the phone', ru: 'Проблема с телефоном', ua: 'Проблема з телефоном' },
     lines: [
-      { speaker: 'A', de: 'Mein Handy funktioniert nicht mehr.' },
+      { speaker: 'A', de: 'Die App auf meinem Handy funktioniert nicht mehr.' },
       { speaker: 'B', de: 'Hast du die App neu heruntergeladen?' },
       { speaker: 'A', de: 'Ja, aber ich habe mein Passwort vergessen.' },
-      { speaker: 'B', de: 'Kein Problem, ich schicke dir eine neue Nachricht.' },
+      { speaker: 'B', de: 'Kein Problem, ich schicke dir eine E-Mail mit einem neuen Passwort.' },
     ],
     questions: [
-      { de: 'Das Handy funktioniert nicht.', answer: true, text: { en: 'The phone does not work.', ru: 'Телефон не работает.', ua: 'Телефон не працює.' } },
+      { de: 'Die App funktioniert nicht.', answer: true, text: { en: 'The app does not work.', ru: 'Приложение не работает.', ua: 'Застосунок не працює.' } },
       { de: 'A hat das Passwort vergessen.', answer: true, text: { en: 'A forgot the password.', ru: 'A забыл пароль.', ua: 'A забув пароль.' } },
       { de: 'B kann nicht helfen.', answer: false, text: { en: 'B cannot help.', ru: 'B не может помочь.', ua: 'B не може допомогти.' } },
     ],

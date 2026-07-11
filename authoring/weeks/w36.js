@@ -4,7 +4,7 @@ module.exports = {
   phase: 'Pruefung',
   level: 'B1',
   theme:      { en: 'Exam: Schreiben + Sprechen', ru: 'Экзамен: Schreiben + Sprechen', ua: 'Іспит: Schreiben + Sprechen' },
-  grammar:    { en: 'No new grammar — writing and speaking formats + general rehearsal', ru: '0 нового — форматы Schreiben/Sprechen + генеральная репетиция', ua: '0 нового — формати Schreiben/Sprechen + генеральна репетиція' },
+  grammar:    { en: 'No new grammar — writing and speaking formats + general rehearsal', ru: 'Без новой грамматики — форматы Schreiben/Sprechen + генеральная репетиция', ua: 'Без нової граматики — формати Schreiben/Sprechen + генеральна репетиція' },
   vocabTheme: { en: 'exam readiness', ru: 'готовность к экзамену', ua: 'готовність до іспиту' },
 
   vocab: [
