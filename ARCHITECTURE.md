@@ -470,13 +470,15 @@ collection upserts **merge per id** so a create + later mastery update collapse 
   grandfathers every existing user and never traps an offline read (which lands in the `catch`, where
   the gate flag stays false). Otherwise it resolves the language **before** the first render, then
   `await setLang(lang, true)` loads that one locale and renders **once** — no language flash.
-- **Course v2 migration.** For a `planner_data`-owning page, `initApp` runs `_migratePlannerV2(payload)`
-  before applying it: a **pre-v2** row (no `courseVersion`, day numbers keyed to the old 24-week order)
-  is reset to a **clean v2 course state** — `{ courseVersion:2, currentDay/viewingDay = start day for
-  the onboarding level (A1→1, A2→61, B1→121), completed:{}, dayStats:{}, grammarReview:{}, migratedFrom
-  }` — and immediately persisted (`_pushProgress`) so it sticks. Old day numbers / `completed` /
-  `lessons` are **not** remapped (redesign §2); safe trainer progress (`verbs_data` by infinitive key,
-  vocab modes/levels) is kept by the trainer pages. An already-v2 payload is returned untouched
+- **Course v2 migration.** `initApp` fetches `planner_data` on **every** field page (added to the
+  select when it isn't the page's own column) and runs `_migratePlannerV2` on it, so the reset fires
+  on whichever page a v1 account loads first: a **pre-v2** row (no `courseVersion`, day numbers keyed
+  to the old 24-week order) is reset to a **clean v2 course state** — `{ courseVersion:2,
+  currentDay/viewingDay = start day for the onboarding level (A1→1, A2→61, B1→121), completed:{},
+  dayStats:{}, grammarReview:{}, migratedFrom }` — and immediately persisted (`_pushProgress`) so it
+  sticks. Old day numbers / `completed` / `lessons` are **not** remapped (redesign §2); `verbs_data`
+  (keyed by infinitive) and vocab `modes`/`levels` are kept, while stale index-keyed vocab mastery is
+  reset by the vocab engine (see the bullet below). An already-v2 payload is returned untouched
   (idempotent). New accounts get `courseVersion:2` stamped by `/welcome`. Because the reset is
   silent otherwise (redesign §2 "Do not hide the reset"), `/today`'s intro shows a **one-time
   dismissible notice** whenever `planner.migratedFrom` exists without an ack (`migrationPending()`);
@@ -492,6 +494,15 @@ collection upserts **merge per id** so a create + later mastery update collapse 
   (a future "legacy notes" viewer could still surface them); native / never-migrated accounts keep
   everything. Both readers — `/planner`'s `loadLessonsThenRender` and `/today`'s `loadDayLesson` —
   go through `loadLessonsFromCloud`, so both are covered. (Guarded by `tests/legacy-lessons.test.js`.)
+- **Stale v1 vocab mastery is reset on first v2 load.** `vocab_data`'s `mastery`/`pluralMastery` are
+  index-keyed (`"week-idx"`) against `VOCAB`, so cards graded on the pre-v2 word lists would silently
+  re-attach to unrelated v2 words (redesign §2/§6). `VocabTrainer.applyData` drops both maps —
+  keeping `modes`/`levels`/`newLog` — when the payload lacks the `courseVersion` stamp AND either the
+  account was migrated (`courseMigratedAt()`, the getter over `_noteMigratedAt`'s timestamp) or the
+  payload's `savedAt` predates the v2 cutover (a v1 vocab-only account that never opened the
+  planner). `VocabTrainer.serialize()` stamps `courseVersion` on every save, so the reset runs at
+  most once per account; v2-native accounts are never touched. The verb store needs no reset — it is
+  keyed by infinitive. (Guarded by `tests/course-v2-cutover.test.js`.)
 - `saveToCloud()` / `saveLangToCloud(code)` / `saveThemeToCloud(theme)` / `saveVerbsToCloud(payload)`
   / `saveVocabToCloud(payload)` / `saveOnboardingToCloud(payload)` — all route through the internal `_pushProgress(fields)`, which
   `upsert`s `{ user_id, …fields, updated_at }` on the `progress` row (`onConflict: 'user_id'`). They

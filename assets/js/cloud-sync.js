@@ -37,13 +37,15 @@ const COURSE_V2 = 2;
 const V2_START_DAY = { A1: 1, A2: 61, B1: 121 }; // first day of each band ((week-1)*5+1, WEEK_FOR_LEVEL {A1:1,A2:13,B1:25})
 
 // ISO timestamp of this account's v1→v2 reset (planner_data.migratedFrom.at), or null when the
-// account was never migrated (native v2 / brand new). Captured from the applied planner_data on
-// initApp — see _noteMigratedAt — and used by loadLessonsFromCloud to hide legacy lesson/summary
-// rows that are keyed to the OLD day/week numbers (redesign §2 Lessons Policy, Gate 6).
+// account was never migrated (native v2 / brand new). Captured from the loaded planner_data on
+// initApp — see _noteMigratedAt — and consumed by (a) loadLessonsFromCloud, to hide legacy
+// lesson/summary rows keyed to the OLD day/week numbers (redesign §2 Lessons Policy, Gate 6), and
+// (b) the vocab engine via courseMigratedAt(), to reset stale index-keyed v1 mastery (§2/§6).
 let _migratedAt = null;
 function _noteMigratedAt(pd) {
   _migratedAt = (pd && pd.migratedFrom && typeof pd.migratedFrom.at === 'string') ? pd.migratedFrom.at : null;
 }
+function courseMigratedAt() { return _migratedAt; }
 
 /* Return a clean v2 planner_data for a pre-v2 payload; the same object back if it's already v2. */
 function _migratePlannerV2(d) {
@@ -235,24 +237,27 @@ async function initApp() {
   try {
     // maybeSingle() returns { data: null, error: null } when the row doesn't exist (no throw), which
     // lets us tell a brand-new account (no row) apart from an offline read (error → catch).
+    // Field pages whose column ISN'T planner_data also fetch it: the v1→v2 course reset must be
+    // visible on every page, so the vocab engine can consult courseMigratedAt() (redesign §2/§6).
+    const alsoPlanner = (hasField && CLOUD_FIELD !== 'planner_data') ? 'planner_data, ' : '';
     const { data, error } = await sb.from('progress')
-      .select((hasField ? CLOUD_FIELD + ', ' : '') + 'lang, onboarding')
+      .select((hasField ? CLOUD_FIELD + ', ' : '') + alsoPlanner + 'lang, onboarding')
       .eq('user_id', session.user.id)
       .maybeSingle();
     if (error) throw error;
     isNewUser = !data;
     userOnboarding = (data && data.onboarding) || {};
+    // Course v2 cutover: reset a pre-v2 planner_data to a clean v2 state and lock it in — on
+    // whichever field page the account loads first. An empty ({}::jsonb) row stays untouched:
+    // that's a v2-native account, not a migration candidate.
+    if (hasField && data && data.planner_data && Object.keys(data.planner_data).length) {
+      const migrated = _migratePlannerV2(data.planner_data);
+      if (migrated !== data.planner_data) { data.planner_data = migrated; _pushProgress({ planner_data: migrated }); }
+      _noteMigratedAt(data.planner_data); // reset timestamp: hides legacy lessons, resets stale v1 vocab
+    }
     if (hasField && typeof applyCloudData === 'function') {
-      let payload = data && data[CLOUD_FIELD];
-      if (payload && Object.keys(payload).length) {
-        // Course v2 cutover: reset a pre-v2 planner_data to a clean v2 state and lock it in.
-        if (CLOUD_FIELD === 'planner_data') {
-          const migrated = _migratePlannerV2(payload);
-          if (migrated !== payload) { payload = migrated; _pushProgress({ planner_data: payload }); }
-          _noteMigratedAt(payload); // remember the reset timestamp so legacy lessons stay hidden
-        }
-        applyCloudData(payload); // skip empty default ({}::jsonb)
-      }
+      const payload = data && data[CLOUD_FIELD];
+      if (payload && Object.keys(payload).length) applyCloudData(payload); // skip empty default ({}::jsonb)
     }
     if (data && data.lang && LANG_NAMES[data.lang]) lang = data.lang;
     if (data) _cacheProgress(hasField ? { [CLOUD_FIELD]: data[CLOUD_FIELD], lang: data.lang } : { lang: data.lang });

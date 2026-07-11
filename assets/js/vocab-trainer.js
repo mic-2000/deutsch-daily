@@ -285,14 +285,31 @@ window.VocabTrainer = (function () {
   function levelWordCount(levels) { let n = 0; for (const w in VOCAB) { if (levels.includes(levelOfWeek(w))) n += VOCAB[w].words.length; } return n; }
 
   /* Cloud contract (host's getCloudPayload/applyCloudData delegate here) */
+  // Course-version stamp for vocab_data (COURSE_VERSION from course-consts.js; the fallback only
+  // serves bare test sandboxes) and the moment the v2 word lists went live — see applyData.
+  const COURSE_V = (typeof COURSE_VERSION !== 'undefined') ? COURSE_VERSION : 2;
+  const V2_CUTOVER_AT = '2026-07-10T00:00:00Z';
   function serialize() {
-    return { app: 'deutsch-vokabeltrainer', version: 2, savedAt: new Date().toISOString(),
+    return { app: 'deutsch-vokabeltrainer', version: 2, courseVersion: COURSE_V,
+             savedAt: new Date().toISOString(),
              selectedWeek: state.selectedWeek, modes: state.modes, levels: state.levels,
              mastery: state.mastery, pluralMastery: state.pluralMastery, newLog: state.newLog };
   }
   function applyData(d) {
     if (!d || typeof d !== 'object' || !d.mastery || typeof d.mastery !== 'object') {
       showToast(T('toast_file_bad')); return false;
+    }
+    /* Course v2 vocab reset (redesign §2/§6, §17 item 7). mastery/pluralMastery are index-keyed
+       ("week-idx") against VOCAB, so cards graded on the pre-v2 word lists point at UNRELATED v2
+       words. A payload without this course's stamp loses its cards (modes/levels/newLog are kept)
+       when the account was migrated (planner_data.migratedFrom → cloud-sync's courseMigratedAt())
+       or the payload was last saved before the v2 cutover (covers v1 vocab-only accounts that
+       never opened the planner). serialize() stamps every save, so the reset runs at most once;
+       v2-native accounts (neither signal) are never touched. */
+    if (d.courseVersion !== COURSE_V) {
+      const migrated = (typeof courseMigratedAt === 'function') && !!courseMigratedAt();
+      const preCutover = !(typeof d.savedAt === 'string' && d.savedAt >= V2_CUTOVER_AT);
+      if (migrated || preCutover) d = Object.assign({}, d, { mastery: {}, pluralMastery: {} });
     }
     state.mastery = d.mastery;
     state.pluralMastery = (d.pluralMastery && typeof d.pluralMastery === 'object') ? d.pluralMastery : {};

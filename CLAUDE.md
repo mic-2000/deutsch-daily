@@ -66,7 +66,9 @@ multi-slug `startSession({ slugs, review:true })` session over the grammar topic
   Every `data/verbs.js` entry carries a `band` (A1/A2/B1) written by `scripts/band-verbs.js` — after
   adding a verb, run it (never hand-type `band`). `tests/course-v2-align.test.js` (Gate 4, generated
   output) and `tests/course-v2-cutover.test.js` (Gate 6, live state + migration) guard it. A pre-v2
-  `planner_data` row is reset to a clean v2 state by `cloud-sync.initApp`. (§5, §21)
+  `planner_data` row is reset to a clean v2 state by `cloud-sync.initApp` (on every field page), and
+  `VocabTrainer.applyData` drops pre-v2 index-keyed `mastery`/`pluralMastery` (the `courseVersion`
+  stamp in `vocab_data` makes the reset one-time). (§5, §21)
 - **Cloud is the source of truth.** Before calling `initApp()`, a page must define `render()` and —
   if it owns a `progress` column — `CLOUD_FIELD`, `getCloudPayload()`, `applyCloudData(d)`. A page
   with its **own table** (`collections.html` → `collections`) omits `CLOUD_FIELD` and loads via its

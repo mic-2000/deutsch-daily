@@ -245,3 +245,65 @@ test('the /today intro shows no reset notice for a native v2 account (never migr
   p.render();
   assert.doesNotMatch(p.app.innerHTML, /today-migrated/, 'no reset notice for a native v2 account');
 });
+
+/* ---- stale v1 vocab mastery reset (redesign §2/§6, §17 item 7) ------------------------------
+ * vocab_data's mastery/pluralMastery are index-keyed ("week-idx") against VOCAB, so cards earned
+ * on the pre-v2 word lists point at unrelated v2 words. VocabTrainer.applyData drops both maps
+ * (keeping modes/levels/newLog) when the payload lacks the courseVersion stamp AND the account was
+ * migrated (courseMigratedAt() — cloud-sync is shimmed in the harness, so the tests inject it) or
+ * the payload's savedAt predates the v2 cutover. serialize() stamps courseVersion on every save,
+ * so the reset can never repeat. */
+function freshVocabFor(shims) {
+  return loadPage({
+    page: 'vocab.html', extraFiles: ['locales/en.js'],
+    exports: ['applyData', 'serialize', 'state'],
+    shims,
+  });
+}
+const v1VocabPayload = (over) => Object.assign({
+  app: 'deutsch-vokabeltrainer', version: 2,
+  mastery: { '1-0': { box: 3, due: 1, right: 3, wrong: 0, seen: 3 } },
+  pluralMastery: { '1-1': { box: 2, due: 1, right: 2, wrong: 1, seen: 3 } },
+  modes: { flashcard: false, article: true, spelling: false, plural: true },
+  levels: { A1: true, A2: false, B1: false },
+  selectedWeek: 4,
+}, over);
+
+test('a migrated account\'s unstamped vocab payload is reset: cards dropped, settings kept', () => {
+  const v = freshVocabFor({ courseMigratedAt: () => '2026-07-10T12:00:00.000Z' });
+  // saved AFTER the cutover (the user already trained on v2) but the stale v1 keys are still inside
+  v.applyData(v1VocabPayload({ savedAt: '2026-07-11T09:00:00.000Z' }));
+  assert.deepEqual(plain(v.state.mastery), {}, 'index-keyed word mastery dropped');
+  assert.deepEqual(plain(v.state.pluralMastery), {}, 'index-keyed plural mastery dropped');
+  assert.equal(v.state.modes.plural, true, 'modes carried over (§2)');
+  assert.equal(v.state.modes.flashcard, false, 'modes carried over verbatim');
+  assert.equal(v.state.levels.A1, true, 'levels carried over (§2)');
+  assert.equal(v.state.selectedWeek, 4, 'selectedWeek carried over');
+  assert.equal(v.serialize().courseVersion, 2, 'the next save stamps courseVersion');
+});
+
+test('a pre-cutover vocab payload is reset even without a planner migration (v1 vocab-only account)', () => {
+  const v = freshVocabFor({}); // no courseMigratedAt in the sandbox (cloud-sync is shimmed out)
+  v.applyData(v1VocabPayload({ savedAt: '2026-06-20T10:00:00.000Z' }));
+  assert.deepEqual(plain(v.state.mastery), {}, 'pre-cutover cards dropped');
+  assert.deepEqual(plain(v.state.pluralMastery), {}, 'pre-cutover plural cards dropped');
+});
+
+test('a v2-native unstamped payload is kept (saved after the cutover, never migrated)', () => {
+  const v = freshVocabFor({ courseMigratedAt: () => null });
+  v.applyData(v1VocabPayload({ savedAt: '2026-07-10T18:00:00.000Z' }));
+  assert.equal(v.state.mastery['1-0'].box, 3, 'post-cutover native mastery kept');
+  assert.equal(v.state.pluralMastery['1-1'].box, 2, 'post-cutover native plural mastery kept');
+  assert.equal(v.serialize().courseVersion, 2, 'stamped on the next save anyway');
+});
+
+test('a stamped payload is never reset, even for a migrated account (idempotent round trip)', () => {
+  const v = freshVocabFor({ courseMigratedAt: () => '2026-07-10T12:00:00.000Z' });
+  // ancient savedAt but already stamped — e.g. re-applied cloud data after the one-time reset ran
+  v.applyData(v1VocabPayload({ courseVersion: 2, savedAt: '2026-06-01T00:00:00.000Z' }));
+  assert.equal(v.state.mastery['1-0'].box, 3, 'stamped payload is trusted');
+  const round = plain(v.serialize());
+  const v2 = freshVocabFor({ courseMigratedAt: () => '2026-07-10T12:00:00.000Z' });
+  v2.applyData(round);
+  assert.equal(v2.state.mastery['1-0'].box, 3, 'the serialized round trip survives the reset check');
+});
