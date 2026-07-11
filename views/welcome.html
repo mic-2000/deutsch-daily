@@ -211,8 +211,8 @@ function persistAll(extra){
   saveVocabNow();
   if (a.hardest === 'verbs') saveVerbsNow();
 }
-function finishLesson(){ phase = 'done'; persistAll(); render(); }
-function skipOnboarding(){ applyLevel(); phase = 'done'; lessonResult = null; persistAll({ skipped: true }); render(); }
+function finishLesson(){ track('welcome_minilesson_done'); phase = 'done'; persistAll(); render(); }
+function skipOnboarding(){ const a = resolved(); track('onboarding_skip', { level: a.level, minutes: a.minutes, hardest: a.hardest }); applyLevel(); phase = 'done'; lessonResult = null; persistAll({ skipped: true }); render(); }
 
 /* ---- success screen ---- */
 /* Optional, skippable: first introduction of the AI tutor. "Connect now" opens the shared key modal

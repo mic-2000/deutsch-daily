@@ -296,7 +296,12 @@ async function loadDayLesson(day){
   if (flow.running) render();
 }
 function exitFlow(){ flow.running = false; clearFlow(); if (window.speechSynthesis) window.speechSynthesis.cancel(); render(); }
-function nextStep(){ flow.step = Math.min(flow.step + 1, flow.steps.length - 1); renderStep(); }
+function nextStep(){
+  const step = currentStep();
+  if (step && step.id !== 'done') track('today_block_done', { block: step.id, day: flow.day });
+  flow.step = Math.min(flow.step + 1, flow.steps.length - 1);
+  renderStep();
+}
 
 function renderStep(){
   saveFlow();   // remember where we are, so a refresh resumes the same step
@@ -715,7 +720,7 @@ function closeTodayKeyModal(){ ai.keyModalOpen = false; render(); }
 function onTodayKeySaved(){ ai.keyModalOpen = false; render(); }
 
 function askTopic(){ if (ai.loading) return; ai.messages.push({ role: 'user', text: dayBreakdownText(), seed: true }); runTodayTurn({ pin: 'explanation' }); }
-function sendAi(){ const inp = document.getElementById('aiInput'); const t = inp ? inp.value.trim() : ''; if (!t || ai.loading) return; ai.messages.push({ role: 'user', text: t }); runTodayTurn(); }
+function sendAi(){ const inp = document.getElementById('aiInput'); const t = inp ? inp.value.trim() : ''; if (!t || ai.loading) return; track('ai_message_sent', { surface: 'today' }); ai.messages.push({ role: 'user', text: t }); runTodayTurn(); }
 
 /* On the AI step: auto-generate a once-per-day summary (grammar takeaways + word/verb results),
    pinned at the top. Skipped if one already exists (loaded from the saved lesson) or no key. */

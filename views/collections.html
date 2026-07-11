@@ -320,6 +320,8 @@ function saveDraft(){
     .map(r => { const w = { id: r.id || uid(), de: r.de.trim(), tr: (r.tr || '').trim() }; if ((r.note || '').trim()) w.note = r.note.trim(); return w; });
   if (!words.length){ showToast(T('collections_toast_need_words')); return; }
   let col = state.collections.find(c => c.id === state.draft.id);
+  const isNew = !col;
+  const isImport = state.view === 'import';
   if (col){
     const valid = new Set(words.map(w => w.id));
     const mastery = {}; for (const id of valid){ if (col.mastery[id]) mastery[id] = col.mastery[id]; }
@@ -327,6 +329,10 @@ function saveDraft(){
   } else {
     col = { id: state.draft.id, name, words, mastery: {} };
     state.collections.push(col);
+  }
+  if (isNew) {
+    if (isImport) track('collection_imported', { words: words.length });
+    else track('collection_created', { words: words.length });
   }
   saveCollectionToCloud(col);
   afterEditorClose();

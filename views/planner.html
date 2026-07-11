@@ -99,6 +99,7 @@ async function sendChatMessage(day) {
   const inp = document.getElementById('chatInput');
   const text = inp ? inp.value.trim() : '';
   if (!text || chatState.loading) return;
+  track('ai_message_sent', { surface: 'planner' });
   if (!lessonsCache[day]) lessonsCache[day] = [];
   lessonsCache[day].push({ role: 'user', text });
   chatState.loading = true;

@@ -101,8 +101,8 @@ window.GeminiKey = (function(){
     if(!key){ remove(); return { ok:true, removed:true }; }
     if(!looksValid(key)) return { ok:false, reason:'format' };
     const v = await validate(key);
-    if(v.ok){ _commit(key, wantSync); return { ok:true, key }; }
-    if(v.reason === 'network'){ _commit(key, wantSync); return { ok:true, key, warn:'network' }; }
+    if(v.ok){ _commit(key, wantSync); if(typeof track === 'function') track('ai_key_added', { synced: !!wantSync }); return { ok:true, key }; }
+    if(v.reason === 'network'){ _commit(key, wantSync); if(typeof track === 'function') track('ai_key_added', { synced: !!wantSync }); return { ok:true, key, warn:'network' }; }
     return { ok:false, reason: v.reason };
   }
 
