@@ -13,6 +13,9 @@
 .day-week-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.2em; color: var(--ink-soft); }
 .day-week-theme { font-family: var(--serif); font-size: 22px; margin-top: 2px; }
 .day-done-badge { background: var(--green); color: var(--paper); font-size: 11px; text-transform: uppercase; letter-spacing: 0.15em; padding: 6px 12px; }
+/* Course-readiness chip: per-day coverage, distinct from the (green) done badge. Only shown on partial
+   coverage (e.g. the 5-minute light track ran one of two trainers). */
+.day-readiness { background: var(--paper); border: 1px solid var(--line); color: var(--ink-soft); font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; padding: 5px 11px; border-radius: 2px; white-space: nowrap; }
 
 .day-body { padding: 24px 26px; }
 .grammar-focus { background: var(--paper-2); padding: 12px 16px; border-radius: 2px; margin-bottom: 22px; }

@@ -171,7 +171,7 @@ Supabase CDN
 → assets/js/markdown.js            (renderMd — AI reply markdown, shared with /today)
 → assets/js/header.js              (appHeader — shared header/nav markup)
 → data/weeks.js                    (WEEKS)
-→ assets/js/planner-data.js        (DAYS, TOTAL_DAYS, getLocalizedDay — shared with /today)
+→ assets/js/planner-data.js        (DAYS, TOTAL_DAYS, getLocalizedDay, dayReadiness — shared with /today)
 → inline page <script>             (state, chat state, render, page logic)
    initApp().then(loadLessonsThenRender)
 ```
@@ -315,9 +315,13 @@ The flattening of `WEEKS` into `DAYS` (one task = one day), `TOTAL_DAYS`, and `g
 (the active-locale overlay) — extracted from `planner.html` so `/planner` and the `/today` wizard
 share one day model. A task is either a Course-v2 object `{ type, text, grammarFocus?, drill?,
 checklist? }` or a legacy v1 `[type, text]` tuple; `taskFields(task)` normalizes both, so a mixed
-dataset works during a cutover window. Top-level `const`/`function` in a classic script live in the
-shared global lexical scope (same pattern as `leitner.js` `MAX_BOX`), so both pages see these
-directly. Depends on `WEEKS` (must load first) and `getLang`.
+dataset works during a cutover window. It also owns the pure **course-readiness** helper
+`dayReadiness(blocks)` (over `SRS_FAMILIES = ['grammar','vocab','verbs']`): the share of a day's core
+SRS families worked, read from the `dayStats[day].blocks` summary `/today` records — used by both the
+`/today` done screen and the `/planner` day card to report the 5-min light track's partial coverage
+distinct from the streak (redesign-v2 §17 item 5). Top-level `const`/`function` in a classic script
+live in the shared global lexical scope (same pattern as `leitner.js` `MAX_BOX`), so both pages see
+these directly. Depends on `WEEKS` (must load first) and `getLang`.
 
 ### `vocab-trainer.js` / `verbs-trainer.js` — the shared trainer engines (`window.VocabTrainer` / `window.VerbsTrainer`)
 Each is a single namespace object holding the **entire** trainer: helpers, Leitner routing, the
@@ -1508,8 +1512,13 @@ complete; **closing a trainer early leaves its block incomplete**.
    → "Open the planner". When a trainer's **due backlog** overflowed the tariff's `sessionCap()` (recorded
    at step start via `noteBacklog(id, due)` from `VocabTrainer.dueCount(week)` / `VerbsTrainer.dueCount()`
    into `flow.backlog`), the done screen also shows a small `.done-backlog` "N cards waiting" note
-   (`today_backlog`) — the due cards that carry over to the next sessions (Plan §4). If a required trainer
-   was closed early the day is **not** checked off: it shows an
+   (`today_backlog`) — the due cards that carry over to the next sessions (Plan §4). A **course-readiness**
+   meter (`.done-readiness`, `today_readiness_*`) surfaces **only on partial coverage** — the share of the
+   day's core SRS families (grammar · vocab · verbs) actually worked, via `currentReadiness()` →
+   `dayReadiness(blocks)` (shared, in `planner-data.js`; §below). The 5-min light track runs one of the two
+   trainers, so it reads **2/3** even though the day completes — coverage is reported **distinct from the
+   streak/day-completion mark** (Plan §4, redesign-v2 §17 item 5); a full day is 3/3 and the meter is hidden.
+   If a required trainer was closed early the day is **not** checked off: it shows an
    "almost there" partial screen (`today_done_partial_*`) that doesn't advance `currentDay`, with **Run the
    day again**.
 

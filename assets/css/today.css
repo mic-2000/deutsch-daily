@@ -99,6 +99,16 @@
 .done-backlog { max-width: 440px; margin: 0 auto 24px; padding: 11px 16px 11px 42px; position: relative; border: 1px solid var(--line); border-radius: 8px; background: var(--paper-3); font-size: 14px; line-height: 1.5; color: var(--ink-soft); text-align: left; }
 .done-backlog::before { content: '⏳'; position: absolute; left: 15px; top: 10px; font-size: 16px; }
 
+/* Course-readiness meter (share of the day's core SRS families worked; distinct from the streak) */
+.done-readiness { max-width: 440px; margin: 0 auto 24px; padding: 14px 18px; border: 1px solid var(--line); border-radius: 8px; background: var(--paper-3); text-align: left; }
+.done-readiness-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.done-readiness-label { font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-soft); }
+.done-readiness-frac { font-size: 22px; line-height: 1; color: var(--ink); }
+.done-readiness-of { font-size: 14px; color: var(--ink-soft); }
+.done-readiness-bar { height: 6px; border-radius: 3px; background: var(--paper); border: 1px solid var(--line); margin: 10px 0; overflow: hidden; }
+.done-readiness-fill { height: 100%; background: var(--accent); }
+.done-readiness-note { font-size: 13px; line-height: 1.5; color: var(--ink-soft); margin: 0; }
+
 .done-cando { border: 1px solid var(--line); border-radius: 8px; background: var(--paper-3); padding: 18px 22px; margin: 0 auto 24px; max-width: 440px; text-align: left; }
 .done-cando-title { font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-soft); margin-bottom: 10px; }
 .done-cando-list { list-style: none; margin: 0; padding: 0; }

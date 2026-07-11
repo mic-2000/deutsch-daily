@@ -107,6 +107,9 @@ window.LOCALE_RU = {
     today_light_pace: 'Лёгкий темп: один тренажёр в день поддерживает форму — выберите более длинную ежедневную цель, когда захотите быстрее двигаться к B1.',
     // SRS backlog: due cards that didn't fit today's capped session (shown on the done screen)
     today_backlog: (n) => `Осталось повторить: ${n} ${n % 10 === 1 && n % 100 !== 11 ? 'карточка' : (n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 10 || n % 100 >= 20)) ? 'карточки' : 'карточек'}. Они перейдут на следующие сессии.`,
+    // Course readiness: share of the day's core practice families worked (distinct from the streak)
+    today_readiness_title: 'Готовность по курсу',
+    today_readiness_note: (worked, total) => `Вы прошли ${worked} из ${total} основных блоков практики за сегодня. Это показывает, сколько плана вы выполнили, отдельно от серии — лёгкий темп сохраняет серию, но охватывает меньше каждый день.`,
     version_reload_title: 'Доступно обновление',
     version_reload_msg: 'Вышла новая версия курса, но часть файлов на этом устройстве осталась от старой. Перезагрузите, чтобы получить актуальную версию и избежать несоответствия в уроке.',
     version_reload_btn: 'Перезагрузить приложение',
@@ -328,6 +331,9 @@ window.LOCALE_RU = {
     planner_grammar_week: 'Грамматика недели',
     planner_task_today: 'Задача на сегодня',
     planner_done_badge: 'Выполнено',
+    // Per-day course-readiness chip (shown only when the day's coverage was partial, e.g. the light track)
+    planner_readiness: (worked, total) => `Охват ${worked}/${total}`,
+    planner_readiness_hint: 'Основные блоки практики за этот день (грамматика · слова · глаголы). Лёгкий темп охватывает меньше, чем полный план.',
     planner_daily_also: 'Ежедневно также',
     planner_vocab_habit: (week, vocab) => `Словарь: квиз по словам недели ${week} (${vocab}) — 10–15 мин в тренажёре`,
     planner_done: '✓ Готово, дальше',

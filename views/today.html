@@ -754,6 +754,15 @@ function recordDayStats(day){
   };
 }
 
+/* Course-readiness for the flow's current day, measured from the LIVE steps (same block shape
+   recordDayStats persists), so it works on both the complete and the partial done screen regardless of
+   whether dayStats has been written yet. Delegates the actual measure to the shared dayReadiness
+   (planner-data.js) so /today and /planner agree. (Plan §4, §17 item 5.) */
+function currentReadiness(){
+  const blocks = flow.steps.filter(s => s.id !== 'done').map(s => ({ id: s.id, completed: !!s.isComplete() }));
+  return dayReadiness(blocks);
+}
+
 /* The current week's "I can…" statements from the active locale (weeks block), EN fallback. Read-only;
    surfaced on the done screen so the learner sees the week's concrete goals. */
 function weekCanDo(){
@@ -785,6 +794,19 @@ function renderDone(){
   const backlogBlock = waiting > 0 ? `<div class="done-backlog">${T('today_backlog', waiting)}</div>` : '';
   // 5-min light track: remind the learner this is a maintenance pace, not the full B1 path. (Plan §4.)
   const lightNote = tariff() === 5 ? `<div class="done-light">${T('today_light_pace')}</div>` : '';
+  // Course readiness — the share of today's core SRS families (grammar · vocab · verbs) actually worked,
+  // shown DISTINCT from the streak/day-completion mark. Only surfaced on partial coverage (the light
+  // track runs one of two trainers → 2/3), so a full day (100%) stays uncluttered. (Plan §4, §17 item 5.)
+  const rd = currentReadiness();
+  const readinessBlock = (rd && !rd.full) ? `
+  <div class="done-readiness">
+    <div class="done-readiness-head">
+      <span class="done-readiness-label">${T('today_readiness_title')}</span>
+      <span class="done-readiness-frac num">${rd.worked}<span class="done-readiness-of">/${rd.total}</span></span>
+    </div>
+    <div class="done-readiness-bar"><div class="done-readiness-fill" style="width:${Math.round(rd.worked / rd.total * 100)}%"></div></div>
+    <p class="done-readiness-note">${T('today_readiness_note', rd.worked, rd.total)}</p>
+  </div>` : '';
   const canDo = weekCanDo();
   const canDoBlock = canDo.length ? `
   <div class="done-cando">
@@ -802,6 +824,7 @@ function renderDone(){
   ${stats}
   ${backlogBlock}
   ${lightNote}
+  ${readinessBlock}
   ${canDoBlock}
   <div class="flow-actions"><a class="btn accent big" href="/planner">${T('today_done_to_planner')}</a></div>
   <button class="restart" onclick="startFlow()">↻ ${T('today_restart_day')}</button>

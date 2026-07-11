@@ -3,7 +3,8 @@
    Flattens the 36-week WEEKS curriculum (data/weeks.js — Course v2) into a flat list of study days
    (one task = one day) and overlays the active UI language. Top-level `const`/`function` in a classic
    script live in the shared global lexical scope (same pattern as leitner.js `MAX_BOX`), so both the
-   planner inline script and the /today host see DAYS / TOTAL_DAYS / getLocalizedDay directly.
+   planner inline script and the /today host see DAYS / TOTAL_DAYS / getLocalizedDay / dayReadiness
+   directly.
 
    A task is either a Course-v2 object `{ type, text, grammarFocus?, drill?, checklist? }` or a legacy
    v1 tuple `[type, text]`; `taskFields()` normalizes both so a mixed dataset works during a cutover.
@@ -34,6 +35,23 @@ WEEKS.forEach(w => {
   });
 });
 const TOTAL_DAYS = DAYS.length;
+
+/* Course-readiness measure (curriculum-redesign-2026-07-v2 §4 / §17 item 5). The 5-minute "light
+   track" completes a day while running only ONE of the two daily trainers (vocab on even days, verbs
+   on odd), so day-completion / the streak overstates how much of the course a light-track learner
+   actually covers. `dayReadiness` reports the SHARE of a day's core spaced-repetition families —
+   grammar-drill · vocab · verbs — that were actually worked, read purely from the `blocks` summary
+   `/today` records in `dayStats[day]` at completion (`[{ id, required, completed }]`). Pure and
+   self-contained (needs nothing but the blocks array), so /planner and /today compute it identically
+   and it stores nothing new. A family counts as worked when its block is present AND completed (an
+   empty-queue auto-skip still records `completed:true`, i.e. nothing was owed). Returns
+   `{ worked, total, full }` (or null when there is no blocks summary to measure). */
+const SRS_FAMILIES = ['grammar', 'vocab', 'verbs'];
+function dayReadiness(blocks) {
+  if (!Array.isArray(blocks)) return null;
+  const worked = SRS_FAMILIES.filter(id => blocks.some(b => b && b.id === id && b.completed)).length;
+  return { worked, total: SRS_FAMILIES.length, full: worked >= SRS_FAMILIES.length };
+}
 
 /* Return a day object with content translated to the active UI language */
 function getLocalizedDay(d) {

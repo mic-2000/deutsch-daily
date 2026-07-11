@@ -106,6 +106,9 @@ window.LOCALE_UA = {
     today_light_pace: 'Легкий темп: один тренажер на день підтримує форму — оберіть довшу щоденну мету, коли захочете швидше рухатися до B1.',
     // SRS backlog: due cards that didn't fit today's capped session (shown on the done screen)
     today_backlog: (n) => `Залишилось повторити: ${n} ${n % 10 === 1 && n % 100 !== 11 ? 'картку' : (n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 10 || n % 100 >= 20)) ? 'картки' : 'карток'}. Вони перейдуть на наступні сесії.`,
+    // Course readiness: share of the day's core practice families worked (distinct from the streak)
+    today_readiness_title: 'Готовність за курсом',
+    today_readiness_note: (worked, total) => `Ви пройшли ${worked} з ${total} основних блоків практики за сьогодні. Це показує, скільки плану ви виконали, окремо від серії — легкий темп зберігає серію, але охоплює менше щодня.`,
     version_reload_title: 'Доступне оновлення',
     version_reload_msg: 'Вийшла нова версія курсу, але частина файлів на цьому пристрої залишилася від старої. Перезавантажте, щоб отримати актуальну версію й уникнути невідповідності в уроці.',
     version_reload_btn: 'Перезавантажити застосунок',
@@ -327,6 +330,9 @@ window.LOCALE_UA = {
     planner_grammar_week: 'Граматика тижня',
     planner_task_today: 'Завдання на сьогодні',
     planner_done_badge: 'Виконано',
+    // Per-day course-readiness chip (shown only when the day's coverage was partial, e.g. the light track)
+    planner_readiness: (worked, total) => `Охоплення ${worked}/${total}`,
+    planner_readiness_hint: 'Основні блоки практики за цей день (граматика · слова · дієслова). Легкий темп охоплює менше, ніж повний план.',
     planner_daily_also: 'Щодня також',
     planner_vocab_habit: (week, vocab) => `Словник: квіз по словах тижня ${week} (${vocab}) — 10–15 хв у тренажері`,
     planner_done: '✓ Готово, далі',

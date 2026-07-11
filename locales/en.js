@@ -107,6 +107,9 @@ window.LOCALE_EN = {
     today_light_pace: 'Light pace: one trainer a day keeps you ticking over — switch to a longer daily goal when you want to move toward B1 faster.',
     // SRS backlog: due cards that didn't fit today's capped session (shown on the done screen)
     today_backlog: (n) => `${n} due card${n === 1 ? '' : 's'} didn't fit today — ${n === 1 ? "it'll" : "they'll"} carry over to your next sessions.`,
+    // Course readiness: share of the day's core practice families worked (distinct from the streak)
+    today_readiness_title: 'Course readiness',
+    today_readiness_note: (worked, total) => `You covered ${worked} of ${total} of today's core practice areas. This tracks how much of the plan you did, separate from your streak — the light pace keeps the streak going while covering less each day.`,
     version_reload_title: 'Update available',
     version_reload_msg: 'A new version of the course has shipped, but some files on this device are still from the old one. Reload to fetch the latest and avoid a mismatched lesson.',
     version_reload_btn: 'Reload the app',
@@ -330,6 +333,9 @@ window.LOCALE_EN = {
     planner_grammar_week: 'Grammar of the week',
     planner_task_today: "Today's task",
     planner_done_badge: 'Done',
+    // Per-day course-readiness chip (shown only when the day's coverage was partial, e.g. the light track)
+    planner_readiness: (worked, total) => `Coverage ${worked}/${total}`,
+    planner_readiness_hint: 'Core practice areas you worked this day (grammar · words · verbs). The light pace covers fewer than the full plan.',
     planner_daily_also: 'Also daily',
     planner_vocab_habit: (week, vocab) => `Vocabulary: quiz on week ${week} words (${vocab}) — 10–15 min in trainer`,
     planner_done: '✓ Done, next',

@@ -24,6 +24,29 @@ test('planner: render() at a later day still succeeds', () => {
   assert.ok(p.app.innerHTML.length > 500);
 });
 
+test('planner: a partial-coverage day shows a course-readiness chip; a full day does not', () => {
+  const p = loadPage({ page: 'planner.html', extraFiles: ['locales/en.js'], exports: ['render', 'state'] });
+  // A light-track day (dayStats blocks summary from /today): grammar + verbs worked, vocab never ran → 2/3.
+  p.state.viewingDay = 1;
+  p.state.dayStats = { 1: { blocks: [{ id: 'grammar', completed: true }, { id: 'verbs', completed: true }] } };
+  p.render();
+  assert.match(p.app.innerHTML, /day-readiness/, 'partial coverage shows a readiness chip');
+  assert.match(p.app.innerHTML, /Coverage 2\/3/, 'the chip reports 2 of 3 core families');
+  assert.doesNotMatch(p.app.innerHTML, /planner_readiness/, 'no raw i18n key leaks');
+  // A full-path day: all three core families worked → no chip (distinct from the done badge/streak).
+  p.state.viewingDay = 2;
+  p.state.dayStats = { 2: { blocks: [{ id: 'grammar', completed: true }, { id: 'vocab', completed: true }, { id: 'verbs', completed: true }] } };
+  p.render();
+  assert.doesNotMatch(p.app.innerHTML, /day-readiness/, 'full coverage shows no chip');
+});
+
+test('planner: renders without a readiness chip when the day has no dayStats', () => {
+  const p = loadPage({ page: 'planner.html', extraFiles: ['locales/en.js'], exports: ['render', 'state'] });
+  p.state.viewingDay = 1;                 // no state.dayStats at all (never completed via /today)
+  assert.doesNotThrow(() => p.render());
+  assert.doesNotMatch(p.app.innerHTML, /day-readiness/, 'no chip without a dayStats summary');
+});
+
 test('vocab: render() shows the home screen without an active session', () => {
   const v = loadPage({ page: 'vocab.html', extraFiles: ['locales/en.js'], exports: ['render', 'state'] });
   v.state.session = null;

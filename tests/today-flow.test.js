@@ -204,6 +204,66 @@ test('5-min light track: one trainer carries the day, with a light-pace note on 
   assert.doesNotMatch(html, /today_light_pace/, 'no raw i18n key leaks');
 });
 
+/* ---- course readiness — coverage of the day's core SRS families, distinct from the streak
+       (Plan §4; curriculum-redesign-2026-07-v2 §17 item 5) ---- */
+
+test('dayReadiness measures the share of core SRS families worked in a dayStats blocks summary', () => {
+  const t = fresh(['dayReadiness']);
+  // Full path — grammar + vocab + verbs all worked (listen too) → 3/3, full.
+  const full = t.dayReadiness([
+    { id: 'grammar', required: true, completed: true },
+    { id: 'vocab', required: true, completed: true },
+    { id: 'verbs', required: true, completed: true },
+    { id: 'listen', required: true, completed: true },
+  ]);
+  assert.deepEqual({ worked: full.worked, total: full.total, full: full.full }, { worked: 3, total: 3, full: true });
+  // Light track (even day) — grammar + vocab only, verbs never ran → 2/3, not full.
+  const light = t.dayReadiness([
+    { id: 'grammar', required: true, completed: true },
+    { id: 'vocab', required: true, completed: true },
+  ]);
+  assert.deepEqual({ worked: light.worked, total: light.total, full: light.full }, { worked: 2, total: 3, full: false });
+  // A family present but NOT completed (trainer closed early) does not count as worked.
+  const early = t.dayReadiness([
+    { id: 'grammar', required: true, completed: true },
+    { id: 'vocab', required: true, completed: false },
+    { id: 'verbs', required: true, completed: true },
+  ]);
+  assert.equal(early.worked, 2, 'an incomplete family is not counted');
+  assert.equal(t.dayReadiness(null), null, 'no blocks summary → null (nothing to measure)');
+});
+
+test('5-min light track: the done screen shows course readiness (2/3), distinct from the streak', () => {
+  const t = loadPage({
+    page: 'today.html', extraFiles: ['locales/en.js'],
+    exports: ['startFlow', 'nextStep', 'VerbsTrainer', 'planner'],
+    shims: { userOnboarding: { minutes: '5' } },
+  });
+  t.startFlow();                   // day 1 (odd) → grammar
+  t.nextStep();                    // → verbs (the single light-track trainer)
+  finishSession(t.VerbsTrainer);   // → done
+  const html = t.app.innerHTML;
+  assert.match(html, /done-readiness/, 'a course-readiness meter is rendered');
+  assert.match(html, /Course readiness/, 'the localized readiness label is shown');
+  assert.match(html, /2<span class="done-readiness-of">\/3/, 'shows 2 of 3 core families covered');
+  assert.match(html, /core practice areas/, 'the localized readiness note is shown');
+  assert.doesNotMatch(html, /today_readiness/, 'no raw i18n key leaks');
+  // Readiness is separate from day-completion: the day still completes on its single required trainer.
+  assert.equal(t.planner.completed[1], true, 'the day completes; readiness only reports coverage');
+});
+
+test('the full path done screen omits the readiness meter (every core family was worked)', () => {
+  const t = fresh(['startFlow', 'nextStep', 'VocabTrainer', 'VerbsTrainer', 'finishListen']);
+  t.startFlow();                   // default 15-min: grammar + vocab + verbs + listen
+  t.nextStep();
+  finishSession(t.VocabTrainer);
+  finishSession(t.VerbsTrainer);
+  t.finishListen();                // → done
+  const html = t.app.innerHTML;
+  assert.match(html, /flow-done/, 'reached the done screen');
+  assert.doesNotMatch(html, /done-readiness/, 'no readiness meter when coverage is 3/3');
+});
+
 /* ---- listen block (renderListen; Plan §3/§4, Gate 5) ---- */
 
 test('the listen block is required on a dialogue week when TTS is available', () => {

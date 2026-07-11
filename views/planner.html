@@ -337,6 +337,16 @@ function renderProgress(doneCount, pct) {
 }
 
 function renderDayCard(d, isDone) {
+  // Course-readiness chip (curriculum-redesign-2026-07-v2 §4 / §17 item 5): the share of this day's core
+  // SRS families the learner actually worked, read from the dayStats blocks summary /today wrote at
+  // completion. Shown DISTINCT from the done badge (which is the streak/completion signal) and only on
+  // partial coverage — a light-track day runs one of two trainers (2/3), a full day is 3/3 and stays
+  // unmarked. `state.dayStats` rides along as an unknown planner_data key (applyCloudData preserves it).
+  const stats = state.dayStats && state.dayStats[d.day];
+  const rd = (stats && typeof dayReadiness === 'function') ? dayReadiness(stats.blocks) : null;
+  const readinessChip = (rd && !rd.full)
+    ? `<div class="day-readiness" title="${esc(T('planner_readiness_hint'))}">${T('planner_readiness', rd.worked, rd.total)}</div>`
+    : '';
   return `
   <div class="day-card">
     <div class="day-top">
@@ -345,6 +355,7 @@ function renderDayCard(d, isDone) {
         <div class="day-week-label">${T('planner_week', d.week)}</div>
         <div class="day-week-theme">${esc(d.weekTheme)}</div>
       </div>
+      ${readinessChip}
       ${isDone ? `<div class="day-done-badge">${T('planner_done_badge')}</div>` : ''}
     </div>
 
