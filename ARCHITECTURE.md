@@ -625,12 +625,43 @@ create table public.collections (
 alter table public.collections enable row level security;
 create policy "own collections" on public.collections
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+-- server-issued plan flag (one row per PAYING user; no row = free; §5 Entitlements)
+create table public.entitlements (
+  user_id             uuid        primary key references auth.users(id),
+  plan                text        not null default 'free',   -- 'free' | 'premium' | 'lifetime'
+  status              text        not null default 'active', -- 'active' | 'past_due' | 'cancelled'
+  provider            text,                                  -- 'paddle' | 'lemonsqueezy' | 'stripe' | 'manual'
+  provider_ref        text,                                  -- provider's subscription/order id
+  current_period_end  timestamptz,                           -- null for lifetime / free
+  updated_at          timestamptz default now()
+);
+alter table public.entitlements enable row level security;
+create policy "own entitlements read" on public.entitlements
+  for select using (auth.uid() = user_id);  -- SELECT only — no anon/authenticated write policy
 ```
 
 `messages` is a JSON array of `{ role: "user"|"model", text: string }` objects — the full
 conversation including the opening system message (the day plan). Day-lesson rows (`day > 0`)
 use `AI_MODEL_ID`; summary rows (`day < 0`) use `AI_PRO_MODEL_ID`. The table is append-friendly:
 clearing a lesson deletes the row (`deleteLessonFromCloud`); there is no soft-delete.
+
+**Entitlements (table `entitlements`, one row per PAYING user):** the server-of-record plan flag
+that everything monetization-related is built on (paywall gating, referral credits, admin comps).
+No row means free — a user who never purchased. Rows are written ONLY by service-role code (Vercel
+`/api` functions handling payment-provider webhooks); the RLS policy above grants the owner `SELECT`
+only, with no `INSERT`/`UPDATE`/`DELETE` policy for the `anon`/`authenticated` roles, so a signed-in
+user can read their own plan but can never forge it client-side (writes go through the service-role
+key, which bypasses RLS entirely). `cloud-sync.initApp` loads it in a separate query (same pattern as
+`theme`/`gemini_key`/`deletion_requested_at` — a missing table/row can't break the main load) into the
+`userPlan` global (`{ plan, status, currentPeriodEnd }`, defaulting to free), and `hasPremium()` reads
+it: `true` for `plan:'lifetime'` always, or `plan:'premium'` while `current_period_end` is null or in
+the future. `status` (`active`/`past_due`/`cancelled`) is stored for display/analytics but doesn't
+gate `hasPremium()` itself — a cancelled or past-due subscription still reads premium until
+`current_period_end`, so the grace-period/downgrade timing is the webhook's job (DEV-3), not this
+helper's. This client-side check is trivially bypassable in devtools by a determined user; that's an
+accepted risk for gating **content** (course days, stats page) — the AI proxy enforces its quota
+server-side (DEV-5), where bypassing actually costs money.
 
 **Notes:**
 - **Default language is `'en'` on both sides** — the DB column default (`lang 'en'`) matches the

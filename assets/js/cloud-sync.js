@@ -28,6 +28,19 @@ let accountDeletionAt = null;
 // (minutes → session length). A brand-new user (NO progress row) is gated into /welcome by initApp.
 let userOnboarding = {};
 
+// Server-issued plan flag (table `entitlements`, DEV-2). Written ONLY by service-role /api code
+// (payment webhooks) — the client only ever reads it. No row = free (never purchased). Loaded by
+// initApp alongside `progress`; read anywhere via hasPremium().
+let userPlan = { plan: 'free', status: 'active', currentPeriodEnd: null };
+// True for 'lifetime' always, or 'premium' whose current_period_end hasn't passed (null = no expiry,
+// e.g. mid-cycle). A cancelled/past_due subscription still reads premium until current_period_end —
+// the grace-period + downgrade timing itself is DEV-3/webhook logic, not this helper's job.
+function hasPremium() {
+  if (userPlan.plan === 'lifetime') return true;
+  if (userPlan.plan !== 'premium') return false;
+  return !userPlan.currentPeriodEnd || new Date(userPlan.currentPeriodEnd) > new Date();
+}
+
 // Course v2 cutover (curriculum-redesign-2026-07-v2.md §2/§7): a v1 planner_data row (no
 // courseVersion, day numbers keyed to the old 24-week order) is reset to a clean v2 course state on
 // first v2 load. Old day numbers / completed / lessons are intentionally NOT remapped; safe trainer
@@ -331,6 +344,16 @@ async function initApp() {
   } catch(e) { /* deletion_requested_at column may not exist yet */ }
   if (typeof applyDeletionStatus === 'function') applyDeletionStatus(accountDeletionAt);
   if (accountDeletionAt && typeof showToast === 'function' && typeof T === 'function') showToast(T('settings_deletion_pending_toast'));
+
+  // Entitlement (table `entitlements`). Separate query so a missing table/row (free user, or a
+  // pre-DEV-2 database) can't break the main load — no row simply leaves userPlan at its free default.
+  try {
+    const { data } = await sb.from('entitlements')
+      .select('plan, status, current_period_end')
+      .eq('user_id', session.user.id)
+      .single();
+    if (data) userPlan = { plan: data.plan || 'free', status: data.status || 'active', currentPeriodEnd: data.current_period_end || null };
+  } catch (e) { /* no entitlements row (free user) or table missing */ }
 
   // setLang(skipSave) loads the resolved locale, syncs it into localStorage, and renders once.
   if (lang !== getLang()) { await setLang(lang, true); }

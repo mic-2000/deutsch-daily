@@ -126,3 +126,32 @@ $$;
 -- Run daily at 03:00 UTC (requires the pg_cron extension):
 --   select cron.schedule('purge-deleted-accounts', '0 3 * * *',
 --                        $$select public.purge_deleted_accounts()$$);
+
+-- -------------------------------------------------------------------------
+-- entitlements  (server-issued plan flag — one row per PAYING user)
+--   No row = free. Written ONLY by service-role code (Vercel /api functions handling
+--   payment-provider webhooks) — there is deliberately no INSERT/UPDATE policy for the
+--   anon/authenticated roles below, so a signed-in user can read but never forge their
+--   own plan. The client loads this alongside `progress` (cloud-sync.initApp) into the
+--   `userPlan` global and reads it via `hasPremium()`.
+-- -------------------------------------------------------------------------
+create table if not exists public.entitlements (
+  user_id             uuid        primary key references auth.users(id),
+  plan                text        not null default 'free',   -- 'free' | 'premium' | 'lifetime'
+  status              text        not null default 'active', -- 'active' | 'past_due' | 'cancelled'
+  provider            text,                                  -- 'paddle' | 'lemonsqueezy' | 'stripe' | 'manual'
+  provider_ref        text,                                  -- provider's subscription/order id
+  current_period_end  timestamptz,                           -- null for lifetime / free
+  updated_at          timestamptz default now()
+);
+
+alter table public.entitlements enable row level security;
+
+do $$ begin
+  if not exists (
+    select 1 from pg_policies where tablename = 'entitlements' and policyname = 'own entitlements read'
+  ) then
+    create policy "own entitlements read" on public.entitlements
+      for select using (auth.uid() = user_id);
+  end if;
+end $$;
