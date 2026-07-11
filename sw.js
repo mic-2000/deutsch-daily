@@ -27,6 +27,7 @@ const SHELL_ASSETS = [
   '/assets/icons/icon-512.png',
   '/assets/icons/maskable-512.png',
   '/assets/icons/apple-touch-icon.png',
+  '/assets/social-preview.png',
   '/assets/css/base.css', '/assets/css/components.css', '/assets/css/auth.css',
   '/assets/css/landing.css',
   '/assets/css/chat.css', '/assets/css/collections.css', '/assets/css/planner.css',

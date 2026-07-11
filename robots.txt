@@ -1,0 +1,12 @@
+User-agent: *
+Allow: /
+Disallow: /login
+Disallow: /welcome
+Disallow: /today
+Disallow: /planner
+Disallow: /vocab
+Disallow: /verbs
+Disallow: /collections
+Disallow: /settings
+
+Sitemap: https://deutsch-daily-red.vercel.app/sitemap.xml

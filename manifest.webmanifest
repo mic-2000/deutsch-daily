@@ -4,7 +4,7 @@
   "description": "Personal German learning app (A1 → B1): daily planner, spaced-repetition vocabulary & verb trainers, AI lessons.",
   "lang": "de",
   "dir": "ltr",
-  "start_url": "/planner",
+  "start_url": "/today",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
