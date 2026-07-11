@@ -80,6 +80,11 @@ window.GrammarDrill = (function () {
   function closeSession() {
     const s = state.session;
     const summary = s ? summarize(s) : null;
+    if (summary && summary.total > 0) {
+      const score = Math.round((summary.right / summary.total) * 100);
+      const slug = summary.perSlug && summary.perSlug[0] ? summary.perSlug[0].slug : 'unknown';
+      track('drill_done', { slug: slug, score: score });
+    }
     state.session = null;
     if (cfg.embedded && typeof cfg.onSessionEnd === 'function') cfg.onSessionEnd(summary);
     else render();

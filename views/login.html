@@ -156,6 +156,7 @@ function showLogin() { mode = 'login'; render(); }
 
 async function loginGoogle() {
   try {
+    track('login', { method: 'google' });
     const { error } = await sb.auth.signInWithOAuth({
       provider: 'google',
       options: { redirectTo: window.location.origin + '/' }
@@ -191,6 +192,7 @@ async function submit() {
     } else {
       const { error } = await sb.auth.signInWithPassword({ email, password });
       if (error) { showToast(T('auth_err_wrong')); return; }
+      track('login', { method: 'email' });
       redirect();
     }
   } catch(e) {

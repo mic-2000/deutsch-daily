@@ -65,7 +65,7 @@ function hero() {
       <h1>${T('lp_hero_title')}</h1>
       <p class="lp-lead">${T('lp_hero_sub')}</p>
       <div class="lp-cta-row">
-        <a href="${REGISTER_URL}" class="lp-btn lp-btn-solid">${T('lp_hero_cta')}</a>
+        <a onclick="trackCta('hero', '${REGISTER_URL}')" class="lp-btn lp-btn-solid">${T('lp_hero_cta')}</a>
         <a href="#how" class="lp-btn lp-btn-outline">${T('lp_hero_how')}</a>
       </div>
       <div class="lp-note">${T('lp_hero_note')}</div>
@@ -173,7 +173,7 @@ function pricing() {
           <li class="muted">${T('lp_price_free_3')}</li>
           <li class="muted">${T('lp_price_free_4')}</li>
         </ul>
-        <a href="${REGISTER_URL}" class="lp-price-cta">${T('lp_price_free_cta')}</a>
+        <a onclick="trackCta('pricing', '${REGISTER_URL}')" class="lp-price-cta">${T('lp_price_free_cta')}</a>
       </div>
       <div class="lp-price-card">
         <div class="lp-price-name">${T('lp_price_month_name')}</div>
@@ -184,7 +184,7 @@ function pricing() {
           <li>${T('lp_price_month_3')}</li>
           <li>${T('lp_price_month_4')}</li>
         </ul>
-        <a href="${REGISTER_URL}" class="lp-price-cta">${T('lp_price_month_cta')}</a>
+        <a onclick="trackCta('pricing', '${REGISTER_URL}')" class="lp-price-cta">${T('lp_price_month_cta')}</a>
       </div>
       <div class="lp-price-card featured">
         <span class="lp-price-badge">${T('lp_price_year_badge')}</span>
@@ -258,9 +258,16 @@ function render() {
     `</main>`;
 }
 
+/* Track landing CTA clicks and navigate. */
+function trackCta(section, url) {
+  track('landing_cta_click', { section: section });
+  location.href = url;
+}
+
 /* Email field on the footer CTA → start registration with the address prefilled. */
 function onLandingSubmit(e) {
   e.preventDefault();
+  track('landing_cta_click', { section: 'footer' });
   const el = document.getElementById('lp-email');
   const email = (el && el.value || '').trim();
   location.href = REGISTER_URL + (email ? '&email=' + encodeURIComponent(email) : '');
