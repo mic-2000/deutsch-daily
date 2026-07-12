@@ -49,8 +49,9 @@ experiments; keep the funnel honest.
   `stripe-data` subagent; qualitative reasons from the feedback table — quotes kept in the
   original language with an audience tag.
 - Pricing benchmark refresh with the Research agent (competitor sweep).
-- **AI-cost vs revenue guardrail report**: cost side from `ai_usage`, revenue side (MRR, ARPU)
-  via the `stripe-data` subagent; alert the human at 80% of the AI budget.
+- **AI-cost vs revenue guardrail report**: cost side from `ai_usage` via the `supabase-data`
+  subagent (table lands with DEV-5), revenue side (MRR, ARPU) via the `stripe-data` subagent;
+  alert the human at 80% of the AI budget.
 
 ## Outputs
 

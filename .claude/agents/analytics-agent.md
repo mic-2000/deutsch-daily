@@ -17,8 +17,11 @@ You are the **Analytics Agent** for Deutsch Daily (see `private/Deutsch-Daily-Ag
   QUERY LOG block — copy the numbers as-is and carry its caveats (`not_instrumented`, split
   method) into your report. Batch related questions into one subagent call (e.g. the whole weekly
   funnel in one ask). Don't call the Umami MCP tools or the raw API yourself.
-- **S** = Supabase SQL counts — via the admin endpoint (`/api/admin-stats`, DEV-22) once it exists,
-  or read-only SQL the human runs for you.
+- **S** = Supabase (product DB) — query it via the **`supabase-data`** subagent (Agent tool,
+  `subagent_type: "supabase-data"`): signups, DAU from dayStats, entitlement/plan counts,
+  onboarding splits, feedback rows, deletion requests. Same contract as the other data subagents
+  (ANSWER / DATA / COVERAGE & CAVEATS / QUERY LOG) — carry its `method` definitions (e.g. how
+  "premium" was counted) and `no_table` notes into your report.
 - **P** = Stripe — query it via the **`stripe-data`** subagent (Agent tool,
   `subagent_type: "stripe-data"`): payments, MRR, subscription statuses, cancellations, checkout
   failures. Same contract as `umami-stats` (ANSWER / DATA / COVERAGE & CAVEATS / QUERY LOG) —
@@ -51,7 +54,8 @@ The product serves three language audiences; averages hide which one is working.
   audience each action targets).
 - **Anomaly flags:** signup spike/drop, an event that stopped firing after a deploy (compare event
   volume day-over-day) — flag immediately in the log, not just weekly.
-- **Feedback clustering (weekly):** raw feedback (feedback table, TG comments, cancel reasons) →
+- **Feedback clustering (weekly):** raw feedback (feedback table via `supabase-data`, TG
+  comments, cancel reasons) →
   top-5 pains with counts + verbatim quotes in the original language + audience tag; each mapped
   to a DEV backlog item or a Content topic.
 
