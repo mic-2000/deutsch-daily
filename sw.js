@@ -42,7 +42,7 @@ const SHELL_ASSETS = [
   '/assets/js/theme.js', '/assets/js/utils.js',
   '/assets/js/vocab-trainer.js', '/assets/js/verbs-trainer.js',
   '/assets/js/grammar-drill.js',
-  '/data/vocab.js', '/data/verbs.js', '/data/weeks.js', '/data/grammar-drills.js', '/data/dialogues.js',
+  '/data/vocab.js', '/data/verbs.js', '/data/weeks.js', '/data/grammar-drills.js', '/data/dialogues.js', '/data/hints.js',
   '/locales/en.js', '/locales/ru.js', '/locales/ua.js'
 ];
 

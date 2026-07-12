@@ -760,6 +760,14 @@ ${appFooter()}`;
     <div class="kbd-hint">${T('flashcard_hint')}</div>`;
   }
 
+  /* ---- DEV-15 error explanations: a 1-line grammar rule under the feedback on a MISS, shown only
+     when a rule confidently applies (else nothing → no layout jump). Rules + German examples live in
+     data/hints.js (window.HINTS); the localized frame is a T() key. Guarded so a page that doesn't
+     load hints.js simply shows no hint. ---- */
+  function hintHtml(h) { return h ? `<div class="rule-hint">${T(h.key, ...h.args, esc(h.examples.join(' · ')))}</div>` : ''; }
+  function articleHintHtml(art) { return (typeof HINTS !== 'undefined' && art) ? hintHtml(HINTS.articleHint(art.core, art.article)) : ''; }
+  function pluralHintHtml(card) { return (typeof HINTS !== 'undefined') ? hintHtml(HINTS.pluralHint(card.de, card.pl)) : ''; }
+
   function renderArticle(card, s) {
     const art = parseArticle(card.de);
     const arts = ['der', 'die', 'das'];
@@ -782,6 +790,7 @@ ${appFooter()}`;
       <div class="feedback ${s.lastCorrect?'ok':'bad'}">
         ${s.lastCorrect ? T('article_correct') : T('article_wrong')} <span class="correct-answer"><span class="art ${art.article}" style="font-weight:600">${art.article}</span> ${esc(art.core)}</span> — ${esc(card.ru)}
       </div>
+      ${s.lastCorrect ? '' : articleHintHtml(art)}
       <button class="audio-btn" id="cardAudio" onclick="VocabTrainer.speakWord(${card.week},${card.idx},this)" style="margin-top:8px">🔊</button>
       <div class="card-actions"><button class="next-btn" onclick="VocabTrainer.nextCard()">${T('article_next')}</button></div>
       <div class="kbd-hint">${T('article_hint_next')}</div>
@@ -876,6 +885,7 @@ ${appFooter()}`;
       <div class="feedback ${s.lastCorrect?'ok':'bad'}">
         ${s.lastCorrect ? T('article_correct') : T('article_wrong')} <span class="correct-answer">${deColored(correct)}</span>
       </div>
+      ${s.lastCorrect ? '' : pluralHintHtml(card)}
       <button class="audio-btn" id="cardAudio" onclick="VocabTrainer.speakPlural(${card.week},${card.idx},this)" style="margin-top:8px">🔊</button>
       <div class="card-actions"><button class="next-btn" onclick="VocabTrainer.nextCard()">${T('article_next')}</button></div>
       <div class="kbd-hint">${T('article_hint_next')}</div>
@@ -919,6 +929,7 @@ ${appFooter()}`;
       onkeydown="if(event.key==='Enter'){event.preventDefault(); ${s.answered?'VocabTrainer.nextCard()':'VocabTrainer.submitPluralInput()'}}"></div>
     ${s.answered ? `
       ${answeredBlock}
+      ${s.spellCorrect ? '' : pluralHintHtml(card)}
       <button class="audio-btn" id="cardAudio" onclick="VocabTrainer.speakPlural(${card.week},${card.idx},this)" style="margin-top:8px">🔊</button>
       <div class="card-actions"><button class="next-btn" onclick="VocabTrainer.nextCard()">${T('spelling_next')}</button></div>
     ` : `

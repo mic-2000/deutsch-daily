@@ -537,6 +537,13 @@ ${appFooter()}`;
     `}`;
   }
 
+  /* DEV-15 error explanation: a present-tense stem-vowel change note under the conjug feedback on a
+     MISS, shown only when the verb actually has such a change (else nothing → no layout jump). Rule +
+     German examples live in data/hints.js (window.HINTS); the localized frame is a T() key. Guarded so
+     a page that doesn't load hints.js simply shows no hint. */
+  function hintHtml(h) { return h ? `<div class="rule-hint">${T(h.key, ...h.args, esc(h.examples.join(' · ')))}</div>` : ''; }
+  function verbStemHintHtml(key) { if (typeof HINTS === 'undefined') return ''; const e = VERBS[key]; return e ? hintHtml(HINTS.verbStemHint(key, e.praes)) : ''; }
+
   function renderConjug(card, s) {
     const forms = conjugatePresent(card.key);
     const person = card.person;
@@ -562,6 +569,7 @@ ${appFooter()}`;
     <div class="conj-line"><span class="conj-pron-big">${esc(PRON_LABEL[person])}</span> ${slot}</div>
     ${s.answered ? `
       ${s.lastCorrect?`<div class="feedback ok">${T('spelling_correct')}</div>`:feedback}
+      ${s.lastCorrect ? '' : verbStemHintHtml(card.key)}
       <div class="conj-table">${table}</div>
       <button class="audio-btn" id="cardAudio" onclick="VerbsTrainer.speakVerb(${jk(card.key)},this)" style="margin-top:8px">🔊</button>
       <div class="card-actions"><button class="next-btn" onclick="VerbsTrainer.nextCard()">${T('article_next')}</button></div>

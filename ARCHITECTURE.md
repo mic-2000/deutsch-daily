@@ -380,6 +380,14 @@ globals the inline code used (`T`/`getLang`, `esc`/`showToast`/`normalize`/`diff
 internals through the namespace via a small `harness.js` bridge (top-level lookup falls back to
 `window.VocabTrainer`/`VerbsTrainer`), so the existing trainer tests kept their `exports` lists.
 
+**Error explanations (DEV-15).** On a MISS, the article / plural / verb-conjug modes show a one-line
+localized grammar rule under the feedback (never on a hit → no layout jump). The matching is a pure,
+language-agnostic engine in `data/hints.js` (`window.HINTS`, see §7); the localized prose is three
+parametric locale keys (`hint_article` / `hint_plural` / `hint_verb`). Each engine keeps a tiny
+`hintHtml(h)` helper that renders `T(h.key, ...h.args, esc(examples))`, and calls `HINTS` guarded by
+`typeof HINTS !== 'undefined'` so a page that doesn't load `data/hints.js` simply shows no hint. A
+`null` return (no rule confidently applies) also shows nothing.
+
 ### `legal.js` — shared renderer for the static legal pages (`/privacy` · `/terms`)
 `renderLegal(active, doc)` builds the landing-style chrome (header + footer) around a per-language
 content object (`{ title, intro, sections:[{h, items:[]}] }`) defined inline in each page (precedent:
@@ -842,6 +850,31 @@ const VERBS = {
   trainer also writes verb mastery into `verbs_data` for words that resolve to a verb key via
   `verbKeyForWord`.
 
+### `data/hints.js` — global `HINTS` (error-explanation rules, DEV-15)
+
+A pure, language-agnostic rule engine consumed by the trainers to explain a **missed** answer. No
+prose lives here (that's `hint_*` in the locales, §6) — only rule matching and German example words.
+
+```js
+window.HINTS = {
+  articleHint(core, gender)          → { key:'hint_article', args:[suffix, article], examples } | null
+  pluralHint(sgWithArt, plWithArt)   → { key:'hint_plural',  args:[classId],         examples } | null
+  verbStemHint(infinitive, praes)    → { key:'hint_verb',    args:[vowelChange],     examples } | null
+};
+```
+- **Article** — noun gender by suffix (`-ung/-heit/-keit/-schaft/-ion/-tät/-ik/-ei/-ie/-ur → die`,
+  `-chen/-lein/-ment/-um → das`, `-ling/-ismus/-or → der`). **Gender-gated:** a rule fires only when
+  its gender equals the word's *actual* article, so a suffix with exceptions (e.g. `das Labor` vs
+  `-or → der`) never mis-teaches — a mismatch just skips.
+- **Plural** — formation class from the singular vs plural forms: ending (`-e`/`-er`/`-(e)n`/`-nen`/
+  `-s`/none) × umlaut. Unclassifiable (Latin/irregular, e.g. `Firma → Firmen`) → `null`.
+- **Verb** — present-tense stem-vowel change (`a→ä`, `e→i`, `e→ie`, `au→äu`, `o→ö`) from the
+  infinitive vs the stored `praes` (drives the conjug mode). Regular verbs → `null`. (Präteritum/PP
+  ablaut is intentionally *not* classified — too noisy to guarantee a correct rule.)
+- Loaded on the four trainer hosts (`vocab` / `verbs` / `today` / `welcome`), guarded in the engines
+  (`typeof HINTS !== 'undefined'`), and cached in the PWA shell (`SHELL_ASSETS`). Guarded by
+  `tests/hints.test.js` (rule matching + "hint on a miss, only then" wiring).
+
 ---
 
 ## 8. `planner.html`
@@ -998,10 +1031,15 @@ across the vocabulary and verb trainer pages.
 - **flashcard** — German shown → "show translation" (auto-speaks on reveal) → self-grade
   "Knew it / Didn't know". **Advances immediately** after grading.
 - **article** — word without article → `der/die/das` buttons (color-coded der=blue, die=red,
-  das=green) → feedback + "Next". Audio appears only **after** answering (so it doesn't hint).
+  das=green) → feedback + "Next". Audio appears only **after** answering (so it doesn't hint). On a
+  MISS a one-line gender rule (`HINTS.articleHint`, DEV-15) appears under the feedback when a
+  teachable suffix applies (§7 `data/hints.js`).
 - **spelling** — translation shown → type the German → check. Comparison via `normalize()`
   from `utils.js`. A missing article is accepted correct with a note. On error, `diffChars` LCS
   highlights wrong chars (`diff-bad`) and missing chars (`diff-miss`), case-insensitively.
+
+The **plural** modes (choose / type) likewise show a plural-formation rule (`HINTS.pluralHint`) under
+the feedback on a miss.
 
 ### Three-form verb display (`verbForms`)
 Any word that is a known **`VERBS`** key is shown with all THREE principal parts —
@@ -1108,6 +1146,8 @@ other non-reflexive verbs support every mode. Pedagogical selection walks the bo
 then conjug → cloze → table as the card climbs the Leitner boxes. The **conjug** mode asks one
 random person (ich/du/er/wir/ihr/sie) and reveals the full six-person paradigm on answer;
 `conjugatePresent(key)` generates it from the infinitive + `praes` (verified in `tests/verb-present.test.js`).
+On a MISS in the conjug mode, a one-line stem-vowel-change rule (`HINTS.verbStemHint`, DEV-15) appears
+under the feedback when the verb has one (a→ä / e→i / e→ie / au→äu / o→ö; §7 `data/hints.js`).
 
 - **triad** — Prompt: infinitiv; user recalls Präteritum + Partizip II (with auxiliary). Read-aloud,
   `Space`/`Enter` to reveal. Self-grade "knew it / didn't".
