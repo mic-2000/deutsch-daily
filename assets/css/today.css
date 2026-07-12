@@ -36,6 +36,14 @@
 .today-migrated-ack { flex: 0 0 auto; align-self: center; border: 1px solid var(--line); background: transparent; color: var(--ink); border-radius: 4px; padding: 8px 14px; font-size: 13px; cursor: pointer; white-space: nowrap; transition: all 0.15s; }
 .today-migrated-ack:hover { background: var(--ink); color: var(--paper); }
 
+/* return-after-break offer (DEV-12) — warm, shame-free re-entry card with an easy day + full-day
+   alternative; either button answers the offer for this break. */
+.today-break { margin: 26px 0 10px; border: 1px solid var(--line); border-left: 3px solid var(--accent); background: var(--paper-3); border-radius: 6px; padding: 20px 22px; }
+.today-break-title { font-family: var(--serif); font-size: clamp(20px, 2.6vw, 26px); font-weight: 400; color: var(--ink); }
+.today-break-msg { margin: 8px 0 0; color: var(--ink-soft); font-size: 15px; line-height: 1.6; max-width: 52ch; }
+.today-break-actions { margin-top: 18px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.today-break-note { margin-top: 12px; font-size: 13px; color: var(--ink-soft); }
+
 .steps-label { margin: 26px 0 10px; font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-soft); }
 .steps-list { border: 1px solid var(--line); border-radius: 6px; overflow: hidden; background: var(--paper-3); }
 .step-row { display: flex; gap: 16px; align-items: flex-start; padding: 18px 20px; border-bottom: 1px solid var(--line); }

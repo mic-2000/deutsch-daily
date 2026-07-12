@@ -110,6 +110,13 @@ window.LOCALE_EN = {
     // Course readiness: share of the day's core practice families worked (distinct from the streak)
     today_readiness_title: 'Course readiness',
     today_readiness_note: (worked, total) => `You covered ${worked} of ${total} of today's core practice areas. This tracks how much of the plan you did, separate from your streak — the light pace keeps the streak going while covering less each day.`,
+    // return-after-break re-entry offer (DEV-12) — warm, no guilt copy
+    today_break_title: 'Welcome back',
+    today_break_msg: "It's been a little while — that's completely fine. Want to ease back in with a lighter day? Just your due reviews, nothing new.",
+    today_break_easy: 'Ease back in',
+    today_break_normal: 'Do a full day',
+    today_break_note: 'The easy day is due reviews only, at about half the usual length.',
+    today_easy_pace: "Welcome back — you eased in with your due reviews. Pick up the full plan again whenever you're ready.",
     // streak + activity calendar (DEV-7) — adult tone, no guilt copy
     streak_current: (n) => `${n}-day streak`,
     streak_best: (n) => `Best: ${n} ${n === 1 ? 'day' : 'days'}`,

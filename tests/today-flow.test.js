@@ -582,6 +582,129 @@ test('renderStep persists the position and resumeFlow restores it (refresh → s
   assert.match(html, /Day summary/, 'the saved summary is shown');
 });
 
+/* ---- return-after-break "easy day" (DEV-12; depends on DEV-7 lastActiveDate) ----
+ * A gap of BREAK_DAYS+ days since lastActiveDate offers a warm, shame-free re-entry on the intro: an
+ * EASY day (due-only, no new cards, half the tariff session cap) or a full day. The offer shows once
+ * per break; completing the easy day counts the day and re-anchors the streak. */
+
+/* A 'YYYY-MM-DD' local day key n days before today — matches leitnerToday()'s format. */
+function dayKeyAgo(n) {
+  const d = new Date();
+  d.setDate(d.getDate() - n);
+  const p = (x) => String(x).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+}
+/* First non-verb word index of a week (its mastery lives in state.mastery, not the shared verb store). */
+function firstNonVerbIdx(V, VOCAB, week) {
+  const words = VOCAB[week].words;
+  for (let i = 0; i < words.length; i++) if (!V.verbKeyForWord(words[i])) return i;
+  return 0;
+}
+
+test('daysSinceActive / onBreak reflect the gap since lastActiveDate', () => {
+  const t = fresh(['planner', 'daysSinceActive', 'onBreak']);
+  assert.equal(t.daysSinceActive(), 0, 'a brand-new account (no stamp) is never on a break');
+  assert.equal(t.onBreak(), false);
+  t.planner.lastActiveDate = dayKeyAgo(2);
+  assert.equal(t.daysSinceActive(), 2);
+  assert.equal(t.onBreak(), false, 'a 2-day gap is not yet a break (< 4)');
+  t.planner.lastActiveDate = dayKeyAgo(5);
+  assert.equal(t.daysSinceActive(), 5);
+  assert.equal(t.onBreak(), true, 'a 5-day gap is a break');
+});
+
+test('the break offer shows once per break; either choice answers it; a new break re-offers', () => {
+  const t = fresh(['planner', 'showBreakOffer', 'ackBreak']);
+  t.planner.lastActiveDate = dayKeyAgo(6);
+  assert.equal(t.showBreakOffer(), true, 'a real break offers the easy day');
+  t.ackBreak();
+  assert.equal(t.showBreakOffer(), false, 'answered → not shown again for the same break');
+  assert.equal(t.planner.breakPromptedFor, t.planner.lastActiveDate, 'the break anchor is recorded');
+  t.planner.lastActiveDate = dayKeyAgo(4);   // a later, different break
+  assert.equal(t.showBreakOffer(), true, 'a new break re-anchors and offers again');
+});
+
+test('the intro renders the localized break offer with both paths, not the plain Start', () => {
+  const t = fresh(['planner', 'render']);
+  t.planner.lastActiveDate = dayKeyAgo(5);
+  t.render();
+  const html = t.app.innerHTML;
+  assert.match(html, /today-break/, 'the break offer card is shown');
+  assert.match(html, /Welcome back/, 'localized title');
+  assert.match(html, /startEasyDay\(\)/, 'an easy-day button');
+  assert.match(html, /startNormalDay\(\)/, 'a full-day button — the normal path stays available');
+  assert.doesNotMatch(html, /today_break_[a-z_]+/, 'no raw i18n keys leak');
+});
+
+test('buildSteps(easy) is the lightest set: grammar (optional) + both trainers + done', () => {
+  const t = fresh(['buildSteps']);
+  // day 4 is a produce day normally; the easy set drops produce/listen/review/ai/weak entirely.
+  const steps = t.buildSteps(4, {}, true);
+  assert.equal(steps.map((s) => s.id).join(','), 'grammar,vocab,verbs,done', 'no extras on the easy day');
+  assert.equal(steps.find((s) => s.id === 'grammar').required, false, 'the grammar drill is optional on the easy day');
+  assert.equal(steps.find((s) => s.id === 'vocab').required, true, 'the due-only trainers still count for the day');
+  assert.equal(steps.find((s) => s.id === 'verbs').required, true);
+});
+
+test('startEasyDay halves the session cap and runs vocab due-only (no new cards)', () => {
+  const t = fresh(['planner', 'startEasyDay', 'nextStep', 'sessionCap', 'VocabTrainer', 'VOCAB']);
+  const capNormal = t.sessionCap();   // flow not easy yet → full cap (default 15-min tariff → 18)
+  const V = t.VocabTrainer;
+  const idx = firstNonVerbIdx(V, t.VOCAB, 1);
+  V.state.mastery[V.key(1, idx)] = { box: 2, due: 1, right: 1, wrong: 0, seen: 3 };   // a seen, past-due card
+  V.state.modes.plural = false;
+  t.planner.lastActiveDate = dayKeyAgo(5);
+  t.startEasyDay();                   // grammar
+  assert.ok(t.sessionCap() < capNormal, 'the easy day runs at a reduced session cap');
+  assert.equal(t.planner.breakPromptedFor, t.planner.lastActiveDate, 'starting the easy day answers the offer');
+  t.nextStep();                       // grammar → vocab session
+  assert.ok(V.state.session, 'the due card started a vocab session');
+  assert.equal(V.state.session.scope.onlyDue, true, 'the easy vocab scope is due-only');
+  assert.ok(V.state.session.queue.every((c) => V.isSeen(c.week, c.idx)), 'no new (unseen) cards on the easy day');
+});
+
+test('the easy day introduces no new verbs (due-only, no new-verb fallback)', () => {
+  const t = fresh(['planner', 'startEasyDay', 'nextStep', 'VerbsTrainer']);
+  t.planner.lastActiveDate = dayKeyAgo(5);
+  t.startEasyDay();          // grammar
+  t.nextStep();              // grammar → vocab (empty, auto-skip) → verbs (no due, easy: no fallback → auto-skip) → done
+  assert.match(t.app.innerHTML, /flow-done/, 'the easy day cascades to done when nothing is due');
+  assert.ok(!t.VerbsTrainer.state.session, 'no verbs session started → no new verbs pulled on the easy day');
+});
+
+test('completing the easy day counts the day, advances currentDay, and re-anchors the streak', () => {
+  const t = fresh(['planner', 'startEasyDay', 'nextStep']);
+  t.planner.lastActiveDate = dayKeyAgo(6);
+  const day = t.planner.currentDay;
+  t.startEasyDay();          // grammar
+  t.nextStep();              // cascades through the (empty) due-only trainers to the done screen
+  assert.match(t.app.innerHTML, /flow-done/, 'the easy day reaches the done screen');
+  assert.equal(t.planner.completed[day], true, 'the easy day counts as a completed day');
+  assert.equal(t.planner.currentDay, day + 1, 'currentDay advances');
+  assert.ok(t.planner.dayStats[day], 'a dayStats entry is recorded');
+  assert.equal(t.planner.lastActiveDate, dayKeyAgo(0), 're-anchored to today — the streak restarts from here');
+  assert.match(t.app.innerHTML, /Welcome back/, 'the done screen shows the warm easy-day note');
+});
+
+test('startNormalDay answers the offer and runs a full (non-easy) day', () => {
+  const t = fresh(['planner', 'startNormalDay', 'sessionCap', 'showBreakOffer']);
+  const full = t.sessionCap();
+  t.planner.lastActiveDate = dayKeyAgo(5);
+  assert.equal(t.showBreakOffer(), true);
+  t.startNormalDay();
+  assert.equal(t.showBreakOffer(), false, 'choosing the full day also answers the offer');
+  assert.equal(t.sessionCap(), full, 'a normal day keeps the full session cap (not the easy half)');
+});
+
+test('no break offer for a steady learner (active yesterday)', () => {
+  const t = fresh(['planner', 'showBreakOffer', 'render']);
+  t.planner.lastActiveDate = dayKeyAgo(1);
+  assert.equal(t.showBreakOffer(), false, 'a one-day gap is normal, not a break');
+  t.render();
+  assert.match(t.app.innerHTML, /today-start-row/, 'the plain Start is shown, not the break offer');
+  assert.doesNotMatch(t.app.innerHTML, /today-break/);
+});
+
 test('planner: a pinned reply renders highlighted and the seed prompt is hidden', () => {
   const p = loadPage({
     page: 'planner.html', extraFiles: ['locales/en.js'], exports: ['render', 'state', 'lessonsCache'],

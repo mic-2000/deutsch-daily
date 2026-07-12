@@ -434,7 +434,10 @@ window.VocabTrainer = (function () {
       /* /today's daily-review scope for the guided flow. Every DUE card from the weeks reached so
          far — INCLUDING mastered-but-due cards, so long-interval words still resurface (unlike
          'review-all', which drops the mastered) — plus a capped set of NEW words from the current
-         week only. `scope.week` = the day's curriculum week (clamped to the available range). */
+         week only. `scope.week` = the day's curriculum week (clamped to the available range).
+         `scope.onlyDue` (DEV-12 return-after-break "easy day") forces a due-only session: no new
+         words, no new plural cards, and no empty-queue new-word fallback — so a light re-entry
+         reviews the backlog without piling on fresh material (an empty queue then auto-skips). */
       const maxWeek = Math.max(...Object.keys(VOCAB).map(Number));
       const curWeek = Math.max(1, Math.min(+scope.week || 1, maxWeek));
       const reached = [];
@@ -447,12 +450,14 @@ window.VocabTrainer = (function () {
           else if (w === curWeek) neu.push([w, i]);                      // new words only from the current week
         }
       }
-      list = due.map(([w, i]) => makeCard(w, i)).concat(neu.slice(0, newTake(scope, 12)).map(([w, i]) => makeCard(w, i)));
-      if (usePlural) list = list.concat(collectPluralCards(reached, now, 8));
+      const newWordTake = scope.onlyDue ? 0 : newTake(scope, 12);
+      const newPluralCap = scope.onlyDue ? 0 : 8;
+      list = due.map(([w, i]) => makeCard(w, i)).concat(neu.slice(0, newWordTake).map(([w, i]) => makeCard(w, i)));
+      if (usePlural) list = list.concat(collectPluralCards(reached, now, newPluralCap));
       // Empty-queue fallback shows the whole current week as new — but only when UNCAPPED. When the
-      // daily new-word budget is the reason the queue is empty, leave it empty so the /today host
-      // auto-skips the vocab step instead of blowing past today's cap.
-      if (list.length === 0 && newDailyCap(scope) === Infinity) {
+      // daily new-word budget (or the due-only easy day) is the reason the queue is empty, leave it
+      // empty so the /today host auto-skips the vocab step instead of blowing past today's cap.
+      if (list.length === 0 && newDailyCap(scope) === Infinity && !scope.onlyDue) {
         VOCAB[curWeek].words.forEach((_, i) => list.push(makeCard(curWeek, i)));
         if (usePlural) list = list.concat(allPluralCards([curWeek]));
       }

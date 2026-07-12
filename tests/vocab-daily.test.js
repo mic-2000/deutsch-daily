@@ -86,3 +86,27 @@ test('daily scope clamps an out-of-range week and still yields a session', () =>
   assert.ok(v.state.session, 'clamped week still starts a session');
   assert.ok(v.state.session.queue.length > 0);
 });
+
+/* ---- onlyDue (DEV-12 return-after-break "easy day") — due-only, no new material ---- */
+
+test('daily onlyDue reviews due cards but introduces NO new words', () => {
+  const v = fresh();
+  const now = Date.now();
+  v.state.modes.plural = false;   // words only, keep it deterministic
+  const [dueIdx] = nonVerbIdx(v, 1, 1);
+  v.state.mastery[v.key(1, dueIdx)] = rec({ box: 2, due: now - 1000, seen: 3 });   // seen + past-due
+
+  v.startSession({ type: 'daily', week: 2, onlyDue: true });
+  assert.ok(v.state.session, 'a due card keeps the session alive');
+  assert.ok(inQueue(v, 1, dueIdx), 'the due card is reviewed');
+  assert.ok(!v.state.session.queue.some((c) => c.week === 2), 'no new current-week words are introduced');
+  assert.ok(v.state.session.queue.every((c) => v.isSeen(c.week, c.idx)), 'onlyDue → every card is already seen');
+});
+
+test('daily onlyDue with nothing due yields no session (host then auto-skips) — no new-word flood', () => {
+  const v = fresh();
+  v.state.modes.plural = false;
+  // fresh account: nothing seen, nothing due. onlyDue must NOT fall back to flooding the week as new.
+  v.startSession({ type: 'daily', week: 2, onlyDue: true });
+  assert.ok(!v.state.session, 'no due cards + no new (onlyDue) → empty → no session');
+});

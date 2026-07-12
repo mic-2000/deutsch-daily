@@ -145,7 +145,7 @@ function shouldRunListening(day, onboarding){
 
 /* Resume position across a page refresh — transient per-tab nav state (NOT progress; progress lives
    in the cloud). sessionStorage survives reload, clears on tab close — exactly "same step on refresh". */
-function saveFlow(){ try { sessionStorage.setItem('today_flow', JSON.stringify({ step: flow.step, day: flow.day })); } catch (e) {} }
+function saveFlow(){ try { sessionStorage.setItem('today_flow', JSON.stringify({ step: flow.step, day: flow.day, easy: !!flow.easy })); } catch (e) {} }
 function clearFlow(){ try { sessionStorage.removeItem('today_flow'); } catch (e) {} }
 function readFlow(){ try { return JSON.parse(sessionStorage.getItem('today_flow')); } catch (e) { return null; } }
 
@@ -171,6 +171,33 @@ function markActive(){
   planner.lastActiveDate = today;
   saveToCloud();   // idempotent planner_data upsert — carries lastActiveDate alongside the rest
 }
+
+/* ---- return-after-break (DEV-12) ----
+   A gap of BREAK_DAYS+ calendar days since the last active day (the DEV-7 `lastActiveDate` stamp) is
+   a "break". On the /today intro we offer a warm, shame-free re-entry: an EASY day (due-only, no new
+   cards, half the tariff session cap — see sessionCap / startVocabStep / startVerbsStep / buildSteps).
+   Completing it counts the day and re-anchors the streak (stats.js derives the rest, freeze included).
+   The offer is shown ONCE per break: choosing either path stamps `planner.breakPromptedFor` with the
+   break's anchor (the current lastActiveDate), so it won't re-appear until a later break re-anchors. */
+const BREAK_DAYS = 4;
+function todayKey(){ return (typeof leitnerToday === 'function') ? leitnerToday() : streakDayKey(new Date()); }
+/* Whole calendar days between two 'YYYY-MM-DD' day keys (local, DST-safe via midnight-local dates). */
+function dayKeyDiff(a, b){
+  const toLocal = (k) => { const p = String(k).split('-').map(Number); return new Date(p[0], (p[1] || 1) - 1, p[2] || 1); };
+  return Math.round((toLocal(b) - toLocal(a)) / 86400000);
+}
+/* Days since the learner was last active; 0 for a brand-new account (no stamp yet → never on break). */
+function daysSinceActive(){ return planner.lastActiveDate ? dayKeyDiff(planner.lastActiveDate, todayKey()) : 0; }
+function onBreak(){ return daysSinceActive() >= BREAK_DAYS; }
+/* The stable identifier of the current break — the lastActiveDate it started from. */
+function breakAnchor(){ return planner.lastActiveDate || ''; }
+/* Show the re-entry offer on the intro: on a real break, for a day still in the course, not yet
+   answered for THIS break. */
+function showBreakOffer(){ return dayOf() <= TOTAL_DAYS && onBreak() && planner.breakPromptedFor !== breakAnchor(); }
+/* Mark this break's offer answered so it won't re-prompt (persisted with the rest of planner_data). */
+function ackBreak(){ planner.breakPromptedFor = breakAnchor(); saveToCloud(); }
+function startEasyDay(){ ackBreak(); startFlow(true); }
+function startNormalDay(){ ackBreak(); startFlow(false); }
 /* Each engine's onSessionEnd normally files its result and advances the flow. During the optional
    weak-spots round (weak.active) the same callback instead hands the result to weakStageDone, which
    chains the family sub-sessions — so a weak sub-session never clobbers the main step's result. */
@@ -253,7 +280,19 @@ function tariff(onboarding){
    end (or auto-skipped on empty content) counts complete; the produce block completes on the
    learner's own self-check (never gated on writing/speech quality); closing one early leaves its
    block incomplete. */
-function buildSteps(day, onboarding){
+function buildSteps(day, onboarding, easy){
+  // Easy return-after-break day (DEV-12): the lightest set — a short grammar card (drill optional,
+  // never required) + the two trainers in DUE-ONLY mode (startVocabStep/startVerbsStep read flow.easy;
+  // half session cap via sessionCap). No review/listen/produce/AI/weak, so nothing extra to carry. An
+  // empty trainer queue (backlog already cleared) auto-skips, so the day can never deadlock (Gate 5).
+  if (easy) {
+    return [
+      { id: 'grammar', required: false, enabled: true, run: renderGrammar,  isComplete: () => true },
+      { id: 'vocab',   required: true,  enabled: true, run: startVocabStep,  isComplete: () => !!(flow.results.vocab && flow.results.vocab.completed) },
+      { id: 'verbs',   required: true,  enabled: true, run: startVerbsStep,  isComplete: () => !!(flow.results.verbs && flow.results.verbs.completed) },
+      { id: 'done',    required: true,  enabled: true, run: renderDone,      isComplete: () => true },
+    ];
+  }
   const t = tariff(onboarding);
   const light = t === 5;
   // Light track runs one trainer per day: vocab on even days, verbs on odd days.
@@ -288,17 +327,18 @@ function currentStep(){ return flow.steps[flow.step] || null; }
 /* A day is finished when every enabled required descriptor reports complete (AI is not required). */
 function dayComplete(){ return flow.steps.filter(s => s.required).every(s => s.isComplete()); }
 
-function startFlow(){
+function startFlow(easy){
   if (dayOf() > TOTAL_DAYS) return;
   const onb = onboardingProfile();
   const tariffVal = tariff(onb);
-  track('today_start', { day: dayOf(), tariff: String(tariffVal) });
+  const isEasy = !!easy;   // DEV-12 return-after-break "easy day"
+  track('today_start', { day: dayOf(), tariff: String(tariffVal), easy: isEasy });
   ai = { messages: [], loading: false };
   grammarExplain = false;
   listen = { checked: false, answers: [] };
   produce = { text: '', checks: {}, feedback: '', loading: false };
   weak = { active: false, seq: [], stage: 0, results: {} };
-  flow = { running: true, step: 0, day: dayOf(), steps: buildSteps(dayOf(), onb), results: {}, backlog: {}, vocabResult: null, verbResult: null };
+  flow = { running: true, step: 0, day: dayOf(), steps: buildSteps(dayOf(), onb, isEasy), results: {}, backlog: {}, vocabResult: null, verbResult: null, easy: isEasy };
   renderStep();
   loadDayLesson(flow.day);   // pull any saved explanation/chat for this day (shared with the planner)
 }
@@ -328,8 +368,9 @@ function renderStep(){
 }
 /* AI step run(): paint the chat, then auto-generate the once-per-day summary if a key is present. */
 function runAiStep(){ renderAi(); maybeSummarize(); }
-/* Cap a session to the active tariff's daily time budget (onboarding "minutes/day"). */
-function sessionCap(){ return { 5: 6, 10: 12, 15: 18, '20+': 25 }[tariff()]; }
+/* Cap a session to the active tariff's daily time budget (onboarding "minutes/day"). The easy
+   return-after-break day (DEV-12) runs at ~half the cap for a lighter re-entry. */
+function sessionCap(){ const base = { 5: 6, 10: 12, 15: 18, '20+': 25 }[tariff()]; return flow.easy ? Math.max(3, Math.ceil(base / 2)) : base; }
 function trimSession(engine){ const s = engine.state.session; if (s && s.queue) { s.queue = s.queue.slice(0, sessionCap()); s.uniqueTotal = s.queue.length; } }
 /* SRS backlog (Plan §4, curriculum-redesign-2026-07-v2.md §17 item 4): record how many DUE cards a
    trainer step couldn't fit into its capped session, so the done screen can tell the learner what
@@ -341,14 +382,16 @@ function startVocabStep(){
   // `dailyNew: true` opts into the trainer's per-day new-word budget so extra same-day sessions don't
   // keep introducing fresh words (the free-explore /vocab page omits it and stays uncapped).
   noteBacklog('vocab', VocabTrainer.dueCount(localizedToday().week));
-  VocabTrainer.startSession({ type: 'daily', week: localizedToday().week, dailyNew: true });
-  if (!VocabTrainer.state.session) { flow.results.vocab = { completed: true, skipped: true }; nextStep(); return; }   // empty queue (incl. daily new-word cap reached) → auto-skip, doesn't block the day
+  // Easy day (DEV-12): due-only, no new words/plurals; else the normal daily scope with today's new-word budget.
+  VocabTrainer.startSession({ type: 'daily', week: localizedToday().week, dailyNew: true, onlyDue: !!flow.easy });
+  if (!VocabTrainer.state.session) { flow.results.vocab = { completed: true, skipped: true }; nextStep(); return; }   // empty queue (incl. daily new-word cap reached / easy-day backlog cleared) → auto-skip, doesn't block the day
   trimSession(VocabTrainer); VocabTrainer.render();
 }
 function startVerbsStep(){
   noteBacklog('verbs', VerbsTrainer.dueCount());
   VerbsTrainer.startSession({ type: 'due' });                          // repetition first
-  if (!VerbsTrainer.state.session) VerbsTrainer.startSession({ type: 'filter', filter: 'all', week: localizedToday().week, dailyNew: true }); // else due + some new (band-gated to today's week + capped to today's new-verb budget)
+  // Easy day (DEV-12): due-only — skip the new-verb fallback so a light re-entry introduces nothing new.
+  if (!VerbsTrainer.state.session && !flow.easy) VerbsTrainer.startSession({ type: 'filter', filter: 'all', week: localizedToday().week, dailyNew: true }); // else due + some new (band-gated to today's week + capped to today's new-verb budget)
   if (!VerbsTrainer.state.session) { flow.results.verbs = { completed: true, skipped: true }; nextStep(); return; }   // nothing to train → auto-skip
   trimSession(VerbsTrainer); VerbsTrainer.render();
 }
@@ -851,7 +894,9 @@ function renderDone(){
   const waiting = Object.keys(flow.backlog).reduce((n, id) => n + (flow.backlog[id] || 0), 0);
   const backlogBlock = waiting > 0 ? `<div class="done-backlog">${T('today_backlog', waiting)}</div>` : '';
   // 5-min light track: remind the learner this is a maintenance pace, not the full B1 path. (Plan §4.)
-  const lightNote = tariff() === 5 ? `<div class="done-light">${T('today_light_pace')}</div>` : '';
+  // Easy return-after-break day (DEV-12): a warm "you're back" note instead (takes precedence).
+  const lightNote = flow.easy ? `<div class="done-light">${T('today_easy_pace')}</div>`
+    : (tariff() === 5 ? `<div class="done-light">${T('today_light_pace')}</div>` : '');
   // Course readiness — the share of today's core SRS families (grammar · vocab · verbs) actually worked,
   // shown DISTINCT from the streak/day-completion mark. Only surfaced on partial coverage (the light
   // track runs one of two trainers → 2/3), so a full day (100%) stays uncluttered. (Plan §4, §17 item 5.)
@@ -929,6 +974,19 @@ function renderIntro(){
         <div class="step-text"><h3>${T('today_step_' + step.id)}</h3><p>${T('today_step_' + step.id + '_sub')}</p></div>
       </div>`).join('');
     const banner = planner.completed[dayOf()] ? `<div class="today-banner">${T('today_already_msg')}</div>` : '';
+    // Return-after-break offer (DEV-12): warm, shame-free re-entry with an easy (due-only) day and a
+    // full-day alternative — either choice answers the offer for this break. Otherwise the normal Start.
+    const startRow = showBreakOffer() ? `
+        <div class="today-break" role="group" aria-label="${esc(T('today_break_title'))}">
+          <div class="today-break-title">${T('today_break_title')}</div>
+          <p class="today-break-msg">${T('today_break_msg')}</p>
+          <div class="today-break-actions">
+            <button class="btn accent huge" onclick="startEasyDay()">${T('today_break_easy')}</button>
+            <button class="btn" onclick="startNormalDay()">${T('today_break_normal')}</button>
+          </div>
+          <div class="today-break-note">${T('today_break_note')}</div>
+        </div>`
+      : `<div class="today-start-row"><button class="btn accent huge" onclick="startFlow()">${T('today_start')}</button></div>`;
     main = `<main class="container">
       <section class="today-hero">
         <div class="today-daynum">
@@ -945,7 +1003,7 @@ function renderIntro(){
         ${banner}
         <div class="steps-label">${T('today_steps_label')}</div>
         <div class="steps-list">${list}</div>
-        <div class="today-start-row"><button class="btn accent huge" onclick="startFlow()">${T('today_start')}</button></div>
+        ${startRow}
       </section>
     </main>`;
   }
@@ -979,7 +1037,7 @@ async function afterInit(){
   const saved = readFlow();
   if (saved && Number.isInteger(saved.step) && saved.step >= 0
       && Number.isInteger(saved.day) && saved.day >= 1 && saved.day <= TOTAL_DAYS
-      && saved.step < buildSteps(saved.day, onboardingProfile()).length) {
+      && saved.step < buildSteps(saved.day, onboardingProfile(), !!saved.easy).length) {
     resumeFlow(saved);
   }
 }
@@ -989,8 +1047,9 @@ function resumeFlow(saved){
   listen = { checked: false, answers: [] };
   produce = { text: '', checks: {}, feedback: '', loading: false };
   weak = { active: false, seq: [], stage: 0, results: {} };
-  const steps = buildSteps(saved.day, onboardingProfile());
-  flow = { running: true, step: Math.min(saved.step, steps.length - 1), day: saved.day, steps: steps, results: {}, backlog: {}, vocabResult: null, verbResult: null };
+  const isEasy = !!(saved && saved.easy);   // DEV-12: resume an easy day as easy (due-only, half cap)
+  const steps = buildSteps(saved.day, onboardingProfile(), isEasy);
+  flow = { running: true, step: Math.min(saved.step, steps.length - 1), day: saved.day, steps: steps, results: {}, backlog: {}, vocabResult: null, verbResult: null, easy: isEasy };
   loadDayLesson(flow.day);   // its trailing render() paints the resumed step with the lesson loaded
 }
 

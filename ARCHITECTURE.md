@@ -1601,6 +1601,23 @@ list for the current day). Completion model: **AI and the weak-spots round are `
 block the day); a trainer session worked to its end screen (`onSessionEnd`'s `summary.completed`, set
 from `s.pos >= s.queue.length` in `closeSession`) — or auto-skipped on an empty queue — marks its block
 complete; **closing a trainer early leaves its block incomplete**.
+
+**Return-after-break "easy day" (DEV-12; depends on DEV-7's `lastActiveDate`).** A gap of `BREAK_DAYS`
+(4)+ local calendar days since `planner_data.lastActiveDate` is a *break* (`onBreak()` → `daysSinceActive()`
+→ `dayKeyDiff` on the `YYYY-MM-DD` keys). On the intro, `showBreakOffer()` then swaps the plain **Start**
+for a warm, shame-free re-entry card (`.today-break`, `today_break_*`): **Ease back in** (`startEasyDay`)
+or **Do a full day** (`startNormalDay`). Either choice stamps `planner_data.breakPromptedFor` with the
+break's anchor (the current `lastActiveDate`) via `ackBreak()`, so the offer shows **once per break** and
+re-appears only when a later break re-anchors. The easy day (`startFlow(true)` → `flow.easy`, persisted in
+the sessionStorage resume payload) runs `buildSteps(day, onboarding, true)` — the lightest set: a short
+grammar card (`required:false`, drill optional) + both trainers in **due-only** mode + done (no
+review/listen/produce/AI/weak). Due-only = `VocabTrainer` `{type:'daily', onlyDue:true}` (no new words,
+no new plural cards, no empty-queue new-word flood) and `VerbsTrainer` `{type:'due'}` with **no**
+new-verb fallback; `sessionCap()` runs at ~half. Empty due queues auto-skip, so a light re-entry with a
+cleared backlog still can't deadlock (Gate 5). Completing it counts the day like any other (the done step
+stamps `lastActiveDate` + `dayStats` and advances `currentDay`), which **re-anchors the streak** (stats.js
+derives current/best with the freeze rule from there); the done screen shows a warm `today_easy_pace` note.
+The full-day choice (`startFlow(false)`) is the unchanged normal flow.
 1. **grammar** — the day card (week theme · grammar focus · today's task with its `type_<type>` label),
    rendered by the page. A **"Break it down with AI"** button (`explainDay`) expands the AI chat panel
    right under the card and auto-sends a point-by-point breakdown request (`dayBreakdownText` →
