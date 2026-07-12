@@ -31,7 +31,10 @@ and a built-in AI tutor:
 5. **Collections** (`collections.html`) — user-supplied word sets imported from CSV or pasted from
    Excel/Sheets, drilled with the **same** flashcard/article/spelling trainers and Leitner model.
    Unlimited collections; optional one-click AI translation of missing entries. (See §16.)
-6. **Settings** (`settings.html`, `/settings`) — authenticated account page: change password
+6. **Statistics** (`stats.html`, `/stats`) — a read-only progress screen (the landing's "Statistics"
+   and "B1 forecast"): course position + streak, word/verb totals, activity, per-week accuracy, the
+   weakest cards, and a pace-based projection of the B1-completion date. Premium-gated (see §22).
+7. **Settings** (`settings.html`, `/settings`) — authenticated account page: change password
    (re-authenticates with the current password via `sb.auth.signInWithPassword`, then
    `sb.auth.updateUser`), add/remove the Gemini AI key (reuses the planner's `gemini_key` /
    `gemini_key_sync` logic), switch theme + UI language, **reset all learning progress** (words +
@@ -88,7 +91,7 @@ language.
 - **Supabase** (`@supabase/supabase-js@2` from jsDelivr CDN) for auth + per-user progress storage.
 - **Google Fonts** (Fraunces + Manrope) via `<link>` — the only other external load.
 - **Hosting:** Vercel, static. `vercel.json` keeps `outputDirectory: "."` and adds `rewrites` that
-  map the **pretty URLs** `/planner` `/vocab` `/verbs` `/collections` to the physical
+  map the **pretty URLs** `/planner` `/vocab` `/verbs` `/collections` `/stats` to the physical
   `views/<page>.html` files. (`cleanUrls` is intentionally **off** — it makes Vercel redirect
   `.html` paths to extensionless ones, which breaks a rewrite whose destination ends in `.html`.)
   Production URL is
@@ -121,6 +124,7 @@ deutsch-daily/
 │   ├── vocab.html       # Vocabulary trainer (thin host → VocabTrainer). ( /vocab )
 │   ├── verbs.html       # Irregular-verb trainer (thin host → VerbsTrainer). ( /verbs )
 │   ├── collections.html # User word-set trainer (import/edit/drill/AI translate). ( /collections ) §16
+│   ├── stats.html       # Read-only statistics + B1 forecast (read-only).  ( /stats ) §22
 │   └── settings.html    # Account: password / AI key / theme / lang / delete. ( /settings )
 ├── assets/
 │   ├── css/  base.css · components.css · planner.css · chat.css · vocab.css · verbs.css · auth.css · collections.css · landing.css · settings.css · today.css · welcome.css
@@ -296,13 +300,13 @@ valid `light`/`dark`) and applied as `data-theme` on `<html>` immediately on loa
 > synchronously — before any CSS paints. `theme.js` keeps the same API; the inline snippet just wins
 > the first paint. (Guarded by `tests/ui-refactor.test.js`.)
 
-### `header.js` — shared app chrome (planner / vocab / verbs / collections)
-The single source of truth for the header + nav, so all four sections render an **identical** header
-(same markup, same 920px width, same nav tabs) — the app reads as one site, not four pages.
+### `header.js` — shared app chrome (planner / vocab / verbs / collections / stats)
+The single source of truth for the header + nav, so all sections render an **identical** header
+(same markup, same 920px width, same nav tabs) — the app reads as one site, not separate pages.
 - `appHeader(active, { cat, h1, subtitle })` — returns the full `<header>` markup: category line,
   `<h1>` (raw HTML), italic subtitle, the nav tabs (with `active` marking the current page), the
   language switcher, theme toggle, user email and logout. Nav hrefs are the **pretty URLs**
-  (`/planner` `/vocab` `/verbs` `/collections`) defined once in `NAV_ITEMS`.
+  (`/planner` `/vocab` `/verbs` `/collections` `/stats`) defined once in `NAV_ITEMS`.
 - Each page calls it from its own render: planner's `renderHeader()` and collections' `header()`
   delegate to it; vocab/verbs interpolate `${appHeader(…)}` directly. Depends on `T` /
   `renderLangSwitcher` (i18n), `renderThemeToggle` (theme, guarded by `typeof`), `esc` (utils),
@@ -325,7 +329,7 @@ distinct from the streak (redesign-v2 §17 item 5). Top-level `const`/`function`
 live in the shared global lexical scope (same pattern as `leitner.js` `MAX_BOX`), so both pages see
 these directly. Depends on `WEEKS` (must load first) and `getLang`.
 
-### `stats.js` — streak + activity-calendar math (planner + today; DEV-7)
+### `stats.js` — streak + activity-calendar math (planner + today; DEV-7) + statistics-page aggregation & B1 forecast (stats; DEV-8)
 Pure, dependency-free helpers (operate on `'YYYY-MM-DD'` local date-key strings) so `/planner` and
 `/today` compute identical numbers. The streak is **derived, never stored**: `activeDatesSet(dayStats,
 lastActiveDate)` builds the set of the learner's active local dates from every completed day's
@@ -340,6 +344,17 @@ returns a Monday-first `numWeeks × 7` grid ending in today's week for the `/pla
 Only `lastActiveDate` is added to `planner_data` (no counters, no new column); `/today` stamps it via
 `markActive()` on any embedded session end. `module.exports` makes it dual-mode (browser global +
 `require` for `tests/streak.test.js`). Guarded by `tests/streak.test.js`.
+
+**DEV-8 statistics additions** (same purity/dual-mode contract, guarded by `tests/stats.test.js`):
+`activeCountInWindow(set, todayKey, days)` (active days in a trailing window — the 7-/30-day
+counters); `weeklyAccuracy(dayStats)` (per-curriculum-week `{ week, right, total, days, pct }` summed
+from the `dayStats[*].counts` trainer scores — 5 study days = one week); `masteryBreakdown(records,
+now)` (buckets an array of Leitner records into `{ mastered, learning, due, dueSoon, dueByTomorrow }`);
+and `forecastFinish({ completions, currentDay, totalDays, todayKey, windowDays? })` — the **B1
+forecast**: projects the course-completion date from the learner's realised pace (distinct completion
+days per week over a trailing window ≤ 4 weeks, floored at the learner's own history and capped at
+7/week), returning `{ daysLeft, done, hasPace, perWeek, weeksLeft, etaKey }`. All consumed by `/stats`
+(§22).
 
 ### `vocab-trainer.js` / `verbs-trainer.js` — the shared trainer engines (`window.VocabTrainer` / `window.VerbsTrainer`)
 Each is a single namespace object holding the **entire** trainer: helpers, Leitner routing, the
@@ -1749,3 +1764,43 @@ the parallel arrays makes alignment structural instead of hand-tended.
 Editing rule: change `authoring/`, then `npm run gen:course` (and `band-verbs.js` if verbs changed),
 then `npm run cutover:v2` to refresh the live course; never hand-edit `data/v2/*` or `locales/v2/*`
 (nor the generated blocks in the live `data/weeks.js` / `data/vocab.js` / `locales/*` — regenerate).
+
+---
+
+## 22. `stats.html` — statistics screen + B1 forecast (`/stats`, DEV-8)
+
+The progress screen the landing sells as **"Statistics"** and **"B1 forecast"**. A nav tab
+(`NAV_ITEMS` → `/stats`, rewritten by `vercel.json`, precached in `sw.js`). It is **read-only**:
+everything is derived at render time from cloud data the app already stores — it defines
+`CLOUD_FIELD = 'planner_data'` only to receive `currentDay` / `dayStats` / `lastActiveDate`, but never
+calls `saveToCloud` (`getCloudPayload` exists solely to satisfy the contract).
+
+**Data sources.** `planner_data` (via `applyCloudData`); `verbs_data` (via `applyVerbProgress`, loaded
+by `initApp`); `vocab_data` (a `loadVocabData()` after `initApp`, mirroring `/today`). The
+`VocabTrainer` / `VerbsTrainer` engines are loaded **only for their read-only stats API**
+(`globalStats` / `stats` / `collectWeakCards` / `collectWeakKeys` / `getCard` …), so `/stats` reports
+the **same** mastery numbers as `/vocab` and `/verbs`. Both engines are `init`-ed with **no-op save
+hooks** so loading data (`VocabTrainer.applyData` calls `save()`) can never write back, and
+`wireSharedVerbStore()` points them at one `verbs_data.mastery` map (the `/today` wiring) so a
+verb-WORD isn't double-counted.
+
+**Sections** (all math is pure in `stats.js` §4): course position (day N/180 + band + % + streak
+chip); totals (word/verb `mastered · learning · due` tiles + a combined review look-ahead via
+`masteryBreakdown`); activity (`activityCalendar` grid + `activeCountInWindow` 7-/30-day counters);
+per-week accuracy bars (`weeklyAccuracy`); the **B1 forecast** (`forecastFinish` → a projected finish
+date from the learner's realised pace, explicitly framed as an estimate, never a guarantee — §1
+positioning); and the weakest-cards list (each engine's weak scope, worst-first, with a "practise in
+today's lesson" link to `/today`). A no-progress account gets a friendly empty state instead.
+
+**Gating** (DEV-8 matrix, via `hasPremium()` — DEV-2). FREE: course position, totals, streak and a
+7-day activity view. PREMIUM/LIFETIME: full activity history, per-week accuracy, the B1 forecast and
+the weakest-items list. Free users see a calm `stats-locked` card (a "Premium" badge + a "See plans"
+link to the landing) — **no in-app price or checkout** lives here; that is DEV-3/4 and needs human
+sign-off, so the copy makes no purchase promise. `isPremium()` degrades to `false` when `hasPremium`
+is absent (e.g. the test sandbox), so the page always renders.
+
+**Styling** — `stats.css` (stat tiles, accuracy bars, forecast, weakest list, lock card), reusing the
+`base.css` tokens and the `planner.css` `.cal-*` / `.prog-*` / `.btn` primitives (both linked first).
+
+**Tests** — `tests/stats.test.js` (the pure aggregation + forecast math) and a `/stats` entry in
+`tests/render-smoke.test.js`.

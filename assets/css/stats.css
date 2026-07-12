@@ -1,0 +1,78 @@
+/* stats.css — the /stats statistics screen (DEV-8).
+   Warm-paper editorial system from base.css; reuses the streak/calendar (.cal-*) and .prog-* /
+   .btn primitives already defined in planner.css (both are linked before this file). Only the
+   stat-specific tiles, accuracy bars, forecast, weakest list and free-tier lock live here.
+   Light/dark come for free from the base.css design tokens. */
+
+.btn.accent { background: var(--accent); color: var(--paper); border-color: var(--accent); }
+.btn.accent:hover { background: var(--accent-2); border-color: var(--accent-2); }
+.btn.big { padding: 14px 24px; font-size: 15px; font-weight: 600; }
+
+/* ---- empty state ---- */
+.stats-empty { padding: 40px 0 60px; text-align: center; }
+.stats-empty .info-box { text-align: left; margin: 0 auto 24px; max-width: 560px; }
+
+/* ---- section wrapper + heading ---- */
+.stats-block { padding: 26px 0; border-top: 1px solid var(--line); }
+.stats-block:first-of-type { border-top: none; }
+.stats-h2 { font-family: var(--serif); font-weight: 400; font-size: 22px; letter-spacing: -0.01em; margin: 0 0 16px; }
+
+/* ---- course-position hero ---- */
+.stats-hero { padding: 24px 0 8px; }
+.stats-hero-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.stats-hero-day { font-family: var(--serif); font-size: 34px; line-height: 1.05; margin-top: 4px; }
+.stats-hero-band { font-size: 14px; color: var(--ink-soft); margin-top: 2px; }
+.stats-streak { font-size: 15px; color: var(--ink); display: inline-flex; align-items: baseline; gap: 6px; }
+.stats-streak .num { font-family: var(--serif); color: var(--accent); font-size: 20px; }
+.stats-streak.none { color: var(--ink-soft); }
+.stats-prog { margin-top: 18px; }
+.stats-hero-pct { font-size: 12px; color: var(--ink-soft); margin-top: 6px; text-align: right; }
+
+/* ---- totals: word/verb groups of tiles ---- */
+.stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+.stat-group-title { font-size: 11px; text-transform: uppercase; letter-spacing: 0.18em; color: var(--ink-soft); margin-bottom: 10px; display: flex; align-items: baseline; gap: 8px; }
+.stat-group-total { color: var(--ink); font-size: 13px; letter-spacing: 0; }
+.stat-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.stat-tile { background: var(--paper-3); border: 1px solid var(--line); border-radius: 8px; padding: 12px 8px; text-align: center; }
+.stat-val { font-family: var(--serif); font-size: 26px; line-height: 1; color: var(--accent); }
+.stat-label { font-size: 11px; color: var(--ink-soft); margin-top: 5px; }
+.stats-review { margin-top: 16px; font-size: 14px; color: var(--ink-soft); }
+
+/* ---- activity ---- */
+.stats-counters { display: flex; gap: 20px; font-size: 13px; color: var(--ink-soft); margin-bottom: 14px; }
+.stats-cal { max-width: 320px; }
+.stats-cal .cal-cell { width: 22px; height: 22px; }
+.stats-cal .cal-dot { width: 14px; height: 14px; }
+.stats-hint { font-size: 13px; color: var(--ink-soft); line-height: 1.5; margin: 14px 0 0; }
+
+/* ---- B1 forecast ---- */
+.stats-forecast-date { font-family: var(--serif); font-size: 30px; color: var(--accent); line-height: 1.1; }
+.stats-forecast-sub { font-size: 14px; color: var(--ink); margin: 8px 0 0; }
+.stats-forecast-done { font-size: 16px; color: var(--green); font-weight: 600; }
+.stats-fineprint { font-size: 12px; color: var(--ink-soft); margin: 14px 0 0; font-style: italic; }
+
+/* ---- per-week accuracy bars ---- */
+.acc-list { display: flex; flex-direction: column; gap: 8px; }
+.acc-row { display: grid; grid-template-columns: 64px 1fr 46px; align-items: center; gap: 10px; }
+.acc-week { font-size: 12px; color: var(--ink-soft); }
+.acc-bar { height: 10px; background: var(--paper-2); border: 1px solid var(--line); border-radius: 5px; overflow: hidden; }
+.acc-fill { display: block; height: 100%; background: var(--accent); }
+.acc-pct { font-size: 13px; text-align: right; color: var(--ink); }
+
+/* ---- weakest items ---- */
+.weak-list { list-style: none; margin: 0 0 18px; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.weak-item { display: grid; grid-template-columns: 1fr auto; grid-template-areas: "term meta" "sub meta"; gap: 0 12px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.weak-item:last-child { border-bottom: none; }
+.weak-term { grid-area: term; font-weight: 600; font-size: 15px; }
+.weak-sub { grid-area: sub; font-size: 13px; color: var(--ink-soft); }
+.weak-meta { grid-area: meta; align-self: center; font-size: 12px; color: var(--ink-soft); white-space: nowrap; }
+
+/* ---- free-tier lock ---- */
+.stats-locked { position: relative; }
+.stats-lock-badge { display: inline-block; font-size: 10px; text-transform: uppercase; letter-spacing: 0.18em; color: var(--paper); background: var(--accent); padding: 3px 8px; border-radius: 4px; margin-bottom: 10px; }
+.stats-lock-desc { font-size: 14px; color: var(--ink-soft); line-height: 1.6; margin: 0 0 16px; max-width: 520px; }
+
+@media (max-width: 560px) {
+  .stats-grid { grid-template-columns: 1fr; }
+  .stats-hero-day { font-size: 28px; }
+}

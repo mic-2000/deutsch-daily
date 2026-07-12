@@ -70,6 +70,19 @@ test('today: render() shows the intro checklist with translations resolved', () 
   assert.doesNotMatch(html, /today_[a-z_]+/, 'no raw today_* keys leaked into markup');
 });
 
+test('stats: render() shows the statistics screen with translations resolved', () => {
+  const s = loadPage({ page: 'stats.html', extraFiles: ['locales/en.js'], exports: ['render', 'planner'] });
+  // Seed a little progress so the full (non-empty) screen renders instead of the empty state.
+  s.planner.dayStats = { 1: { completedAt: '2026-07-10', counts: { vocab: { right: 8, total: 10 } } } };
+  s.planner.currentDay = 3;
+  s.render();
+  const html = s.app.innerHTML;
+  assert.ok(html.length > 500, 'app markup is substantial');
+  assert.match(html, /nav-tab/, 'shared header/nav rendered');
+  // A global-name clash (e.g. redefining stats.js helpers) would break T() and leak raw keys.
+  assert.doesNotMatch(html, /stats_[a-z_]+/, 'no raw stats_* keys leaked into markup');
+});
+
 test('settings: render() shows the account screen with translations resolved', () => {
   const s = loadPage({ page: 'settings.html', extraFiles: ['locales/en.js'], exports: ['render', 'state'] });
   s.render();

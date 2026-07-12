@@ -8,11 +8,11 @@ on Vercel (HTTPS). `index.html` (repo root) = the **public landing page** for gu
 `render()` + `landing.css`, no cloud-sync); login/register lives at `views/login.html` (`/login`);
 the authenticated pages live in `views/` and are served via `vercel.json` pretty-URL rewrites —
 `views/today.html` (`/today`) / `views/planner.html` (`/planner`) / `views/vocab.html` (`/vocab`) /
-`views/verbs.html` (`/verbs`) / `views/collections.html` (`/collections`). The app pages share one
-header via `assets/js/header.js` (`appHeader()`) and one `--page-max` width (the landing and login
-have their own chrome). In-page asset/data/locale paths are root-absolute (`/assets`, `/data`,
-`/locales`). (Details: ARCHITECTURE.md §1–§3, landing = §18, collections = §16, today = §19,
-onboarding = §20.)
+`views/verbs.html` (`/verbs`) / `views/collections.html` (`/collections`) / `views/stats.html`
+(`/stats`). The app pages share one header via `assets/js/header.js` (`appHeader()` + `NAV_ITEMS`) and
+one `--page-max` width (the landing and login have their own chrome). In-page asset/data/locale paths
+are root-absolute (`/assets`, `/data`, `/locales`). (Details: ARCHITECTURE.md §1–§3, landing = §18,
+collections = §16, today = §19, onboarding = §20, stats = §22.)
 
 **Onboarding:** `cloud-sync.initApp` gates users to `views/welcome.html` (`/welcome`) — 5 tap
 questions (nothing pre-selected; Start disabled until all answered) → a no-key mini-lesson → `/today`.
@@ -39,7 +39,13 @@ multi-slug `startSession({ slugs, review:true })` session over the grammar topic
 `/planner` and `/today`. The **streak + activity-calendar** math (DEV-7) is a second shared module,
 `assets/js/stats.js` (`streakInfo` / `activityCalendar`) — pure, derived each render from
 `planner_data.dayStats` completions + a single `lastActiveDate` stamp `/today` writes on any embedded
-session end (no counters, no new column). (Details: ARCHITECTURE.md §9–§10, §19.)
+session end (no counters, no new column). `stats.js` also owns the **statistics-page** aggregation +
+**B1 forecast** (DEV-8: `weeklyAccuracy` / `masteryBreakdown` / `activeCountInWindow` /
+`forecastFinish`) that drive the read-only `/stats` screen (`views/stats.html`) — the landing's
+"Statistics" and "B1 forecast". `/stats` reuses the trainer engines' read-only stats API so its
+numbers match `/vocab`+`/verbs`, writes nothing back, and premium-gates the forecast / accuracy /
+weakest-items sections via `hasPremium()` (no in-app price/checkout — that's DEV-3/4). (Details:
+ARCHITECTURE.md §9–§10, §19, §22.)
 
 ## Build
 - `npm run build` (`node build.js`) injects `NEXT_PUBLIC_SUPABASE_*` into

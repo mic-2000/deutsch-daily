@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="light dark">
+<script>try{document.documentElement.setAttribute('data-theme',localStorage.getItem('ui_theme')==='dark'?'dark':'light');}catch(e){}</script>
+<title>Deutsch · Statistik</title>
+<meta name="robots" content="noindex">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#F2EDE3">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Deutsch Daily">
+<link rel="apple-touch-icon" href="/assets/icons/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,300;1,9..144,400;1,9..144,500&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/css/base.css">
+<link rel="stylesheet" href="/assets/css/components.css">
+<link rel="stylesheet" href="/assets/css/planner.css">
+<link rel="stylesheet" href="/assets/css/stats.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="/assets/js/i18n.js"></script>
+<script src="/assets/js/theme.js"></script>
+<script src="/assets/js/utils.js"></script>
+<script src="/assets/js/pwa.js"></script>
+<script src="/assets/js/supabase.js"></script>
+<script src="/assets/js/cloud-sync.js"></script>
+<script src="/assets/js/header.js"></script>
+<script src="/data/vocab.js"></script>
+<script src="/data/verbs.js"></script>
+<script src="/data/weeks.js"></script>
+<script src="/assets/js/leitner.js"></script>
+<script src="/assets/js/course-consts.js"></script>
+<script src="/assets/js/planner-data.js"></script>
+<script src="/assets/js/speech.js"></script>
+<script src="/assets/js/stats.js"></script>
+<script src="/assets/js/vocab-trainer.js"></script>
+<script src="/assets/js/verbs-trainer.js"></script>
+</head>
+<body>
+<div id="app"></div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ==========================================================================
+   /stats — the statistics screen + B1 forecast (DEV-8, Plan §2). This is what the landing sells as
+   "Statistics" and "B1 forecast". It is READ-ONLY: it renders entirely from cloud data the app
+   already stores and writes nothing back.
+     • planner_data — currentDay + the dayStats completion ledger + lastActiveDate (this page's
+       CLOUD_FIELD, but getCloudPayload/saveToCloud are never called — nothing here mutates it).
+     • vocab_data   — the vocab engine's word/plural mastery (loaded after initApp).
+     • verbs_data   — the shared verb mastery (loaded by initApp via applyVerbProgress).
+
+   The trainer engines are loaded only for their READ-ONLY stats API (globalStats / stats /
+   collectWeak*) so /stats reports the SAME mastery numbers the learner sees on /vocab and /verbs.
+   All aggregation + the forecast are pure functions in assets/js/stats.js (tested in stats.test.js).
+
+   Gating (DEV-8 matrix; wired through hasPremium() from cloud-sync — DEV-2): FREE = course position,
+   totals, streak and a 7-day activity view; PREMIUM/LIFETIME = full activity history, per-week
+   accuracy, the B1 forecast and the weakest-items list. No prices/checkout live here yet (that is
+   DEV-3/4 and needs human sign-off) — free users see a calm locked card, not a sales wall.
+   ========================================================================== */
+
+/* ---- state: planner_data (read-only mirror) ---- */
+let planner = {};
+const CLOUD_FIELD = 'planner_data';
+function getCloudPayload(){ return planner; }                 // never persisted — read-only page
+function applyCloudData(d){ planner = (d && typeof d === 'object') ? d : {}; }
+
+/* ---- trainer engines: read-only. Initialise with NO-OP save hooks so loading cloud data can
+   never trigger a write-back (VocabTrainer.applyData calls save() at the end). ---- */
+VocabTrainer.init({ embedded: true, onSaveVocab: function(){}, onSaveVerbs: function(){} });
+VerbsTrainer.init({ embedded: true, onSave: function(){} });
+
+/* Shared verb mastery: both engines read ONE map (verbs_data.mastery) so verb-WORDS counted by the
+   vocab engine and verbs counted by the verb engine agree — the same wiring /today uses. */
+function wireSharedVerbStore(){
+  const map = (VerbsTrainer.state.mastery && typeof VerbsTrainer.state.mastery === 'object') ? VerbsTrainer.state.mastery : {};
+  VerbsTrainer.setMasteryStore(map);
+  VocabTrainer.setVerbStore({ mastery: map });
+}
+/* initApp() calls this if defined → loads verbs_data into the shared store. */
+function applyVerbProgress(d){
+  VerbsTrainer.applyData(d && typeof d === 'object' ? d : { mastery: {} });
+  wireSharedVerbStore();
+}
+
+/* ==========================================================================
+   DERIVED VALUES
+   ========================================================================== */
+function todayKey(){ return (typeof leitnerToday === 'function') ? leitnerToday() : streakDayKey(new Date()); }
+function isPremium(){ return (typeof hasPremium === 'function') ? hasPremium() : false; }
+function activeSet(){ return activeDatesSet(planner.dayStats, planner.lastActiveDate); }
+function currentDayNum(){ return Math.max(1, Math.min(TOTAL_DAYS, planner.currentDay || 1)); }
+function coursePct(){ return Math.round((currentDayNum() - 1) / TOTAL_DAYS * 100); }
+function currentBand(){
+  const wk = getLocalizedDay(DAYS[currentDayNum() - 1]).week;
+  return (typeof levelOfWeek === 'function') ? levelOfWeek(wk) : 'A1';
+}
+function vocabStats(){ return VocabTrainer.globalStats(); }   // { total, mastered, learning, due }
+function verbStats(){ return VerbsTrainer.stats(); }          // { total, mastered, learning, due }
+
+/* All SEEN Leitner records across the three tracks, de-duplicated so a verb-WORD is counted once
+   (it lives in the shared verb store, so it's collected with the verbs, skipped among the words).
+   Feeds the combined review look-ahead (masteryBreakdown). */
+function collectAllRecords(){
+  const recs = [];
+  const plural = !!(VocabTrainer.state.modes && VocabTrainer.state.modes.plural);
+  for (const w in VOCAB){
+    const words = VOCAB[w].words;
+    for (let i = 0; i < words.length; i++){
+      if (!VocabTrainer.verbKeyForWord(words[i]) && VocabTrainer.isSeen(w, i)) recs.push(VocabTrainer.getCard(w, i));
+      if (plural && VocabTrainer.plHasPlural(+w, i) && VocabTrainer.plIsSeen(+w, i)) recs.push(VocabTrainer.plCard(+w, i));
+    }
+  }
+  for (const k in VERBS){ const c = VerbsTrainer.getCard(k); if (c && c.seen > 0) recs.push(c); }
+  return recs;
+}
+function reviewLookahead(){ return masteryBreakdown(collectAllRecords(), Date.now()); }
+
+/* The learner's worst cards across words + plurals + verbs, worst-first (leitnerWeakness), for the
+   premium weakest-items list. Reuses each engine's canonical weak scope so /stats agrees with the
+   /today weak-spots round. */
+function weakestItems(limit){
+  const out = [];
+  VocabTrainer.collectWeakCards().forEach(function(e){
+    const de = String(VOCAB[e.w].words[e.i]).split('—')[0].trim();
+    const card = e.kind === 'plural' ? VocabTrainer.plCard(e.w, e.i) : VocabTrainer.getCard(e.w, e.i);
+    out.push({
+      score: e.score,
+      term: de,
+      sub: e.kind === 'plural' ? T('stats_weak_plural') : VocabTrainer.getTranslation(e.w, e.i),
+      box: leitnerBoxOf(card),
+      wrong: card.wrong || 0,
+    });
+  });
+  VerbsTrainer.collectWeakKeys().forEach(function(k){
+    const card = VerbsTrainer.getCard(k);
+    out.push({
+      score: (typeof leitnerWeakness === 'function') ? leitnerWeakness(card) : 0,
+      term: k,
+      sub: VerbsTrainer.verbGloss ? VerbsTrainer.verbGloss(k) : '',
+      box: leitnerBoxOf(card),
+      wrong: card.wrong || 0,
+    });
+  });
+  out.sort(function(a, b){ return b.score - a.score; });
+  return limit ? out.slice(0, limit) : out;
+}
+
+function forecast(){
+  const ds = planner.dayStats || {};
+  const completions = Object.keys(ds).map(function(k){ return ds[k] && ds[k].completedAt; }).filter(Boolean);
+  return forecastFinish({ completions: completions, currentDay: currentDayNum(), totalDays: TOTAL_DAYS, todayKey: todayKey() });
+}
+
+/* Localise a 'YYYY-MM-DD' key to a human date in the active UI language. */
+function fmtDate(key){
+  const parts = key.split('-').map(Number);
+  const dt = new Date(parts[0], parts[1] - 1, parts[2]);
+  const loc = { en: 'en-GB', ru: 'ru-RU', ua: 'uk-UA' }[getLang()] || 'en-GB';
+  try { return dt.toLocaleDateString(loc, { year: 'numeric', month: 'long', day: 'numeric' }); }
+  catch (e){ return key; }
+}
+
+/* ==========================================================================
+   RENDER (full re-render of #app; no interactive handlers — this page is read-only)
+   ========================================================================== */
+function renderHeader(){
+  return appHeader('stats', { cat: 'stats_title_cat', h1: 'Stat<em>istik</em>', subtitle: 'stats_subtitle' });
+}
+
+function statTile(value, labelKey){
+  return `<div class="stat-tile"><div class="stat-val num">${value}</div><div class="stat-label">${T(labelKey)}</div></div>`;
+}
+
+function streakChipHtml(){
+  const s = streakInfo(activeSet(), todayKey());
+  if (s.current <= 0) return `<div class="stats-streak none">🔥 <span>${T('streak_none')}</span></div>`;
+  const best = (s.best > s.current) ? ` · ${T('streak_best', s.best)}` : '';
+  return `<div class="stats-streak">🔥 <span class="num">${T('streak_current', s.current)}</span>${best}</div>`;
+}
+
+function renderPosition(){
+  const day = currentDayNum();
+  const pct = coursePct();
+  return `
+<section class="container stats-hero">
+  <div class="stats-hero-row">
+    <div>
+      <div class="uppercase-mini">${T('stats_course')}</div>
+      <div class="stats-hero-day num">${T('stats_day_of', day, TOTAL_DAYS)}</div>
+      <div class="stats-hero-band">${T('stats_band_now', currentBand())}</div>
+    </div>
+    ${streakChipHtml()}
+  </div>
+  <div class="prog-bar stats-prog"><div class="prog-fill" style="width:${pct}%"></div></div>
+  <div class="stats-hero-pct">${pct}% ${T('stats_complete')}</div>
+</section>`;
+}
+
+function renderTotals(){
+  const v = vocabStats();
+  const vb = verbStats();
+  const rq = reviewLookahead();
+  const reviewNote = rq.dueSoon > 0
+    ? T('stats_review_queue', rq.due, rq.dueSoon)
+    : T('stats_review_queue_now', rq.due);
+  return `
+<section class="container stats-block">
+  <h2 class="stats-h2">${T('stats_totals_title')}</h2>
+  <div class="stats-grid">
+    <div class="stat-group">
+      <div class="stat-group-title">${T('stats_words')} <span class="stat-group-total num">${v.total}</span></div>
+      <div class="stat-row">${statTile(v.mastered, 'stats_mastered')}${statTile(v.learning, 'stats_learning')}${statTile(v.due, 'stats_due')}</div>
+    </div>
+    <div class="stat-group">
+      <div class="stat-group-title">${T('stats_verbs')} <span class="stat-group-total num">${vb.total}</span></div>
+      <div class="stat-row">${statTile(vb.mastered, 'stats_mastered')}${statTile(vb.learning, 'stats_learning')}${statTile(vb.due, 'stats_due')}</div>
+    </div>
+  </div>
+  <div class="stats-review">${reviewNote}</div>
+</section>`;
+}
+
+function renderActivity(){
+  const set = activeSet();
+  const tk = todayKey();
+  const premium = isPremium();
+  const weeks = activityCalendar(tk, premium ? 8 : 1, set);
+  const wd = (T('streak_weekdays') || 'Mo,Tu,We,Th,Fr,Sa,Su').split(',');
+  const head = wd.map(l => `<span class="cal-wd">${esc(l)}</span>`).join('');
+  const grid = weeks.map(row => row.map(c => {
+    const cls = ['cal-cell'];
+    if (c.active) cls.push('active');
+    if (c.today) cls.push('today');
+    if (c.future) cls.push('future');
+    return `<span class="${cls.join(' ')}" title="${esc(c.key)}"><span class="cal-dot"></span></span>`;
+  }).join('')).join('');
+  const counters = premium
+    ? `<span>${T('stats_active_7', activeCountInWindow(set, tk, 7))}</span><span>${T('stats_active_30', activeCountInWindow(set, tk, 30))}</span>`
+    : `<span>${T('stats_active_7', activeCountInWindow(set, tk, 7))}</span>`;
+  return `
+<section class="container stats-block">
+  <h2 class="stats-h2">${T('stats_activity_title')}</h2>
+  <div class="stats-counters">${counters}</div>
+  <div class="stats-cal"><div class="cal-head">${head}</div><div class="cal-grid">${grid}</div></div>
+  ${!premium ? `<p class="stats-hint">${T('stats_activity_free_note')}</p>` : ''}
+</section>`;
+}
+
+function renderForecast(){
+  const f = forecast();
+  let body;
+  if (f.done) body = `<p class="stats-forecast-done">${T('stats_forecast_done')}</p>`;
+  else if (!f.hasPace) body = `<p class="stats-hint">${T('stats_forecast_nopace')}</p>`;
+  else body =
+    `<div class="stats-forecast-date num">${esc(fmtDate(f.etaKey))}</div>
+     <p class="stats-forecast-sub">${T('stats_forecast_sub', f.perWeek.toFixed(1), f.daysLeft)}</p>`;
+  return `
+<section class="container stats-block stats-forecast">
+  <h2 class="stats-h2">${T('stats_forecast_title')}</h2>
+  ${body}
+  <p class="stats-fineprint">${T('stats_forecast_fine')}</p>
+</section>`;
+}
+
+function renderWeeklyAccuracy(){
+  const rows = weeklyAccuracy(planner.dayStats);
+  if (!rows.length) {
+    return `
+<section class="container stats-block">
+  <h2 class="stats-h2">${T('stats_accuracy_title')}</h2>
+  <p class="stats-hint">${T('stats_accuracy_none')}</p>
+</section>`;
+  }
+  const bars = rows.map(function(r){
+    const pct = (r.pct == null) ? 0 : r.pct;
+    const label = (r.pct == null) ? '—' : pct + '%';
+    return `
+    <div class="acc-row">
+      <span class="acc-week">${T('stats_week_n', r.week)}</span>
+      <span class="acc-bar"><span class="acc-fill" style="width:${pct}%"></span></span>
+      <span class="acc-pct num">${label}</span>
+    </div>`;
+  }).join('');
+  return `
+<section class="container stats-block">
+  <h2 class="stats-h2">${T('stats_accuracy_title')}</h2>
+  <div class="acc-list">${bars}</div>
+</section>`;
+}
+
+function renderWeakest(){
+  const items = weakestItems(8);
+  if (!items.length) {
+    return `
+<section class="container stats-block">
+  <h2 class="stats-h2">${T('stats_weak_title')}</h2>
+  <p class="stats-hint">${T('stats_weak_none')}</p>
+</section>`;
+  }
+  const list = items.map(function(it){
+    return `
+    <li class="weak-item">
+      <span class="weak-term">${esc(it.term)}</span>
+      <span class="weak-sub">${esc(it.sub || '')}</span>
+      <span class="weak-meta">${T('stats_weak_box', it.box)} · ${T('stats_weak_misses', it.wrong)}</span>
+    </li>`;
+  }).join('');
+  return `
+<section class="container stats-block">
+  <h2 class="stats-h2">${T('stats_weak_title')}</h2>
+  <ul class="weak-list">${list}</ul>
+  <a class="btn accent" href="/today">${T('stats_weak_cta')}</a>
+</section>`;
+}
+
+/* Free-tier lock: a calm "this is part of Premium" card (no price/checkout — DEV-3/4). */
+function lockedCard(titleKey, descKey){
+  return `
+<section class="container stats-block stats-locked">
+  <div class="stats-lock-badge">${T('stats_premium')}</div>
+  <h2 class="stats-h2">${T(titleKey)}</h2>
+  <p class="stats-lock-desc">${T(descKey)}</p>
+  <a class="btn accent" href="/">${T('stats_unlock')}</a>
+</section>`;
+}
+
+function renderEmpty(){
+  return `
+<main class="container stats-empty">
+  <div class="info-box">${T('stats_empty')}</div>
+  <a class="btn accent big" href="/today">${T('stats_empty_cta')}</a>
+</main>`;
+}
+
+function render(){
+  const v = vocabStats();
+  const vb = verbStats();
+  const hasData = (v.mastered + v.learning + vb.mastered + vb.learning) > 0
+    || Object.keys(planner.dayStats || {}).length > 0;
+
+  let html = renderHeader();
+  if (!hasData) {
+    html += renderEmpty() + appFooter({ text: 'stats_footer' });
+    document.getElementById('app').innerHTML = html;
+    return;
+  }
+  const premium = isPremium();
+  html += renderPosition();
+  html += renderTotals();
+  html += renderActivity();
+  html += premium ? renderForecast()        : lockedCard('stats_forecast_title', 'stats_forecast_locked');
+  html += premium ? renderWeeklyAccuracy()   : lockedCard('stats_accuracy_title', 'stats_accuracy_locked');
+  html += premium ? renderWeakest()          : lockedCard('stats_weak_title', 'stats_weak_locked');
+  html += appFooter({ text: 'stats_footer' });
+  document.getElementById('app').innerHTML = html;
+}
+
+/* ==========================================================================
+   INIT
+   ========================================================================== */
+async function loadVocabData(){
+  if (typeof currentUser === 'undefined' || !currentUser) return;
+  try {
+    const { data, error } = await sb.from('progress').select('vocab_data').eq('user_id', currentUser.id).single();
+    if (error) throw error;
+    if (data && data.vocab_data && Object.keys(data.vocab_data).length) VocabTrainer.applyData(data.vocab_data);
+  } catch (e) { /* offline or no record yet — vocab stays empty */ }
+}
+async function afterInit(){
+  wireSharedVerbStore();
+  await loadVocabData();
+  render();
+}
+
+// Paint the shell right away in the saved language; initApp() re-renders with cloud data.
+// Gate 3: mixed-course-version cache → reload prompt instead of a drifted course.
+loadLocale(getLang()).then(() => { try { if (courseVersionBlocked()) return; render(); } catch (_) {} });
+if (courseVersionConsistent()) initApp().then(afterInit);
+</script>
+</body>
+</html>

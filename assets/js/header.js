@@ -3,7 +3,7 @@
    (same markup, same width, same nav) — the app reads as one site, not four pages.
 
    appHeader(active, { cat, h1, subtitle })
-     active   — nav key of the current page ('today' | 'planner' | 'vocab' | 'verbs' | 'collections' | 'settings')
+     active   — nav key of the current page ('today' | 'planner' | 'vocab' | 'verbs' | 'collections' | 'stats' | 'settings')
      cat      — T() key for the small uppercase category line
      h1       — raw HTML for the page title (may contain <em>…</em>)
      subtitle — T() key for the italic subtitle
@@ -23,6 +23,7 @@ const NAV_ITEMS = [
   { key: 'vocab',       href: '/vocab',       label: 'nav_vocab' },
   { key: 'verbs',       href: '/verbs',       label: 'nav_verbs' },
   { key: 'collections', href: '/collections', label: 'nav_collections' },
+  { key: 'stats',       href: '/stats',       label: 'nav_stats' },
 ];
 
 // The daily lesson ('today') is rendered as the header's primary CTA button, not a

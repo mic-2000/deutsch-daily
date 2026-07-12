@@ -1,4 +1,5 @@
-/* stats.js — streak + activity-calendar math (DEV-7). Shared by /today and /planner.
+/* stats.js — streak + activity-calendar math (DEV-7) + statistics-page aggregation & B1 forecast
+   (DEV-8). Shared by /today, /planner and /stats.
 
    The streak is DERIVED, never stored: it is recomputed each render from the set of the learner's
    active local dates. That set is `planner_data.dayStats[*].completedAt` (one per COMPLETED day) plus
@@ -132,10 +133,131 @@ function activityCalendar(todayKey, numWeeks, set) {
   return weeks;
 }
 
+/* ==========================================================================
+   STATISTICS PAGE (DEV-8) — pure aggregation + B1 forecast
+
+   These derive the /stats screen from the SAME cloud data the app already stores: the completion
+   ledger in planner_data.dayStats (per-day { completedAt, blocks, counts }) and the Leitner card
+   records the trainers persist. Everything here is pure and dependency-free (operates on plain
+   records / date-key strings), so /stats renders identical numbers offline and tests/stats.test.js
+   exercises it in isolation. The MAX-box / day constants are inlined (mirroring leitner.js MAX_BOX=5)
+   to keep this module standalone.
+   ========================================================================== */
+const STATS_MAX_BOX = 5;
+
+/* How many of the last `days` calendar days (ending at, and including, todayKey) were active. Drives
+   the "active this week / this month" counters (7- and 30-day windows). */
+function activeCountInWindow(set, todayKey, days) {
+  let n = 0;
+  for (let i = 0; i < days; i++) if (set.has(streakShiftDay(todayKey, -i))) n++;
+  return n;
+}
+
+/* Per-week accuracy from the dayStats completion ledger. Each completed day records `counts` =
+   { vocab, verbs, listen } trainer scores ({ right, total } | null); we sum right/total per
+   curriculum week (5 study days = 1 week, matching recordDayStats' `Math.ceil(day/5)`). Returns one
+   row per week that has graded data, ascending by week:
+     { week, right, total, pct, days }   (pct = null when nothing gradeable was recorded that week)
+   This is the learner's realised answer accuracy — the honest signal behind the landing's
+   "Statistics". */
+function weeklyAccuracy(dayStats) {
+  const byWeek = {};
+  if (dayStats && typeof dayStats === 'object') {
+    for (const dayKey in dayStats) {
+      const day = Number(dayKey);
+      if (!day) continue;
+      const counts = dayStats[dayKey] && dayStats[dayKey].counts;
+      if (!counts || typeof counts !== 'object') continue;
+      const week = Math.ceil(day / 5);
+      const w = byWeek[week] || (byWeek[week] = { week: week, right: 0, total: 0, days: 0 });
+      let graded = false;
+      for (const kind of ['vocab', 'verbs', 'listen']) {
+        const c = counts[kind];
+        if (c && typeof c.total === 'number' && c.total > 0) {
+          w.right += (c.right || 0);
+          w.total += c.total;
+          graded = true;
+        }
+      }
+      if (graded) w.days++;
+    }
+  }
+  return Object.keys(byWeek)
+    .map((k) => byWeek[k])
+    .map((w) => ({ week: w.week, right: w.right, total: w.total, days: w.days,
+                   pct: w.total > 0 ? Math.round((w.right / w.total) * 100) : null }))
+    .sort((a, b) => a.week - b.week);
+}
+
+/* Bucket an array of Leitner card records ({ box, due, seen, right, wrong }) into a totals summary.
+   Only SEEN cards count (an unseen card is a not-yet-started card, not "in progress"). `now` is the
+   reference epoch-ms (Date.now() on the page; a fixed value in tests):
+     mastered      — box at MAX
+     learning      — seen, not yet mastered
+     due           — learning AND due now (due <= now)
+     dueSoon        — learning AND falling due within the next 24h (now < due <= now+1d)
+     dueByTomorrow — due + dueSoon  (the review load coming up by this time tomorrow) */
+function masteryBreakdown(records, now) {
+  const DAY = STREAK_DAY_MS;
+  const soon = now + DAY;
+  let mastered = 0, learning = 0, due = 0, dueSoon = 0;
+  (records || []).forEach((c) => {
+    if (!c || !(c.seen > 0)) return;
+    if ((c.box || 0) >= STATS_MAX_BOX) { mastered++; return; }
+    learning++;
+    const d = c.due || 0;
+    if (d <= now) due++;
+    else if (d <= soon) dueSoon++;
+  });
+  return { mastered: mastered, learning: learning, due: due, dueSoon: dueSoon, dueByTomorrow: due + dueSoon };
+}
+
+/* B1-completion forecast (DEV-8 "Прогноз B1"). Projects, from the learner's realised pace, the
+   calendar date they'll reach the end of the 180-day course.
+     completions — array of completion date signals (ISO ts or date keys), one per completed day
+                   (planner_data.dayStats[*].completedAt)
+     currentDay  — the curriculum day the learner is on (1-based); currentDay-1 days are behind them
+                   (whether done or skipped by a placement start), so daysLeft = totalDays-(currentDay-1)
+     todayKey    — local 'YYYY-MM-DD' anchor
+     windowDays  — trailing window the pace is measured over (default 28 ≈ 4 weeks)
+   Pace = distinct completion days within the trailing window ÷ that window's weeks, capped at 7/wk
+   and measured over an effective window no shorter than the learner's own history (so a keen first
+   week isn't diluted by dividing across four). Returns:
+     { daysLeft, done, hasPace, perWeek, weeksLeft, etaKey }
+   hasPace is false (etaKey/weeksLeft null) until there's at least one completion to extrapolate from —
+   the page then asks for a few days of activity rather than printing a fantasy date. */
+function forecastFinish(opts) {
+  opts = opts || {};
+  const totalDays = opts.totalDays || 0;
+  const currentDay = opts.currentDay || 1;
+  const todayKey = opts.todayKey;
+  const windowDays = opts.windowDays || 28;
+  const daysLeft = Math.max(0, totalDays - (currentDay - 1));
+  const done = daysLeft === 0;
+
+  const uniq = Array.from(new Set((opts.completions || []).filter(Boolean).map(streakDayKey))).sort();
+  if (!uniq.length || done) {
+    return { daysLeft: daysLeft, done: done, hasPace: false, perWeek: 0, weeksLeft: null, etaKey: null };
+  }
+  // Effective window: never shorter than a week, never longer than the learner's own span so far.
+  const span = streakDaysBetween(uniq[0], todayKey) + 1;
+  const win = Math.max(7, Math.min(windowDays, span));
+  const cutoff = streakShiftDay(todayKey, -(win - 1));
+  const inWin = uniq.filter((k) => k >= cutoff && k <= todayKey).length;
+  const perWeek = Math.min(7, inWin / (win / 7));
+  if (perWeek <= 0) {
+    return { daysLeft: daysLeft, done: false, hasPace: false, perWeek: 0, weeksLeft: null, etaKey: null };
+  }
+  const weeksLeft = daysLeft / perWeek;
+  const etaKey = streakShiftDay(todayKey, Math.ceil(weeksLeft * 7));
+  return { daysLeft: daysLeft, done: false, hasPace: true, perWeek: perWeek, weeksLeft: weeksLeft, etaKey: etaKey };
+}
+
 /* Node/test entry point — harmless in the browser (no module global there). */
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     STREAK_FREEZE_WINDOW, streakDayKey, streakShiftDay, streakDaysBetween, streakWeekdayMon,
     activeDatesSet, streakInfo, activityCalendar,
+    activeCountInWindow, weeklyAccuracy, masteryBreakdown, forecastFinish,
   };
 }
