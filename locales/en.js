@@ -110,6 +110,13 @@ window.LOCALE_EN = {
     // Course readiness: share of the day's core practice families worked (distinct from the streak)
     today_readiness_title: 'Course readiness',
     today_readiness_note: (worked, total) => `You covered ${worked} of ${total} of today's core practice areas. This tracks how much of the plan you did, separate from your streak — the light pace keeps the streak going while covering less each day.`,
+    // streak + activity calendar (DEV-7) — adult tone, no guilt copy
+    streak_current: (n) => `${n}-day streak`,
+    streak_best: (n) => `Best: ${n} ${n === 1 ? 'day' : 'days'}`,
+    streak_none: 'Start your streak today',
+    streak_freeze_note: 'Miss a single day and a streak freeze is used automatically — one a week keeps your streak alive.',
+    streak_freeze_active: 'A streak freeze is keeping your streak going.',
+    streak_weekdays: 'Mo,Tu,We,Th,Fr,Sa,Su',
     version_reload_title: 'Update available',
     version_reload_msg: 'A new version of the course has shipped, but some files on this device are still from the old one. Reload to fetch the latest and avoid a mismatched lesson.',
     version_reload_btn: 'Reload the app',

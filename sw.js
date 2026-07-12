@@ -38,7 +38,7 @@ const SHELL_ASSETS = [
   '/assets/js/gemini-key.js',
   '/assets/js/header.js', '/assets/js/i18n.js', '/assets/js/leitner.js',
   '/assets/js/legal.js', '/assets/js/markdown.js', '/assets/js/planner-data.js',
-  '/assets/js/pwa.js', '/assets/js/speech.js', '/assets/js/supabase.js',
+  '/assets/js/pwa.js', '/assets/js/speech.js', '/assets/js/stats.js', '/assets/js/supabase.js',
   '/assets/js/theme.js', '/assets/js/utils.js',
   '/assets/js/vocab-trainer.js', '/assets/js/verbs-trainer.js',
   '/assets/js/grammar-drill.js',

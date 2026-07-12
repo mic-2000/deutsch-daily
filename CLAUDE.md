@@ -36,7 +36,10 @@ multi-slug `startSession({ slugs, review:true })` session over the grammar topic
 `planner_data.grammarReview` has come due — soft-demotion, topic-level grading; the state lives in
 `planner_data`, owned by `/today`, not the engine). The curriculum day model (`DAYS` / `TOTAL_DAYS` /
 `getLocalizedDay`, now carrying each day's `drill` slug) is `assets/js/planner-data.js`, shared by
-`/planner` and `/today`. (Details: ARCHITECTURE.md §9–§10, §19.)
+`/planner` and `/today`. The **streak + activity-calendar** math (DEV-7) is a second shared module,
+`assets/js/stats.js` (`streakInfo` / `activityCalendar`) — pure, derived each render from
+`planner_data.dayStats` completions + a single `lastActiveDate` stamp `/today` writes on any embedded
+session end (no counters, no new column). (Details: ARCHITECTURE.md §9–§10, §19.)
 
 ## Build
 - `npm run build` (`node build.js`) injects `NEXT_PUBLIC_SUPABASE_*` into

@@ -37,6 +37,7 @@
 <script src="/data/weeks.js"></script>
 <script src="/assets/js/course-consts.js"></script>
 <script src="/assets/js/planner-data.js"></script>
+<script src="/assets/js/stats.js"></script>
 </head>
 <body>
 <div id="app"></div>
@@ -338,6 +339,43 @@ function renderProgress(doneCount, pct) {
 </section>`;
 }
 
+/* Streak + 5-week activity calendar (DEV-7). Both are DERIVED from planner_data (dayStats completions
+   + the lastActiveDate stamp /today writes) via stats.js — this page never writes streak data, it
+   only reads what rides along on the shared planner_data payload. Adult tone: freezes are mentioned
+   as an automatic safety net, never as a loss/guilt message. */
+function renderStreak() {
+  const todayKey = streakDayKey(new Date());
+  const set = activeDatesSet(state.dayStats, state.lastActiveDate);
+  const s = streakInfo(set, todayKey);
+  const weeks = activityCalendar(todayKey, 5, set);
+  const wd = (T('streak_weekdays') || 'Mo,Tu,We,Th,Fr,Sa,Su').split(',');
+  const head = wd.map(l => `<span class="cal-wd">${esc(l)}</span>`).join('');
+  const grid = weeks.map(row => row.map(c => {
+    const cls = ['cal-cell'];
+    if (c.active) cls.push('active');
+    if (c.today) cls.push('today');
+    if (c.future) cls.push('future');
+    return `<span class="${cls.join(' ')}" title="${esc(c.key)}"><span class="cal-dot"></span></span>`;
+  }).join('')).join('');
+  const flame = s.current > 0
+    ? `<div class="streak-flame">🔥 <span class="streak-flame-num num">${s.current}</span></div>
+       <div class="streak-flame-label">${T('streak_current', s.current)}${s.best > s.current ? ` · ${T('streak_best', s.best)}` : ''}</div>`
+    : `<div class="streak-flame idle">🔥</div>
+       <div class="streak-flame-label">${T('streak_none')}${s.best > 0 ? ` · ${T('streak_best', s.best)}` : ''}</div>`;
+  const freezeNote = s.freezeActive
+    ? `<p class="streak-note freeze">❄️ ${T('streak_freeze_active')}</p>`
+    : `<p class="streak-note">${T('streak_freeze_note')}</p>`;
+  return `
+<section class="container streak-section">
+  <div class="streak-head">${flame}</div>
+  <div class="streak-cal">
+    <div class="cal-head">${head}</div>
+    <div class="cal-grid">${grid}</div>
+  </div>
+  ${freezeNote}
+</section>`;
+}
+
 function renderDayCard(d, isDone) {
   // Course-readiness chip (curriculum-redesign-2026-07-v2 §4 / §17 item 5): the share of this day's core
   // SRS families the learner actually worked, read from the dayStats blocks summary /today wrote at
@@ -424,6 +462,7 @@ function render() {
 
   let html = `${renderHeader()}
 ${renderProgress(doneCount, pct)}
+${renderStreak()}
 
 <main class="container">
   ${renderDayCard(d, isDone)}

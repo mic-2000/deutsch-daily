@@ -18,6 +18,13 @@
 .today-day-tag { margin-top: 18px; font-size: 13px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-soft); }
 .today-day-tag strong { color: var(--ink); font-weight: 600; }
 
+/* streak chip (DEV-7) — compact, on the intro hero under the day number */
+.streak-chip { display: inline-flex; align-items: center; gap: 8px; margin-top: 12px; padding: 6px 14px; border: 1px solid var(--line); border-radius: 999px; background: var(--paper-3); font-size: 14px; color: var(--ink); }
+.streak-chip.none { color: var(--ink-soft); }
+.streak-chip-cur { font-weight: 600; }
+.streak-chip-best { color: var(--ink-soft); font-size: 13px; padding-left: 8px; border-left: 1px solid var(--line); }
+.streak-chip-freeze { font-size: 13px; }
+
 .today-banner { margin-top: 18px; border: 1px solid var(--line); border-left: 3px solid var(--gold); background: var(--paper-3); border-radius: 4px; padding: 12px 16px; color: var(--ink-soft); font-size: 14px; }
 
 /* one-time v1→v2 reset notice (§2 "Do not hide the reset") — dismissible; the ack persists in
@@ -92,6 +99,13 @@
 .done-stat-val { font-size: 30px; line-height: 1.1; margin-top: 4px; color: var(--ink); }
 .done-stat-of { font-size: 18px; color: var(--ink-soft); }
 .done-stat-note { flex-basis: 100%; text-align: center; font-size: 12px; color: var(--ink-soft); margin-top: 2px; }
+
+/* streak block on the done screen (DEV-7) */
+.done-streak { display: flex; flex-direction: column; align-items: center; gap: 2px; margin: 0 auto 24px; }
+.done-streak-flame { font-size: 40px; line-height: 1; }
+.done-streak-text { font-family: var(--serif); font-size: 24px; color: var(--ink); }
+.done-streak-best { font-size: 13px; color: var(--ink-soft); }
+.done-streak-freeze { font-size: 13px; color: var(--ink-soft); margin-top: 4px; }
 
 .done-light { max-width: 440px; margin: 0 auto 24px; padding: 12px 18px; border: 1px dashed var(--line); border-radius: 8px; background: var(--paper-3); font-size: 14px; line-height: 1.5; color: var(--ink-soft); text-align: left; }
 

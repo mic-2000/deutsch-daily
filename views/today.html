@@ -45,6 +45,7 @@
 <script src="/data/dialogues.js"></script>
 <script src="/assets/js/course-consts.js"></script>
 <script src="/assets/js/planner-data.js"></script>
+<script src="/assets/js/stats.js"></script>
 <script src="/assets/js/vocab-trainer.js"></script>
 <script src="/assets/js/verbs-trainer.js"></script>
 <script src="/assets/js/grammar-drill.js"></script>
@@ -157,14 +158,27 @@ function applyVerbProgress(d){ VerbsTrainer.applyData(d && typeof d === 'object'
 /* ---- engine persistence hooks (three independent columns) ---- */
 function saveVerbsNow(){ if (typeof saveVerbsToCloud === 'function') saveVerbsToCloud(VerbsTrainer.serialize()); }
 function saveVocabNow(){ if (typeof saveVocabToCloud === 'function') saveVocabToCloud(VocabTrainer.serialize()); }
+/* Streak stamp (DEV-7): mark today active on ANY session end so a trainer-only day (a session run
+   without finishing the whole day, which never writes dayStats) still counts toward the streak. The
+   streak itself is derived from dayStats + this stamp (stats.js) — this only persists the one
+   lastActiveDate key into planner_data. Idempotent per day: it saves at most once (the first activity
+   of the day), so it adds no write on later sessions the same day. */
+function markActive(){
+  const today = (typeof leitnerToday === 'function') ? leitnerToday() : streakDayKey(new Date());
+  if (planner.lastActiveDate === today) return;
+  planner.lastActiveDate = today;
+  saveToCloud();   // idempotent planner_data upsert — carries lastActiveDate alongside the rest
+}
 /* Each engine's onSessionEnd normally files its result and advances the flow. During the optional
    weak-spots round (weak.active) the same callback instead hands the result to weakStageDone, which
    chains the family sub-sessions — so a weak sub-session never clobbers the main step's result. */
 VocabTrainer.init({ embedded: true, onSessionEnd: (r) => {
+  markActive();
   if (weak.active) { weakStageDone(r); return; }
   flow.vocabResult = r; flow.results.vocab = { completed: !!(r && r.completed) }; nextStep();
 }, onSaveVocab: saveVocabNow, onSaveVerbs: saveVerbsNow });
 VerbsTrainer.init({ embedded: true, onSessionEnd: (r) => {
+  markActive();
   if (weak.active) { weakStageDone(r); return; }
   flow.verbResult = r; flow.results.verbs = { completed: !!(r && r.completed) }; nextStep();
 }, onSave: saveVerbsNow });
@@ -174,6 +188,7 @@ VerbsTrainer.init({ embedded: true, onSessionEnd: (r) => {
    so a weak-spots drill still regrades the topic). Outside the weak round the result is filed under
    whichever step is active so the done step gates on it. */
 GrammarDrill.init({ embedded: true, onSessionEnd: (r) => {
+  markActive();
   if (r && Array.isArray(r.perSlug)) recordGrammarReview(r.perSlug);
   if (weak.active) { weakStageDone(r); return; }
   const id = (currentStep() && currentStep().id) || 'grammar';
@@ -775,6 +790,34 @@ function currentReadiness(){
   return dayReadiness(blocks);
 }
 
+/* ---- streak (DEV-7) — derived from planner.dayStats + planner.lastActiveDate via stats.js ---- */
+function streakSummary(){
+  const set = activeDatesSet(planner.dayStats, planner.lastActiveDate);
+  return streakInfo(set, (typeof leitnerToday === 'function') ? leitnerToday() : streakDayKey(new Date()));
+}
+/* Compact chip for the intro hero. Adult tone: a gentle "start today" when there's no live streak,
+   never a guilt/loss message. */
+function streakChip(){
+  const s = streakSummary();
+  if (s.current <= 0) return `<div class="streak-chip none">${T('streak_none')}</div>`;
+  const best = (s.best > s.current) ? `<span class="streak-chip-best">${T('streak_best', s.best)}</span>` : '';
+  const freeze = s.freezeActive ? `<span class="streak-chip-freeze" title="${esc(T('streak_freeze_note'))}">❄️</span>` : '';
+  return `<div class="streak-chip">🔥 <span class="streak-chip-cur">${T('streak_current', s.current)}</span>${freeze}${best}</div>`;
+}
+/* Prominent streak block for the done screen (shown whenever a streak is live — includes today, which
+   any session end this run has already stamped). */
+function streakDoneBlock(){
+  const s = streakSummary();
+  if (s.current <= 0) return '';
+  const best = (s.best > s.current) ? `<div class="done-streak-best">${T('streak_best', s.best)}</div>` : '';
+  const freeze = s.freezeActive ? `<div class="done-streak-freeze">❄️ ${T('streak_freeze_active')}</div>` : '';
+  return `<div class="done-streak">
+    <span class="done-streak-flame">🔥</span>
+    <span class="done-streak-text">${T('streak_current', s.current)}</span>
+    ${best}${freeze}
+  </div>`;
+}
+
 /* The current week's "I can…" statements from the active locale (weeks block), EN fallback. Read-only;
    surfaced on the done screen so the learner sees the week's concrete goals. */
 function weekCanDo(){
@@ -790,6 +833,7 @@ function renderDone(){
   if (complete && !planner.completed[day]) {
     planner.completed[day] = true;
     recordDayStats(day);
+    planner.lastActiveDate = (typeof leitnerToday === 'function') ? leitnerToday() : streakDayKey(new Date());   // streak stamp (DEV-7)
     if (day === planner.currentDay && planner.currentDay < TOTAL_DAYS) planner.currentDay = day + 1;
     saveToCloud();
   }
@@ -833,6 +877,7 @@ function renderDone(){
   <h2>${complete ? T('today_done_title') : T('today_done_partial_title')}</h2>
   ${dayLine}
   <p>${complete ? T('today_done_msg') : T('today_done_partial_msg')}</p>
+  ${streakDoneBlock()}
   ${stats}
   ${backlogBlock}
   ${lightNote}
@@ -876,6 +921,7 @@ function renderIntro(){
           <span class="today-daynum-big">${T('today_day_of', dayOf(), TOTAL_DAYS)}</span>
           <span class="today-daynum-sub">${T('planner_week', d.week)} · ${esc(d.weekTheme)}</span>
         </div>
+        ${streakChip()}
         <div class="today-hero-top">
           <p class="today-lead" style="margin-top:0">${T('today_lead')}</p>
           <div class="today-badge">${T('today_minutes')}</div>

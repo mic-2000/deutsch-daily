@@ -172,6 +172,7 @@ Supabase CDN
 → assets/js/header.js              (appHeader — shared header/nav markup)
 → data/weeks.js                    (WEEKS)
 → assets/js/planner-data.js        (DAYS, TOTAL_DAYS, getLocalizedDay, dayReadiness — shared with /today)
+→ assets/js/stats.js               (streakInfo, activityCalendar — streak + calendar, shared with /today)
 → inline page <script>             (state, chat state, render, page logic)
    initApp().then(loadLessonsThenRender)
 ```
@@ -219,6 +220,7 @@ Supabase CDN
 → data/weeks.js → data/vocab.js → data/verbs.js → data/grammar-drills.js → data/dialogues.js
 → course-consts.js                 (COURSE_VERSION, BAND_WEEKS, WEEK_FOR_LEVEL, levelOfWeek)
 → planner-data.js                  (DAYS, TOTAL_DAYS, getLocalizedDay)
+→ stats.js                         (streakInfo, activityCalendar — streak + calendar)
 → vocab-trainer.js → verbs-trainer.js → grammar-drill.js
 → inline page <script>             (flow controller; CLOUD_FIELD='planner_data'; initApp().then(afterInit))
 ```
@@ -322,6 +324,22 @@ SRS families worked, read from the `dayStats[day].blocks` summary `/today` recor
 distinct from the streak (redesign-v2 §17 item 5). Top-level `const`/`function` in a classic script
 live in the shared global lexical scope (same pattern as `leitner.js` `MAX_BOX`), so both pages see
 these directly. Depends on `WEEKS` (must load first) and `getLang`.
+
+### `stats.js` — streak + activity-calendar math (planner + today; DEV-7)
+Pure, dependency-free helpers (operate on `'YYYY-MM-DD'` local date-key strings) so `/planner` and
+`/today` compute identical numbers. The streak is **derived, never stored**: `activeDatesSet(dayStats,
+lastActiveDate)` builds the set of the learner's active local dates from every completed day's
+`dayStats[*].completedAt` **plus** the single `planner_data.lastActiveDate` stamp (so a trainer-only
+day — a session run without finishing the whole day, which never writes `dayStats` — still counts);
+`streakInfo(set, todayKey)` walks that set back from today to return `{ current, best, activeToday,
+alive, freezeActive }`. Dates follow the `leitnerToday()` local-midnight convention, so the streak
+rolls over at the learner's own midnight and is correct across month/year boundaries. **Streak freeze:**
+one missed day is auto-forgiven at most once per `STREAK_FREEZE_WINDOW` (7) days — a single skip never
+breaks the streak, a second skip inside the window does. `activityCalendar(todayKey, numWeeks, set)`
+returns a Monday-first `numWeeks × 7` grid ending in today's week for the `/planner` mini-calendar.
+Only `lastActiveDate` is added to `planner_data` (no counters, no new column); `/today` stamps it via
+`markActive()` on any embedded session end. `module.exports` makes it dual-mode (browser global +
+`require` for `tests/streak.test.js`). Guarded by `tests/streak.test.js`.
 
 ### `vocab-trainer.js` / `verbs-trainer.js` — the shared trainer engines (`window.VocabTrainer` / `window.VerbsTrainer`)
 Each is a single namespace object holding the **entire** trainer: helpers, Leitner routing, the
@@ -561,7 +579,7 @@ single table, `public.progress`, one row per user (confirmed schema):
 | Column | Type | Null | Default | Written by | Payload shape |
 | --- | --- | --- | --- | --- | --- |
 | `user_id` | `uuid` | NO | — | upserts (conflict key) | `session.user.id` — PK, FK → `auth.users(id)` |
-| `planner_data` | `jsonb` | yes | `'{}'::jsonb` | planner / today / welcome `getCloudPayload()` | `{ courseVersion:2, currentDay, viewingDay, completed }` — the keys this app owns. Any other keys (e.g. `/today`'s `dayStats`/`grammarReview`, the cutover's `migratedFrom`) are **passed through untouched** by every page that saves the column, so they survive a round trip. A pre-v2 row (no `courseVersion`) is reset to a clean v2 state by `initApp` (see above). |
+| `planner_data` | `jsonb` | yes | `'{}'::jsonb` | planner / today / welcome `getCloudPayload()` | `{ courseVersion:2, currentDay, viewingDay, completed }` — the keys this app owns. Any other keys (e.g. `/today`'s `dayStats`/`grammarReview`/`lastActiveDate` (the streak stamp, DEV-7), the cutover's `migratedFrom`) are **passed through untouched** by every page that saves the column, so they survive a round trip. A pre-v2 row (no `courseVersion`) is reset to a clean v2 state by `initApp` (see above). |
 | `vocab_data` | `jsonb` | yes | `'{}'::jsonb` | vocab `getCloudPayload()` → `serialize()` | `{ app, version:2, savedAt, selectedWeek, modes, levels, mastery, pluralMastery }` |
 | `verbs_data` | `jsonb` | yes | `'{}'::jsonb` | verbs `getCloudPayload()` **and** vocab `saveVerbStore()` | `{ app, version, savedAt, modes, sel, mastery }` — `mastery` keyed by **verb key**; `sel` = saved training selection |
 | `lang` | `text` | yes | `'en'::text` | `saveLangToCloud` | `'ru' \| 'ua' \| 'en'` |
@@ -1454,8 +1472,15 @@ A guided "do today's day in one run" experience and the **first nav tab**. Inste
 sections, the user presses one **Learn** button and is walked through the day in order. "Today" =
 the planner's `currentDay` (read from `planner_data`); the day's content comes from the shared day
 model (`planner-data.js` — `getLocalizedDay(DAYS[currentDay-1])`). The intro shows a prominent
-**"Day N of TOTAL · Week W · theme"** indicator (`today_day_of`) so it's clear which day you're on;
-the done screen states **"You completed Day N"** (`today_done_day`).
+**"Day N of TOTAL · Week W · theme"** indicator (`today_day_of`) so it's clear which day you're on,
+with a compact **streak chip** below it (`streakChip()` → `🔥 N-day streak`, or a no-guilt
+`streak_none` prompt; `stats.js` §above); the done screen states **"You completed Day N"**
+(`today_done_day`). **Streak stamp (DEV-7):** every embedded session end calls `markActive()`, which
+writes today's local date into `planner_data.lastActiveDate` (idempotent — at most one write per day),
+so a trainer-only day (a session run without finishing the whole day) still counts toward the streak
+even though it writes no `dayStats`. The streak itself is derived, not stored (see `stats.js`); the
+`/planner` page renders the same numbers plus a **5-week Monday-first activity calendar**
+(`renderStreak()` → `activityCalendar`).
 
 **Steps** — the flow is **descriptor-driven**: `buildSteps(day, onboarding)` returns an ordered list of
 step descriptors, each `{ id, required, enabled, run(), isComplete() }`, and `.filter`s out the
@@ -1551,8 +1576,11 @@ complete; **closing a trainer early leaves its block incomplete**.
 9. **done** — gated on `dayComplete()` (every enabled `required` descriptor `isComplete()`): when the day
    is complete it marks `planner_data.completed[day] = true`, records `dayStats[day]`
    (`{ completedAt, blocks:[{id,required,completed}], counts:{vocab,verbs,listen} }` — written once, on the
-   completing pass only), advances `currentDay` (when finishing the current day), persists via
-   `saveToCloud`, and shows the completion screen ("You completed Day N") with the current week's
+   completing pass only), stamps `planner_data.lastActiveDate` (the streak stamp, DEV-7), advances
+   `currentDay` (when finishing the current day), persists via
+   `saveToCloud`, and shows the completion screen ("You completed Day N") with a prominent **streak**
+   block (`streakDoneBlock()` → `🔥 N-day streak` + best + a `❄️` note when a freeze is bridging a recent
+   gap; `stats.js`, §above), the current week's
    read-only **can-do list** (`weekCanDo()` → the active locale's `weeks[week].canDo`, EN fallback) and a
    small no-AI **day stats** block (words / verbs first-try score from `flow.vocabResult`/`flow.verbResult`)
    → "Open the planner". When a trainer's **due backlog** overflowed the tariff's `sessionCap()` (recorded
