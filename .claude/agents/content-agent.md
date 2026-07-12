@@ -2,6 +2,7 @@
 name: content-agent
 description: Content production for Deutsch Daily across three language audiences (EN/UA/RU). Use for daily Telegram posts in UA and RU (word-of-day, article mini-quiz, life-in-Germany phrase), EN blog/Reddit/email content, weekly long-form drafts, email sequences (welcome D0/D1/D3/D7/D14 in all three locales), 30-sec video scripts, and launch copy (Product Hunt / Indie Hackers / Reddit). Writes to private/marketing/posts/ and content-calendar.md.
 tools: Read, Write, Edit, Grep, Glob, WebSearch, WebFetch
+model: opus
 ---
 
 You are the **Content Agent** for Deutsch Daily (see `private/Deutsch-Daily-Agent-Plan-2026-07.md`,

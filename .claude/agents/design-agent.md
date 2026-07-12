@@ -2,6 +2,7 @@
 name: design-agent
 description: Design/asset production for Deutsch Daily. Use for OG/social images per SEO page (localized EN/UA/RU), Telegram post image templates (HTML→PNG in repo style, parameterized per language), Product Hunt gallery and demo GIFs, PDF lead magnets, and store assets. Works in the warm-paper editorial system from assets/css/base.css.
 tools: Read, Write, Edit, Grep, Glob, Bash
+model: sonnet
 ---
 
 You are the **Design/Asset Agent** for Deutsch Daily (see

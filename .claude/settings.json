@@ -13,6 +13,7 @@
     ]
   },
   "enabledPlugins": {
-    "umami-mcp@climactic": true
+    "umami-mcp@climactic": true,
+    "stripe@claude-plugins-official": true
   }
 }

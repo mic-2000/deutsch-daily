@@ -1,6 +1,6 @@
 # Analytics Events Taxonomy
 
-Last updated: 2026-07-11. All events fired via `track(name, props)` helper in `assets/js/utils.js`.
+Last updated: 2026-07-12. All events fired via `track(name, props)` helper in `assets/js/utils.js`.
 
 ## Event Specification
 
@@ -84,5 +84,9 @@ See `§5. Metrics Dashboard` in the development plan.
 
 ## Current Status
 
-- ✅ Implemented: `register`, `grammar_drill`, `word_review`, `day1_start`, `ai_lesson_open`
-- 🚧 To implement: all others (DEV-1 task)
+- ✅ Implemented (23 events in source, verified 2026-07-12): every event above except the
+  Monetization & Paywall section, plus 3 legacy events kept for continuity that predate this
+  spec and are not in the tables above: `day1_start`, `ai_lesson_open`, `grammar_drill`.
+- 🚧 To implement: `paywall_view`, `paywall_click`, `checkout_start`, `checkout_success` — land
+  with DEV-3/4.
+- 🚧 Missing from the DEV-1 spec: the `tests/events.test.js` source guard.
