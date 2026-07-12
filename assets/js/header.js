@@ -61,9 +61,12 @@ function appFooter(opts) {
   const o = opts || {};
   const note = T(o.text || 'vocab_footer') +
     (o.showEmail && currentUser ? ' · ' + esc(currentUser.email) : '');
+  // "💬 Feedback" entry point (feedback.js). Guarded so the footer still renders if that module
+  // isn't loaded on some page.
+  const fb = (typeof feedbackButton === 'function') ? feedbackButton() : '';
   return `
 <footer><div class="container f-row">
   <span>${note} · <a class="gh-link" href="https://github.com/mic-2000/deutsch-daily" target="_blank" rel="noopener">GitHub</a> · <a class="gh-link" href="/privacy">${T('lp_foot_privacy')}</a> · <a class="gh-link" href="/terms">${T('lp_foot_terms')}</a></span>
-  ${o.right || ''}
+  <span class="f-right">${fb}${o.right || ''}</span>
 </div></footer>`;
 }

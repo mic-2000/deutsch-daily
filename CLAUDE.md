@@ -47,6 +47,14 @@ numbers match `/vocab`+`/verbs`, writes nothing back, and premium-gates the fore
 weakest-items sections via `hasPremium()` (no in-app price/checkout — that's DEV-3/4). (Details:
 ARCHITECTURE.md §9–§10, §19, §22.)
 
+The **feedback loop** (DEV-10) is a third small shared module, `assets/js/feedback.js` — a "💬
+Feedback" footer entry point (via `appFooter`) + an in-page modal (note + optional 1–5 mood) that
+writes to the INSERT-only `feedback` table (§5): attributed on app pages, anonymous from the landing.
+The modal is a `<body>`-appended overlay (not part of any page's `#app` re-render), loaded on the
+landing + every app page. `/today` auto-opens it once after 3 completed days (pure
+`feedbackShouldPrompt(planner)` → one-time `planner_data.feedbackPrompted` flag). (Details:
+ARCHITECTURE.md §4 `feedback.js`, §5.)
+
 ## Build
 - `npm run build` (`node build.js`) injects `NEXT_PUBLIC_SUPABASE_*` into
   `assets/js/supabase.js`. Never commit real credentials. (§2)

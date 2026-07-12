@@ -36,6 +36,7 @@ const SHELL_ASSETS = [
   '/assets/js/ai-config.js', '/assets/js/cloud-sync.js', '/assets/js/course-consts.js',
   '/assets/js/gemini.js',
   '/assets/js/gemini-key.js',
+  '/assets/js/feedback.js',
   '/assets/js/header.js', '/assets/js/i18n.js', '/assets/js/leitner.js',
   '/assets/js/legal.js', '/assets/js/markdown.js', '/assets/js/planner-data.js',
   '/assets/js/pwa.js', '/assets/js/speech.js', '/assets/js/stats.js', '/assets/js/supabase.js',

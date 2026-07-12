@@ -478,6 +478,25 @@ Card shape: `{ box:0..5, due:ms, right:count, wrong:count, seen:count }`.
 - `stageConfirm(state, message, action)` / `clearConfirm(state)` — helpers to set/clear the
   `state.confirm` object that drives the in-page confirm modal.
 
+### `feedback.js` — feedback loop (landing + every app page; DEV-10)
+The "💬 Feedback" footer entry point + its in-page modal (a free-text note + an optional 1–5 mood),
+writing to the `feedback` table (§5). The modal is a **self-managed overlay appended to `<body>`** —
+deliberately NOT part of any page's `#app` re-render — so one module serves the landing and all seven
+app pages without threading markup/handlers through each `render()`; a page re-render can't wipe it.
+- `feedbackButton(cls?)` — the footer link markup (`onclick="openFeedback()"`). `appFooter` (header.js)
+  appends it on app pages; the landing footer calls it directly.
+- `openFeedback(isPrompt?)` / `closeFeedback()` / `setFeedbackMood(n)` / `submitFeedback()` — global
+  handlers (classic-script globals, for inline `onclick`). `isPrompt` swaps in the softer auto-prompt
+  copy. Mood is optional; tapping the selected mood clears it. Errors render inline (not a toast, which
+  the overlay would cover); success closes the modal + toasts thanks.
+- `submitFeedbackToCloud({page,text,mood})` → `boolean` — inserts the row (anonymous when there's no
+  `currentUser`); never throws.
+- `feedbackShouldPrompt(planner)` → `boolean` — **pure**: true once ≥3 days are completed
+  (`planner_data.dayStats`) and `planner_data.feedbackPrompted` isn't set. `/today`'s `renderDone`
+  calls it via `maybePromptFeedback`, which sets the flag + `saveToCloud()` so it fires at most once.
+- Dual-mode (browser global script + CommonJS) so the pure helpers are unit-testable
+  (`tests/feedback.test.js`), mirroring `stats.js`.
+
 ### `supabase.js` — client
 - Creates `sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)`. URL/key are
   build-time placeholders (see §2).
@@ -680,6 +699,20 @@ create table public.entitlements (
 alter table public.entitlements enable row level security;
 create policy "own entitlements read" on public.entitlements
   for select using (auth.uid() = user_id);  -- SELECT only — no anon/authenticated write policy
+
+-- product feedback (one row per submission; user_id null = anonymous / landing; DEV-10)
+create table public.feedback (
+  id         uuid        primary key default gen_random_uuid(),
+  user_id    uuid        references auth.users(id),   -- nullable: null = anonymous
+  page       text,                                    -- surface it was sent from ('today' | 'landing' | …)
+  text       text        not null,
+  mood       smallint    check (mood is null or mood between 1 and 5),  -- optional 1..5
+  created_at timestamptz default now()
+);
+alter table public.feedback enable row level security;
+create policy "insert feedback" on public.feedback
+  for insert to anon, authenticated
+  with check (user_id is null or auth.uid() = user_id);  -- INSERT only; no read/update/delete policy
 ```
 
 `messages` is a JSON array of `{ role: "user"|"model", text: string }` objects — the full
@@ -703,6 +736,16 @@ gate `hasPremium()` itself — a cancelled or past-due subscription still reads 
 helper's. This client-side check is trivially bypassable in devtools by a determined user; that's an
 accepted risk for gating **content** (course days, stats page) — the AI proxy enforces its quota
 server-side (DEV-5), where bypassing actually costs money.
+
+**Feedback (table `feedback`, one row per submission; DEV-10):** the qualitative-signal loop. Written
+by `feedback.js` from the "💬 Feedback" footer entry point on every app page (attributed to the
+signed-in user) and from the guest landing (anonymous, `user_id` null). It is **INSERT-only**: the RLS
+policy above lets a signed-in user write their own row (`user_id = auth.uid()`) and anyone — including
+the `anon` role — write an anonymous row (`user_id` null), but nobody can forge a row attributed to
+another user. There is deliberately **no** `SELECT`/`UPDATE`/`DELETE` policy, so the client can never
+read feedback back; it is pulled server-side (SQL editor / service role) for the weekly Analytics
+summary. `/today` also auto-opens the modal once after the learner completes 3 days (a one-time
+`planner_data.feedbackPrompted` flag; the pure `feedbackShouldPrompt(planner)` decides).
 
 **Notes:**
 - **Default language is `'en'` on both sides** — the DB column default (`lang 'en'`) matches the

@@ -38,6 +38,7 @@
 <script src="/assets/js/gemini-key.js"></script>
 <script src="/assets/js/markdown.js"></script>
 <script src="/assets/js/header.js"></script>
+<script src="/assets/js/feedback.js"></script>
 <script src="/data/weeks.js"></script>
 <script src="/data/vocab.js"></script>
 <script src="/data/verbs.js"></script>
@@ -887,6 +888,18 @@ function renderDone(){
   <div class="flow-actions"><a class="btn accent big" href="/planner">${T('today_done_to_planner')}</a></div>
   <button class="restart" onclick="startFlow()">↻ ${T('today_restart_day')}</button>
 </div></main>`;
+  maybePromptFeedback();
+}
+
+/* One-time feedback auto-prompt (DEV-10). Once the learner has completed enough days
+   (feedbackShouldPrompt, pure in feedback.js), open the feedback modal exactly once — the flag lives
+   in planner_data.feedbackPrompted and is persisted with the rest of the payload, so it never repeats. */
+function maybePromptFeedback(){
+  if (typeof feedbackShouldPrompt !== 'function' || typeof openFeedback !== 'function') return;
+  if (!feedbackShouldPrompt(planner)) return;
+  planner.feedbackPrompted = true;
+  saveToCloud();
+  openFeedback(true);
 }
 
 /* ==========================================================================

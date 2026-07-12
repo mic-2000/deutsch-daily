@@ -155,3 +155,38 @@ do $$ begin
       for select using (auth.uid() = user_id);
   end if;
 end $$;
+
+-- -------------------------------------------------------------------------
+-- feedback  (product feedback — one row per submission, DEV-10)
+--   user_id null = anonymous (submitted from the guest landing); otherwise the signed-in user.
+--   page  = the surface it was sent from ('today' | 'planner' | 'landing' | …), for clustering.
+--   text  = free-text note; mood = optional 1..5 (5 = happiest).
+--
+--   INSERT only. A signed-in user may write their OWN row (user_id = auth.uid()); anyone (incl. the
+--   anon role) may write an ANONYMOUS row (user_id null) — so the guest landing can collect feedback.
+--   Nobody can forge a row attributed to ANOTHER user. There is deliberately NO select/update/delete
+--   policy, so the client can never read feedback back; it is pulled server-side (SQL editor /
+--   service role) for the weekly Analytics summary (plan §3 "Feedback collection & analysis loop").
+-- -------------------------------------------------------------------------
+create table if not exists public.feedback (
+  id         uuid        primary key default gen_random_uuid(),
+  user_id    uuid        references auth.users(id),   -- nullable: null = anonymous
+  page       text,
+  text       text        not null,
+  mood       smallint    check (mood is null or mood between 1 and 5),
+  created_at timestamptz default now()
+);
+
+create index if not exists feedback_created_at_idx on public.feedback (created_at desc);
+
+alter table public.feedback enable row level security;
+
+do $$ begin
+  if not exists (
+    select 1 from pg_policies where tablename = 'feedback' and policyname = 'insert feedback'
+  ) then
+    create policy "insert feedback" on public.feedback
+      for insert to anon, authenticated
+      with check (user_id is null or auth.uid() = user_id);
+  end if;
+end $$;
