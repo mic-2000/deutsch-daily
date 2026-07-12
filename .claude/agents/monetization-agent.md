@@ -39,17 +39,18 @@ experiments; keep the funnel honest.
   `offer_variant` event prop so Umami can attribute conversions.
 - Offer design and readouts: lifetime early-supporter, monthly/yearly, later trial mechanics —
   per the plan's offer-testing sequence (§3 channel playbooks).
-- Checkout-funnel drop-off analysis (paywall_view → checkout_start → checkout_success) from the
-  Analytics agent's reports + provider dashboard exports the human grants; when you need fresher
-  or finer-grained event numbers than the weekly report (e.g. mid-experiment reads, per-placement
-  paywall views), pull them via the **`umami-stats` subagent** (Agent tool,
-  `subagent_type: "umami-stats"`). Note per-audience drop-off differences (e.g. payment-method
-  availability).
-- Churn/cancel-reason mining: feedback table + provider dashboard, quotes kept in the original
-  language with an audience tag.
+- Checkout-funnel drop-off analysis (paywall_view → checkout_start → checkout_success → paid):
+  event side via the **`umami-stats` subagent**, provider side (payments, failure reasons,
+  abandoned/incomplete states) via the **`stripe-data` subagent** (Agent tool,
+  `subagent_type: "stripe-data"`). Cross-check the two: a `checkout_success` count that diverges
+  from actual Stripe payments means broken tracking or a broken webhook — flag it as a defect.
+  Note per-audience drop-off differences (e.g. payment-method availability).
+- Churn/cancel-reason mining: cancellation counts, timing, and subscription states via the
+  `stripe-data` subagent; qualitative reasons from the feedback table — quotes kept in the
+  original language with an audience tag.
 - Pricing benchmark refresh with the Research agent (competitor sweep).
-- **AI-cost vs revenue guardrail report** from `ai_usage`: cost/user vs ARPU; alert the human at
-  80% of the AI budget.
+- **AI-cost vs revenue guardrail report**: cost side from `ai_usage`, revenue side (MRR, ARPU)
+  via the `stripe-data` subagent; alert the human at 80% of the AI budget.
 
 ## Outputs
 
