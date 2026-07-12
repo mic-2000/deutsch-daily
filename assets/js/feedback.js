@@ -49,7 +49,7 @@ function _fbModalHtml() {
     '<h3 class="fb-title">' + T('feedback_title') + '</h3>' +
     '<p class="fb-lead">' + lead + '</p>' +
     '<div class="fb-moods" role="group" aria-label="' + esc(T('feedback_mood_label')) + '">' + moods + '</div>' +
-    '<textarea id="fb-text" class="fb-text" rows="4" maxlength="' + FB_MAX_LEN + '" placeholder="' + esc(T('feedback_placeholder')) + '"></textarea>' +
+    '<textarea id="fb-text" class="fb-text" rows="4" maxlength="' + FB_MAX_LEN + '" oninput="fbGrow(this)" placeholder="' + esc(T('feedback_placeholder')) + '"></textarea>' +
     '<div class="fb-err" id="fb-err" role="alert"></div>' +
     '<div class="fb-actions">' +
       '<button type="button" class="fb-btn" onclick="closeFeedback()">' + T('feedback_cancel') + '</button>' +
@@ -91,6 +91,14 @@ function setFeedbackMood(n) {
 function _fbShowErr(msg) {
   const el = document.getElementById('fb-err');
   if (el) el.textContent = msg || '';
+}
+
+/* Auto-grow the note field to fit its content (up to the CSS max-height, then it scrolls). Called
+   from the textarea's oninput. The CSS min-height floors it, so an empty field keeps its 4 rows. */
+function fbGrow(el) {
+  if (!el || !el.style) return;
+  el.style.height = 'auto';
+  el.style.height = el.scrollHeight + 'px';
 }
 
 /* Insert the submission. Returns true on success, false on any error (never throws). Anonymous when
