@@ -6,7 +6,7 @@
    the single `planner_data.lastActiveDate` stamp `/today` writes on any session end — so a day where
    the learner only ran a trainer (didn't finish the whole day) still counts. No streak counters and
    no new cloud column: only `lastActiveDate` is added to planner_data, carried through by every
-   owner page's unknown-key preservation (ARCHITECTURE.md §8). Dates use the local-midnight
+   owner page's unknown-key preservation (docs/architecture/08-planner.md §8). Dates use the local-midnight
    convention (leitner.js `leitnerToday()`), so the streak rolls over at the learner's own midnight
    and is correct across month/year boundaries.
 

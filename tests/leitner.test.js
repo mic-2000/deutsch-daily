@@ -3,9 +3,9 @@
  * it through each page's public card functions (which the refactor keeps as thin wrappers
  * over the shared core), so they stay valid before and after extraction.
  *
- * Behaviour locked here (incl. ARCHITECTURE.md §13 already-fixed bugs):
+ * Behaviour locked here (incl. the docs/architecture/14-fixed-bugs.md already-fixed bugs):
  *   - new word (no record) is always due; isMastered === false
- *   - correct  → box = min(5, box+1)   (first correct is 0→1, NOT 0→2  — §13 bug #4)
+ *   - correct  → box = min(5, box+1)   (first correct is 0→1, NOT 0→2  — §14 bug #4)
  *   - wrong    → configurable via leitnerApply(card, correct, { wrongPolicy }):
  *                 'reset' (default) → box = 1              (a miss sends it back to box 1)
  *                 'soft'            → box = max(1, box-2)  (a miss drops two boxes)

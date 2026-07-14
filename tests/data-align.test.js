@@ -1,5 +1,5 @@
 /* tests/data-align.test.js — index/key alignment between the German base data and all three
- * locales. This is the runtime invariant ARCHITECTURE.md §13 used to flag as "unvalidated":
+ * locales. This is the runtime invariant docs/architecture/13-known-gaps.md used to flag as "unvalidated":
  *   • VOCAB[week].words  ↔  locale.vocab[week]   (index-matched, same length, no blanks)
  *   • WEEKS[n].tasks     ↔  locale.weeks[n].tasks (index-matched, same length)
  *   • VERBS keys         ↔  locale.verbs (key-matched, full coverage, no orphans)

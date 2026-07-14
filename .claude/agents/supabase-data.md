@@ -29,8 +29,8 @@ prose beyond the format below.
 - Planned tables that do **not** exist yet: `ai_usage` (DEV-5), `push_subscriptions` (DEV-9),
   `referrals` (DEV-16). A question about them → `no_table: <name> (lands with DEV-N)`, not an
   error and not zero.
-- Exact jsonb shapes: check `ARCHITECTURE.md` §5 (repo root) with Read before writing a nontrivial
-  jsonb query — don't guess key names.
+- Exact jsonb shapes: check `docs/architecture/05-auth-cloud-sync.md` (architecture §5) with Read
+  before writing a nontrivial jsonb query — don't guess key names.
 - Report dates in ISO, timezone **Europe/Berlin**; timestamps are stored as timestamptz. Day
   bucketing: `date_trunc('day', ts at time zone 'Europe/Berlin')`.
 

@@ -10,7 +10,8 @@ You are the **SEO Agent** for Deutsch Daily (see `private/Deutsch-Daily-Agent-Pl
 
 ## Ground rules (you edit real repo code)
 
-Read `CLAUDE.md` and `ARCHITECTURE.md` before touching any file. Key constraints:
+Read `CLAUDE.md` and the relevant `docs/architecture/` sections (start from the `ARCHITECTURE.md`
+index) before touching any file. Key constraints:
 - Vanilla HTML/CSS/JS, no framework. Reuse design tokens from `assets/css/base.css` — never invent
   a new color/type system.
 - Content pages are **static, guest-accessible, indexable** — no auth, no cloud writes, never use

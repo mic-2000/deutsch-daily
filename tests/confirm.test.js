@@ -4,7 +4,7 @@
  *   - confirmNo clears it without mutating progress
  *   - confirmYes('all') wipes all mastery
  *   - confirmYes({key}) deletes one record
- * (ARCHITECTURE.md §13 bug #5: reset buttons must work via this modal, not confirm().)
+ * (docs/architecture/14-fixed-bugs.md bug #5: reset buttons must work via this modal, not confirm().)
  */
 const test = require('node:test');
 const assert = require('node:assert/strict');

@@ -1,7 +1,9 @@
 # CLAUDE.md — working rules for this repo
 
-Full reference: **[ARCHITECTURE.md](ARCHITECTURE.md)**. This file is **rules only** — for any
-"how it works" detail, read the referenced section (§) there.
+Full reference: **[ARCHITECTURE.md](ARCHITECTURE.md)** — an **index**; the content lives in
+**`docs/architecture/NN-<slug>.md`**, one file per §-section (§19 → `docs/architecture/19-today.md`,
+§5 → `05-auth-cloud-sync.md`, …). This file is **rules only** — for any "how it works" detail, read
+the referenced section's file (not the whole set; the index maps every § to its file).
 
 Orientation: vanilla HTML/CSS/JS, no framework/bundler; Supabase auth + cloud progress; deployed
 on Vercel (HTTPS). `index.html` (repo root) = the **public landing page** for guests (its own
@@ -113,7 +115,7 @@ ARCHITECTURE.md §4 `feedback.js`, §5.)
   on every deploy so caches refresh automatically (§2); the committed `VERSION` is only the local-dev
   default. Keep `*.supabase.co` uncached (JS owns offline data); icon PNGs are rendered from the
   `assets/icon*.svg` sources. (§17)
-- **Don't reintroduce the already-fixed bugs in ARCHITECTURE.md §14.**
+- **Don't reintroduce the already-fixed bugs in `docs/architecture/14-fixed-bugs.md` (§14).**
 
 ## Before finishing
 - Syntax-check: extract the inline `<script>` and run `node --check`. (Running the app locally

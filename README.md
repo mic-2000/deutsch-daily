@@ -65,7 +65,8 @@ far the raw platform takes you when you lean on it instead of around it:
 - **Still tested** — ~100 tests run the pages' real inline scripts in a `vm` sandbox (see below),
   so refactors stay safe without a browser or a framework test runner.
 
-Architecture and conventions are documented in [ARCHITECTURE.md](ARCHITECTURE.md).
+Architecture and conventions are documented in [ARCHITECTURE.md](ARCHITECTURE.md) — an index of
+per-feature section files under [docs/architecture/](docs/architecture/).
 
 ## Development
 

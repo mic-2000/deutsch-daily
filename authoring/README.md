@@ -132,7 +132,7 @@ module.exports = {
 ```
 
 The generator emits `const PLURALS` into `data/v2/vocab.js` (feeding the opt-in plural trainer,
-ARCHITECTURE.md §9); `scripts/cutover-v2.js` ships it verbatim. **Coverage is a hard gate:** every
+`docs/architecture/09-vocab.md` §9); `scripts/cutover-v2.js` ships it verbatim. **Coverage is a hard gate:** every
 noun-shaped vocab word (`der`/`die`/`das …`) must appear in `PLURALS` **or** `NO_PLURAL`, or
 `gen:course` fails — so adding a countable noun to a week forces a plural decision here.
 
