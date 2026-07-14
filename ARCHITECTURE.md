@@ -36,6 +36,12 @@ data. Don't read the whole set for a scoped change.
 | 21 | [docs/architecture/21-course-v2-pipeline.md](docs/architecture/21-course-v2-pipeline.md) | Course v2 pipeline: `authoring/` → `gen-course.js` → `cutover-v2.js`, `band-verbs.js`, `srs-budget.js`, the gate tests |
 | 22 | [docs/architecture/22-stats.md](docs/architecture/22-stats.md) | `/stats` page: data sources, sections, B1 forecast, premium gating |
 
+**Maintaining this reference.** When a change alters behaviour described in a section, update that
+section's file in the same change. A new feature gets the **next free § number** — add
+`docs/architecture/NN-<slug>.md` (with the standard two-line header pointing back here) and a row in
+the table above. § numbers are **stable identifiers**: never renumber, merge, or reuse them — plain
+`§N` references across the repo resolve only through this table.
+
 Common starting points by task:
 
 - **Adding/changing a page or flow** → that page's § (8–10, 16, 18–20, 22) + §3 (load order) + §4

@@ -115,6 +115,12 @@ ARCHITECTURE.md §4 `feedback.js`, §5.)
   on every deploy so caches refresh automatically (§2); the committed `VERSION` is only the local-dev
   default. Keep `*.supabase.co` uncached (JS owns offline data); icon PNGs are rendered from the
   `assets/icon*.svg` sources. (§17)
+- **Keep the architecture reference in sync.** A change that alters behaviour described in a
+  `docs/architecture/NN-*.md` section updates that section file **in the same change** (grep it for
+  stale mentions). A new feature/page/pipeline gets the **next free § number**: a new
+  `docs/architecture/NN-<slug>.md` + a row in the `ARCHITECTURE.md` index table. **Never renumber,
+  merge, or reuse existing § numbers** — plain `§N` references across the repo (CLAUDE.md, code
+  comments, tests) rely on the stable § → file map in the index.
 - **Don't reintroduce the already-fixed bugs in `docs/architecture/14-fixed-bugs.md` (§14).**
 
 ## Before finishing
